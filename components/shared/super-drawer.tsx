@@ -6,6 +6,7 @@ import { Building2, CreditCard, LayoutDashboard, Menu, Ticket } from 'lucide-rea
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
+import { SuperLogoutButton } from '@/components/shared/super-logout-button'
 
 const superLinks = [
   { label: 'Dashboard', href: '/super/dashboard', icon: LayoutDashboard },
@@ -29,12 +30,12 @@ export function SuperDrawer() {
           <span className="sr-only">Abrir menu super admin</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[280px] p-0">
+      <SheetContent side="left" className="w-[280px] gap-0 p-0">
         <SheetHeader className="border-b">
           <SheetTitle>Painel Super Admin</SheetTitle>
         </SheetHeader>
 
-        <nav className="space-y-1 p-3">
+        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {superLinks.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             const Icon = item.icon
@@ -56,6 +57,10 @@ export function SuperDrawer() {
             )
           })}
         </nav>
+
+        <div className="mt-auto border-t p-3">
+          <SuperLogoutButton variant="nav" />
+        </div>
       </SheetContent>
     </Sheet>
   )

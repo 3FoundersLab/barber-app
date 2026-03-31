@@ -8,9 +8,10 @@ import type { TabItem } from '@/components/shared/bottom-tabs'
 interface DesktopSidebarProps {
   title: string
   tabs: TabItem[]
+  footer?: React.ReactNode
 }
 
-export function DesktopSidebar({ title, tabs }: DesktopSidebarProps) {
+export function DesktopSidebar({ title, tabs, footer }: DesktopSidebarProps) {
   const pathname = usePathname()
 
   return (
@@ -41,6 +42,8 @@ export function DesktopSidebar({ title, tabs }: DesktopSidebarProps) {
           )
         })}
       </nav>
+
+      {footer ? <div className="border-t p-3">{footer}</div> : null}
     </aside>
   )
 }

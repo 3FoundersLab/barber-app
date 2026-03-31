@@ -4,6 +4,7 @@ import { Building2, CreditCard, LayoutDashboard, Ticket } from 'lucide-react'
 import { BottomTabs, type TabItem } from '@/components/shared/bottom-tabs'
 import { SuperDrawer } from '@/components/shared/super-drawer'
 import { DesktopSidebar } from '@/components/shared/desktop-sidebar'
+import { SuperLogoutButton } from '@/components/shared/super-logout-button'
 
 const superTabs: TabItem[] = [
   { label: 'Dashboard', href: '/super/dashboard', icon: LayoutDashboard },
@@ -21,7 +22,7 @@ export default function SuperLayout({
     <>
       <SuperDrawer />
       <div className="md:flex md:min-h-screen md:bg-muted/20">
-        <DesktopSidebar title="Painel Super Admin" tabs={superTabs} />
+        <DesktopSidebar title="Painel Super Admin" tabs={superTabs} footer={<SuperLogoutButton />} />
         <div className="hidden md:block md:w-64 md:shrink-0" />
         <div className="min-w-0 flex-1">
           {children}
