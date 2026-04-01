@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
-import { Scissors } from 'lucide-react'
+import { Eye, EyeOff, Scissors } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     email: '',
@@ -107,8 +109,8 @@ export default function LoginPage() {
           <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-accent">
             <Scissors className="h-7 w-7 text-accent-foreground" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">BarberTool</h1>
-          <p className="text-sm text-muted-foreground">Sistema de agendamentos</p>
+          <h1 className="text-2xl font-bold tracking-tight">BarberApp</h1>
+          <p className="text-sm text-muted-foreground">Sistema para Barbearias</p>
         </div>
 
         {/* Login Card */}
@@ -135,15 +137,26 @@ export default function LoginPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Sua senha"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  disabled={isLoading}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Sua senha"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                    disabled={isLoading}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                    aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
 
               {error && (
@@ -157,6 +170,13 @@ export default function LoginPage() {
             </form>
           </CardContent>
         </Card>
+
+        <p className="text-center text-sm text-muted-foreground">
+          Tem uma barbearia e quer usar a plataforma?{' '}
+          <Link href="/cadastro/barbearia" className="font-medium text-primary hover:underline">
+            Cadastre sua barbearia
+          </Link>
+        </p>
 
         {/* Demo accounts */}
         <Card className="border-dashed">

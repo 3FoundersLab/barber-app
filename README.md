@@ -48,6 +48,7 @@ O projeto ficara disponivel em `http://localhost:3000`.
 ## Estrutura de rotas
 
 - `/login` - autenticacao
+- `/cadastro/barbearia` - cadastro de novas barbearias com escolha de plano
 - `/cliente/*` - area do cliente
 - `/barbeiro/*` - area do barbeiro
 - `/admin/*` - area administrativa
