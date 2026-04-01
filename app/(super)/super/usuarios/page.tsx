@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Plus, Search, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Search, Trash2 } from 'lucide-react'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Button } from '@/components/ui/button'
@@ -28,8 +28,35 @@ import { createClient } from '@/lib/supabase/client'
 import { ROLE_LABELS } from '@/lib/constants'
 import type { Barbearia, Profile, UserRole } from '@/types'
 import { cn } from '@/lib/utils'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+} from '@/components/ui/pagination'
 
 const ROLES: UserRole[] = ['super_admin', 'admin', 'barbeiro', 'cliente']
+const PAGE_SIZE_OPTIONS = [10, 20, 50] as const
+type UsuariosPageSize = (typeof PAGE_SIZE_OPTIONS)[number]
+
+function pageNumberItems(current: number, total: number): (number | 'ellipsis')[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1)
+  }
+  const set = new Set<number>([1, total])
+  for (let i = current - 1; i <= current + 1; i++) {
+    if (i >= 1 && i <= total) set.add(i)
+  }
+  const sorted = [...set].sort((a, b) => a - b)
+  const out: (number | 'ellipsis')[] = []
+  let prev = 0
+  for (const p of sorted) {
+    if (p - prev > 1) out.push('ellipsis')
+    out.push(p)
+    prev = p
+  }
+  return out
+}
 
 type BarbeariaLink = {
   id: string
@@ -44,6 +71,8 @@ export default function SuperUsuariosPage() {
   const [barbearias, setBarbearias] = useState<Barbearia[]>([])
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState<'todos' | 'super'>('todos')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<UsuariosPageSize>(10)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -112,6 +141,10 @@ export default function SuperUsuariosPage() {
   useEffect(() => {
     loadAll()
   }, [loadAll])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, tab])
 
   async function handleCreate() {
     if (!form.nome || !form.email || form.password.length < 6) return
@@ -195,6 +228,24 @@ export default function SuperUsuariosPage() {
     )
   }, [profiles, search, tab])
 
+  const totalPages =
+    filtered.length === 0 ? 0 : Math.ceil(filtered.length / pageSize)
+  const currentPage = totalPages === 0 ? 1 : Math.min(page, totalPages)
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filtered.slice(start, start + pageSize)
+  }, [filtered, currentPage, pageSize])
+
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) setPage(totalPages)
+  }, [totalPages, page])
+
+  const pageItems = useMemo(
+    () => (totalPages > 0 ? pageNumberItems(currentPage, totalPages) : []),
+    [currentPage, totalPages],
+  )
+
   return (
     <PageContainer>
       <AppPageHeader title="Usuários" profileHref="/super/perfil/editar" avatarFallback="S" />
@@ -206,23 +257,55 @@ export default function SuperUsuariosPage() {
           uma barbearia. Você pode revogar o acesso por barbearia abaixo.
         </p>
 
-        <div className="flex w-full max-w-md gap-2 rounded-lg border bg-muted/40 p-1">
-          <Button
-            type="button"
-            variant={tab === 'todos' ? 'default' : 'ghost'}
-            className="flex-1"
-            onClick={() => setTab('todos')}
-          >
-            Todos
-          </Button>
-          <Button
-            type="button"
-            variant={tab === 'super' ? 'default' : 'ghost'}
-            className="flex-1"
-            onClick={() => setTab('super')}
-          >
-            Super Admins
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+          <div className="flex min-w-0 flex-1 gap-2 rounded-lg border bg-muted/40 p-1 sm:max-w-md">
+            <Button
+              type="button"
+              variant={tab === 'todos' ? 'default' : 'ghost'}
+              className="flex-1"
+              onClick={() => setTab('todos')}
+            >
+              Todos
+            </Button>
+            <Button
+              type="button"
+              variant={tab === 'super' ? 'default' : 'ghost'}
+              className="flex-1"
+              onClick={() => setTab('super')}
+            >
+              Super Admins
+            </Button>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Label
+              htmlFor="usuarios-page-size"
+              className="text-sm text-muted-foreground whitespace-nowrap"
+            >
+              Itens por página
+            </Label>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(v) => {
+                const n = Number(v)
+                const opt = PAGE_SIZE_OPTIONS.find((x) => x === n)
+                if (opt !== undefined) {
+                  setPageSize(opt)
+                  setPage(1)
+                }
+              }}
+            >
+              <SelectTrigger id="usuarios-page-size" className="h-9 w-[4.5rem]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={String(opt)}>
+                    {opt}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
@@ -255,7 +338,7 @@ export default function SuperUsuariosPage() {
               </CardContent>
             </Card>
           ) : filtered.length > 0 ? (
-            filtered.map((p) => {
+            paginated.map((p) => {
               const links = linksByUser[p.id] || []
               const isSelf = currentUserId === p.id
 
@@ -354,6 +437,71 @@ export default function SuperUsuariosPage() {
             </Card>
           )}
         </div>
+
+        {!isLoading && filtered.length > 0 && totalPages > 0 ? (
+          <div className="border-t pt-4">
+            <Pagination className="mx-0 flex w-full max-w-full flex-col items-center gap-2">
+              <PaginationContent className="flex h-9 flex-row flex-wrap items-center justify-center gap-1">
+                <PaginationItem>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-1 px-2.5"
+                    disabled={currentPage <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    aria-label="Página anterior"
+                  >
+                    <ChevronLeft className="h-4 w-4 shrink-0" />
+                    <span className="hidden sm:inline">Anterior</span>
+                  </Button>
+                </PaginationItem>
+                {pageItems.map((item, idx) =>
+                  item === 'ellipsis' ? (
+                    <PaginationItem key={`e-${idx}`} className="flex h-9 items-center">
+                      <PaginationEllipsis className="size-9" />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item} className="flex h-9 items-center">
+                      <Button
+                        type="button"
+                        variant={item === currentPage ? 'default' : 'ghost'}
+                        size="icon"
+                        className={cn(
+                          'h-9 min-w-9',
+                          item === currentPage && 'pointer-events-none font-semibold',
+                        )}
+                        onClick={() => setPage(item)}
+                        aria-label={`Página ${item}`}
+                        aria-current={item === currentPage ? 'page' : undefined}
+                      >
+                        {item}
+                      </Button>
+                    </PaginationItem>
+                  )
+                )}
+                <PaginationItem>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-1 px-2.5"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    aria-label="Próxima página"
+                  >
+                    <span className="hidden sm:inline">Próxima</span>
+                    <ChevronRight className="h-4 w-4 shrink-0" />
+                  </Button>
+                </PaginationItem>
+              </PaginationContent>
+              <p className="text-center text-xs text-muted-foreground">
+                Página {currentPage} de {totalPages} · {filtered.length}{' '}
+                {filtered.length === 1 ? 'usuário' : 'usuários'}
+              </p>
+            </Pagination>
+          </div>
+        ) : null}
       </PageContent>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
