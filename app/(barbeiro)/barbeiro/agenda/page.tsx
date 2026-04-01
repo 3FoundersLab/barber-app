@@ -6,6 +6,7 @@ import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { AppointmentCard } from '@/components/domain/appointment-card'
 import { Button } from '@/components/ui/button'
+import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
 import { ViewToggle, type ViewMode } from '@/components/shared/view-toggle'
@@ -274,11 +275,13 @@ export default function BarbeiroAgendaPage() {
         {/* Appointments */}
         <div className="space-y-3">
           {error ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <p className="text-destructive">{error}</p>
-              </CardContent>
-            </Card>
+            <Alert
+              variant="danger"
+              onClose={() => setError(null)}
+              autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+            >
+              <AlertTitle>{error}</AlertTitle>
+            </Alert>
           ) : isLoading ? (
             <LoadingSkeleton count={3} />
           ) : appointmentsOfSelectedDate.length > 0 ? (

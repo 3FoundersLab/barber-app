@@ -5,6 +5,7 @@ import { Plus, Phone, Mail } from 'lucide-react'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Button } from '@/components/ui/button'
+import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -179,9 +180,13 @@ export default function AdminEquipePage() {
         </div>
 
         {error ? (
-          <Card className="border-dashed">
-            <CardContent className="py-8 text-center text-sm text-destructive">{error}</CardContent>
-          </Card>
+          <Alert
+            variant="danger"
+            onClose={() => setError(null)}
+            autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+          >
+            <AlertTitle>{error}</AlertTitle>
+          </Alert>
         ) : isLoading ? (
           <LoadingSkeleton count={3} />
         ) : barbeiros.length > 0 ? (

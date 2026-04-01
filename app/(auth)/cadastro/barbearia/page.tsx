@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Scissors } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -382,7 +383,16 @@ export default function CadastroBarbeariaPage() {
                 </Card>
               )}
 
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              {error && (
+                <Alert
+                  variant="danger"
+                  className="text-left"
+                  onClose={() => setError(null)}
+                  autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+                >
+                  <AlertTitle className="text-sm">{error}</AlertTitle>
+                </Alert>
+              )}
               {success && <p className="text-sm text-success">{success}</p>}
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

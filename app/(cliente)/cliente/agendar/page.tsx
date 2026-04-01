@@ -7,6 +7,7 @@ import { PageContainer, PageTitle, PageContent } from '@/components/shared/page-
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { ServiceCard } from '@/components/domain/service-card'
 import { Button } from '@/components/ui/button'
+import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { DateNavigatorCalendar } from '@/components/shared/date-navigator-calendar'
@@ -249,9 +250,13 @@ export default function AgendarPage() {
 
       <PageContent className="space-y-4">
         {error && (
-          <Card className="border-dashed">
-            <CardContent className="py-4 text-center text-sm text-destructive">{error}</CardContent>
-          </Card>
+          <Alert
+            variant="danger"
+            onClose={() => setError(null)}
+            autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+          >
+            <AlertTitle>{error}</AlertTitle>
+          </Alert>
         )}
 
         {/* Step: Serviço */}

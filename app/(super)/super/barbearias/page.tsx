@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, LogIn, Pencil, Plus, Search } from 'lucide-r
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Button } from '@/components/ui/button'
+import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -322,9 +323,13 @@ export default function SuperBarbeariasPage() {
         </div>
 
         {error && (
-          <Card className="border-dashed border-destructive/50">
-            <CardContent className="py-4 text-center text-sm text-destructive">{error}</CardContent>
-          </Card>
+          <Alert
+            variant="danger"
+            onClose={() => setError(null)}
+            autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+          >
+            <AlertTitle>{error}</AlertTitle>
+          </Alert>
         )}
 
         {isLoading ? (

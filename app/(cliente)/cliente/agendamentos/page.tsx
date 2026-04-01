@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Calendar, Clock, Scissors, User } from 'lucide-react'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
+import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AppointmentStatusBadge, PaymentStatusBadge } from '@/components/shared/status-badge'
@@ -141,9 +142,14 @@ export default function MeusAgendamentosPage() {
 
       <PageContent>
         {error && (
-          <Card className="mb-4 border-dashed">
-            <CardContent className="py-6 text-center text-sm text-destructive">{error}</CardContent>
-          </Card>
+          <Alert
+            variant="danger"
+            className="mb-4"
+            onClose={() => setError(null)}
+            autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+          >
+            <AlertTitle>{error}</AlertTitle>
+          </Alert>
         )}
 
         <Tabs defaultValue="proximos">

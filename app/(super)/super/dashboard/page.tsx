@@ -4,6 +4,12 @@ import { useEffect, useState } from 'react'
 import { Building2, CreditCard, DollarSign } from 'lucide-react'
 import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  ALERT_DEFAULT_AUTO_CLOSE_MS,
+} from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
@@ -79,9 +85,16 @@ export default function SuperDashboardPage() {
 
       <PageContent className="space-y-4">
         {error && (
-          <Card className="border-dashed">
-            <CardContent className="py-6 text-center text-sm text-destructive">{error}</CardContent>
-          </Card>
+          <Alert
+            variant="danger"
+            onClose={() => setError(null)}
+            autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+          >
+            <AlertTitle>{error}</AlertTitle>
+            <AlertDescription>
+              Assinaturas ativas e MRR podem estar incorretos. Tente recarregar a página.
+            </AlertDescription>
+          </Alert>
         )}
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

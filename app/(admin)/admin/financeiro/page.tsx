@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { AppointmentCard } from '@/components/domain/appointment-card'
+import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -142,9 +143,13 @@ export default function AdminFinanceiroPage() {
         </div>
 
         {error ? (
-          <Card className="border-dashed">
-            <CardContent className="py-8 text-center text-sm text-destructive">{error}</CardContent>
-          </Card>
+          <Alert
+            variant="danger"
+            onClose={() => setError(null)}
+            autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+          >
+            <AlertTitle>{error}</AlertTitle>
+          </Alert>
         ) : isLoading ? (
           <LoadingSkeleton count={4} />
         ) : agendamentos.length > 0 ? (

@@ -18,7 +18,7 @@ type ProfileAvatarUploadProps = {
   onAvatarUrlChange: (url: string) => void
   fallbackLetter: string
   disabled?: boolean
-  /** Erros de upload são repassados para a página (ex.: Card de erro) */
+  /** Erros de upload são repassados para a página (ex.: Alert) */
   onError: (message: string | null) => void
   className?: string
 }

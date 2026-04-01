@@ -160,3 +160,12 @@
     cursor: pointer;
   }
 }
+
+@keyframes alert-auto-close-bar {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}

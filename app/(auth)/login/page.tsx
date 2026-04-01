@@ -8,6 +8,7 @@ import { Eye, EyeOff, Scissors } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { createClient } from '@/lib/supabase/client'
@@ -173,7 +174,14 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <p className="text-sm text-destructive">{error}</p>
+                <Alert
+                  variant="danger"
+                  className="text-left"
+                  onClose={() => setError(null)}
+                  autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+                >
+                  <AlertTitle className="text-sm">{error}</AlertTitle>
+                </Alert>
               )}
 
               <Button type="submit" className="w-full" disabled={isLoading}>

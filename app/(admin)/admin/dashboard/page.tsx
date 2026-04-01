@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Calendar, DollarSign, Users, Scissors, TrendingUp, ChevronRight } from 'lucide-react'
+import { Calendar, ChevronRight, DollarSign, Scissors, TrendingUp, Users } from 'lucide-react'
 import { PageContainer, PageTitle, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
+import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AppointmentStatusBadge } from '@/components/shared/status-badge'
@@ -171,9 +172,13 @@ export default function AdminDashboardPage() {
 
       <PageContent className="space-y-6 md:space-y-8">
         {error && (
-          <Card className="border-dashed">
-            <CardContent className="py-8 text-center text-sm text-destructive">{error}</CardContent>
-          </Card>
+          <Alert
+            variant="danger"
+            onClose={() => setError(null)}
+            autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+          >
+            <AlertTitle>{error}</AlertTitle>
+          </Alert>
         )}
 
         {/* Barbearia Name */}
@@ -252,7 +257,9 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {error ? (
-              <p className="py-4 text-center text-sm text-destructive">{error}</p>
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                Não foi possível exibir os agendamentos. Veja o aviso acima.
+              </p>
             ) : isLoading ? (
               <div className="animate-pulse space-y-3">
                 {[1, 2, 3].map((i) => (

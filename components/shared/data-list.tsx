@@ -1,6 +1,12 @@
 'use client'
 
-import { AlertCircle, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  ALERT_DEFAULT_AUTO_CLOSE_MS,
+} from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '@/components/ui/empty'
 import { cn } from '@/lib/utils'
@@ -9,6 +15,10 @@ interface DataListProps<T> {
   items: T[]
   isLoading?: boolean
   error?: string | null
+  /** Fecha o alerta de erro (X e auto-close). Sem isso o aviso permanece fixo. */
+  onClearError?: () => void
+  /** Ms até fechar o erro; padrão `ALERT_DEFAULT_AUTO_CLOSE_MS` quando `onClearError` existe. */
+  errorAutoCloseMs?: number
   renderItem: (item: T, index: number) => React.ReactNode
   renderSkeleton?: () => React.ReactNode
   skeletonCount?: number
@@ -26,6 +36,8 @@ export function DataList<T>({
   items,
   isLoading = false,
   error = null,
+  onClearError,
+  errorAutoCloseMs,
   renderItem,
   renderSkeleton,
   skeletonCount = 5,
@@ -53,24 +65,28 @@ export function DataList<T>({
 
   // Error state
   if (error) {
+    const closeMs = onClearError
+      ? (errorAutoCloseMs ?? ALERT_DEFAULT_AUTO_CLOSE_MS)
+      : undefined
     return (
-      <Empty className={cn('min-h-[300px]', className)}>
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <AlertCircle className="h-6 w-6 text-destructive" />
-          </EmptyMedia>
-          <EmptyTitle>Erro ao carregar</EmptyTitle>
-          <EmptyDescription>{error}</EmptyDescription>
-        </EmptyHeader>
+      <div className={cn('flex min-h-[300px] flex-col justify-center gap-4', className)}>
+        <Alert
+          variant="danger"
+          onClose={onClearError}
+          autoCloseMs={closeMs}
+        >
+          <AlertTitle>Erro ao carregar</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
         {onRetry && (
-          <EmptyContent>
+          <div className="flex justify-center">
             <Button variant="outline" onClick={onRetry}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Tentar novamente
             </Button>
-          </EmptyContent>
+          </div>
         )}
-      </Empty>
+      </div>
     )
   }
 

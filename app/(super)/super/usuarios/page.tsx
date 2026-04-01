@@ -15,6 +15,12 @@ import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  ALERT_DEFAULT_AUTO_CLOSE_MS,
+} from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -502,17 +508,23 @@ export default function SuperUsuariosPage() {
         </div>
 
         {error && (
-          <Card className="border-dashed border-destructive/50">
-            <CardContent className="py-4 text-center text-sm text-destructive">{error}</CardContent>
-          </Card>
+          <Alert
+            variant="danger"
+            onClose={() => setError(null)}
+            autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+          >
+            <AlertTitle>{error}</AlertTitle>
+          </Alert>
         )}
 
         {linksNotice ? (
-          <Card className="border-dashed border-amber-500/40 bg-amber-500/5">
-            <CardContent className="py-3 text-sm text-amber-900 dark:text-amber-100/90">
-              {linksNotice}
-            </CardContent>
-          </Card>
+          <Alert
+            variant="warning"
+            onClose={() => setLinksNotice(null)}
+            autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+          >
+            <AlertDescription>{linksNotice}</AlertDescription>
+          </Alert>
         ) : null}
 
         <div

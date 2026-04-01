@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { LogOut, Store, MapPin, Phone, Mail, Save } from 'lucide-react'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
+import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -126,9 +127,13 @@ export default function AdminConfiguracoesPage() {
 
       <PageContent className="space-y-6">
         {error && (
-          <Card className="border-dashed">
-            <CardContent className="py-8 text-center text-sm text-destructive">{error}</CardContent>
-          </Card>
+          <Alert
+            variant="danger"
+            onClose={() => setError(null)}
+            autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+          >
+            <AlertTitle>{error}</AlertTitle>
+          </Alert>
         )}
 
         {/* Barbearia Info */}
