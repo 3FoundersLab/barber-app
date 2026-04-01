@@ -1,7 +1,16 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Plus, Search, Trash2, UserCheck, UserX } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  UserCheck,
+  UserX,
+} from 'lucide-react'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Button } from '@/components/ui/button'
@@ -44,7 +53,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 
-const ROLES: UserRole[] = ['super_admin', 'admin', 'barbeiro', 'cliente']
+const SUPER_USUARIOS_ROLES: UserRole[] = ['super_admin', 'admin']
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const
 type UsuariosPageSize = (typeof PAGE_SIZE_OPTIONS)[number]
 
@@ -98,6 +107,18 @@ export default function SuperUsuariosPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [confirmDeactivate, setConfirmDeactivate] = useState<Profile | null>(null)
+  const [editProfile, setEditProfile] = useState<Profile | null>(null)
+  const [editFormNome, setEditFormNome] = useState('')
+  const [editFormEmail, setEditFormEmail] = useState('')
+  const [editFormRole, setEditFormRole] = useState<UserRole>('admin')
+  const [editFormBarbeariaId, setEditFormBarbeariaId] = useState('')
+  const [editBaseline, setEditBaseline] = useState<{
+    nome: string
+    email: string
+    role: UserRole
+    barbearia_id: string
+  } | null>(null)
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
   const [confirmRevokeLink, setConfirmRevokeLink] = useState<{
     linkId: string
     usuarioNome: string
@@ -109,7 +130,7 @@ export default function SuperUsuariosPage() {
     nome: '',
     email: '',
     password: '',
-    role: 'cliente' as UserRole,
+    role: 'admin' as UserRole,
     barbearia_id: '',
   })
 
@@ -209,7 +230,7 @@ export default function SuperUsuariosPage() {
 
   async function handleCreate() {
     if (!form.nome || !form.email || form.password.length < 6) return
-    if ((form.role === 'admin' || form.role === 'barbeiro') && !form.barbearia_id) return
+    if (form.role === 'admin' && !form.barbearia_id) return
 
     setIsSaving(true)
     setError(null)
@@ -223,8 +244,7 @@ export default function SuperUsuariosPage() {
           email: form.email,
           password: form.password,
           role: form.role,
-          barbearia_id:
-            form.role === 'admin' || form.role === 'barbeiro' ? form.barbearia_id : undefined,
+          barbearia_id: form.role === 'admin' ? form.barbearia_id : undefined,
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -241,20 +261,85 @@ export default function SuperUsuariosPage() {
 
     setIsSaving(false)
     setIsDialogOpen(false)
-    setForm({ nome: '', email: '', password: '', role: 'cliente', barbearia_id: '' })
+    setForm({ nome: '', email: '', password: '', role: 'admin', barbearia_id: '' })
     setIsLoading(true)
     await loadAll()
   }
 
-  async function handleRoleChange(profileId: string, role: UserRole) {
-    const supabase = createClient()
-    setError(null)
-    const { error: upErr } = await supabase.from('profiles').update({ role }).eq('id', profileId)
-    if (upErr) {
-      setError('Não foi possível atualizar o papel.')
+  function openEditProfile(p: Profile) {
+    const links = linksByUser[p.id] || []
+    const adminLink = links.find((l) => l.role === 'admin')
+    const barId = adminLink?.barbearia?.id ?? ''
+    setEditProfile(p)
+    setEditFormNome(p.nome)
+    setEditFormEmail(p.email)
+    setEditFormRole(p.role)
+    setEditFormBarbeariaId(barId)
+    setEditBaseline({
+      nome: p.nome,
+      email: p.email,
+      role: p.role,
+      barbearia_id: barId,
+    })
+  }
+
+  function editFormIsDirty(): boolean {
+    if (!editBaseline) return false
+    const nome = editFormNome.trim()
+    const email = editFormEmail.trim().toLowerCase()
+    const effBar = editFormRole === 'admin' ? editFormBarbeariaId : ''
+    const baseBar = editBaseline.role === 'admin' ? editBaseline.barbearia_id : ''
+    return (
+      nome !== editBaseline.nome.trim() ||
+      email !== editBaseline.email.trim().toLowerCase() ||
+      editFormRole !== editBaseline.role ||
+      effBar !== baseBar
+    )
+  }
+
+  async function handleSaveEdit() {
+    if (!editProfile || currentUserId === editProfile.id) return
+    const nome = editFormNome.trim()
+    const email = editFormEmail.trim().toLowerCase()
+    if (!nome || !email) return
+    if (editFormRole === 'admin' && !editFormBarbeariaId) return
+    if (!editFormIsDirty()) {
+      setEditProfile(null)
+      setEditBaseline(null)
       return
     }
-    setProfiles((prev) => prev.map((p) => (p.id === profileId ? { ...p, role } : p)))
+
+    setIsSavingEdit(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/super/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: editProfile.id,
+          nome,
+          email,
+          role: editFormRole,
+          barbearia_id: editFormRole === 'admin' ? editFormBarbeariaId : undefined,
+        }),
+      })
+      const json = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) {
+        setError(typeof json.error === 'string' ? json.error : 'Não foi possível salvar as alterações.')
+        setIsSavingEdit(false)
+        return
+      }
+    } catch {
+      setError('Não foi possível salvar as alterações.')
+      setIsSavingEdit(false)
+      return
+    }
+
+    setIsSavingEdit(false)
+    setEditProfile(null)
+    setEditBaseline(null)
+    setIsLoading(true)
+    await loadAll()
   }
 
   async function handleAtivoToggle(profileId: string, ativo: boolean) {
@@ -341,8 +426,7 @@ export default function SuperUsuariosPage() {
 
       <PageContent className="space-y-4 pb-20 md:pb-6">
         <p className="text-sm text-muted-foreground">
-          Listagem de contas com papéis Super Admin e Admin. Cadastre também barbeiros e clientes pelo
-          formulário abaixo (eles não aparecem nesta lista). Para administradores e barbeiros, vincule
+          Listagem de contas com papéis Super Admin e Admin. Administradores precisam estar vinculados a
           uma barbearia. Você pode revogar o acesso por barbearia abaixo.
         </p>
 
@@ -427,7 +511,13 @@ export default function SuperUsuariosPage() {
           </Card>
         ) : null}
 
-        <div className="space-y-3">
+        <div
+          className={
+            !isLoading && filtered.length > 0
+              ? 'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+              : 'space-y-3'
+          }
+        >
           {isLoading ? (
             <Card>
               <CardContent className="py-8 text-center text-sm text-muted-foreground">
@@ -443,124 +533,120 @@ export default function SuperUsuariosPage() {
               return (
                 <Card
                   key={p.id}
-                  className={cn(!isAtivo && 'border-muted-foreground/25 bg-muted/20')}
+                  className={cn(
+                    'flex min-h-0 flex-col',
+                    !isAtivo && 'border-muted-foreground/25 bg-muted/20',
+                  )}
                 >
-                  <CardContent className="space-y-4 p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium">{p.nome}</p>
-                          <Badge
-                            variant={p.role === 'super_admin' ? 'default' : 'secondary'}
-                            className={cn(p.role === 'super_admin' && 'bg-amber-600 hover:bg-amber-600')}
-                          >
-                            {ROLE_LABELS[p.role]}
-                          </Badge>
-                          {!isAtivo ? (
-                            <Badge variant="outline" className="border-destructive/50 text-destructive">
-                              Inativo
-                            </Badge>
-                          ) : null}
-                        </div>
-                        <p className="truncate text-sm text-muted-foreground">{p.email}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Criado em {new Date(p.created_at).toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
-
-                      <div className="w-full space-y-1 sm:w-52">
-                        <Label className="text-xs text-muted-foreground">Papel global</Label>
-                        <Select
-                          value={p.role}
-                          disabled={isSelf}
-                          onValueChange={(v) => handleRoleChange(p.id, v as UserRole)}
-                        >
-                          <SelectTrigger className="w-full" size="sm">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ROLES.map((r) => (
-                              <SelectItem key={r} value={r}>
-                                {ROLE_LABELS[r]}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {isSelf ? (
-                          <p className="text-xs text-muted-foreground">
-                            Você não pode alterar seu próprio papel aqui.
-                          </p>
-                        ) : null}
-                        <div className="pt-2">
-                          {isAtivo ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="w-full border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              disabled={isSelf || togglingAtivoId === p.id}
-                              onClick={() => setConfirmDeactivate(p)}
-                              title={
-                                isSelf
-                                  ? 'Você não pode desativar a própria conta aqui.'
-                                  : 'Desativar usuário'
-                              }
-                            >
-                              {togglingAtivoId === p.id ? (
-                                <Spinner className="mr-2 h-4 w-4" />
-                              ) : (
-                                <UserX className="mr-2 h-4 w-4" />
-                              )}
-                              Desativar
-                            </Button>
-                          ) : (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="w-full"
-                              disabled={togglingAtivoId === p.id}
-                              onClick={() => void handleAtivoToggle(p.id, true)}
-                            >
-                              {togglingAtivoId === p.id ? (
-                                <Spinner className="mr-2 h-4 w-4" />
-                              ) : (
-                                <UserCheck className="mr-2 h-4 w-4" />
-                              )}
-                              Reativar
-                            </Button>
+                  <CardContent className="flex flex-1 flex-col gap-2.5 p-3">
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="truncate text-sm font-medium">{p.nome}</p>
+                        <Badge
+                          variant={p.role === 'super_admin' ? 'default' : 'secondary'}
+                          className={cn(
+                            'shrink-0 text-[10px] px-1.5 py-0',
+                            p.role === 'super_admin' && 'bg-amber-600 hover:bg-amber-600',
                           )}
-                        </div>
+                        >
+                          {ROLE_LABELS[p.role]}
+                        </Badge>
+                        {!isAtivo ? (
+                          <Badge
+                            variant="outline"
+                            className="shrink-0 border-destructive/50 px-1.5 py-0 text-[10px] text-destructive"
+                          >
+                            Inativo
+                          </Badge>
+                        ) : null}
                       </div>
+                      <p className="truncate text-xs text-muted-foreground" title={p.email}>
+                        {p.email}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {new Date(p.created_at).toLocaleDateString('pt-BR')}
+                      </p>
                     </div>
 
-                    <div className="border-t pt-3">
-                      <p className="mb-2 text-xs font-medium text-muted-foreground">
-                        Acessos às barbearias
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2 text-xs"
+                        disabled={isSelf}
+                        title={
+                          isSelf ? 'Você não pode editar seu próprio usuário aqui.' : 'Editar usuário'
+                        }
+                        onClick={() => openEditProfile(p)}
+                      >
+                        <Pencil className="mr-1 h-3.5 w-3.5 shrink-0" />
+                        Editar
+                      </Button>
+                      {isAtivo ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 border-destructive/40 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          disabled={isSelf || togglingAtivoId === p.id}
+                          onClick={() => setConfirmDeactivate(p)}
+                          title={
+                            isSelf
+                              ? 'Você não pode desativar a própria conta aqui.'
+                              : 'Desativar usuário'
+                          }
+                        >
+                          {togglingAtivoId === p.id ? (
+                            <Spinner className="mr-1 h-3.5 w-3.5 shrink-0" />
+                          ) : (
+                            <UserX className="mr-1 h-3.5 w-3.5 shrink-0" />
+                          )}
+                          Desativar
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2 text-xs"
+                          disabled={togglingAtivoId === p.id}
+                          onClick={() => void handleAtivoToggle(p.id, true)}
+                        >
+                          {togglingAtivoId === p.id ? (
+                            <Spinner className="mr-1 h-3.5 w-3.5 shrink-0" />
+                          ) : (
+                            <UserCheck className="mr-1 h-3.5 w-3.5 shrink-0" />
+                          )}
+                          Reativar
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="mt-auto border-t pt-2">
+                      <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                        Barbearias
                       </p>
                       {links.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Nenhum vínculo.</p>
+                        <p className="text-xs text-muted-foreground">Nenhum vínculo.</p>
                       ) : (
-                        <ul className="space-y-2">
+                        <ul className="max-h-28 space-y-1 overflow-y-auto pr-0.5">
                           {links.map((l) => (
                             <li
                               key={l.id}
-                              className="flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm"
+                              className="flex items-center justify-between gap-1 rounded border bg-muted/30 px-2 py-1 text-xs"
                             >
-                              <div className="min-w-0">
-                                <span className="truncate font-medium">
+                              <div className="min-w-0 leading-tight">
+                                <span className="line-clamp-1 font-medium">
                                   {l.barbearia?.nome ?? 'Barbearia'}
                                 </span>
-                                <span className="text-muted-foreground">
-                                  {' '}
-                                  · {ROLE_LABELS[l.role]}
-                                </span>
+                                <span className="text-muted-foreground"> · {ROLE_LABELS[l.role]}</span>
                               </div>
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="shrink-0 text-destructive hover:text-destructive"
+                                className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
                                 onClick={() =>
                                   setConfirmRevokeLink({
                                     linkId: l.id,
@@ -570,7 +656,7 @@ export default function SuperUsuariosPage() {
                                 }
                                 title="Revogar acesso"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </li>
                           ))}
@@ -775,15 +861,16 @@ export default function SuperUsuariosPage() {
               <Label>Papel</Label>
               <Select
                 value={form.role}
-                onValueChange={(v) =>
-                  setForm((s) => ({ ...s, role: v as UserRole, barbearia_id: '' }))
-                }
+                onValueChange={(v) => {
+                  const r = v as UserRole
+                  setForm((s) => ({ ...s, role: r, barbearia_id: r === 'admin' ? s.barbearia_id : '' }))
+                }}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ROLES.map((r) => (
+                  {SUPER_USUARIOS_ROLES.map((r) => (
                     <SelectItem key={r} value={r}>
                       {ROLE_LABELS[r]}
                     </SelectItem>
@@ -791,7 +878,7 @@ export default function SuperUsuariosPage() {
                 </SelectContent>
               </Select>
             </div>
-            {(form.role === 'admin' || form.role === 'barbeiro') && (
+            {form.role === 'admin' && (
               <div className="space-y-1">
                 <Label>Barbearia</Label>
                 <Select
@@ -828,11 +915,128 @@ export default function SuperUsuariosPage() {
                 !form.nome ||
                 !form.email ||
                 form.password.length < 6 ||
-                ((form.role === 'admin' || form.role === 'barbeiro') && !form.barbearia_id)
+                (form.role === 'admin' && !form.barbearia_id)
               }
             >
               {isSaving ? <Spinner className="mr-2" /> : null}
               {isSaving ? 'Criando...' : 'Criar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!editProfile}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditProfile(null)
+            setEditBaseline(null)
+          }
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar usuário</DialogTitle>
+          </DialogHeader>
+
+          {editProfile ? (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <Label htmlFor="edit-nome">Nome</Label>
+                <Input
+                  id="edit-nome"
+                  value={editFormNome}
+                  onChange={(e) => setEditFormNome(e.target.value)}
+                  autoComplete="name"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editFormEmail}
+                  onChange={(e) => setEditFormEmail(e.target.value)}
+                  autoComplete="off"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-role">Papel global</Label>
+                <Select
+                  value={editFormRole}
+                  onValueChange={(v) => {
+                    const r = v as UserRole
+                    setEditFormRole(r)
+                    if (r !== 'admin') setEditFormBarbeariaId('')
+                  }}
+                >
+                  <SelectTrigger id="edit-role" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUPER_USUARIOS_ROLES.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {ROLE_LABELS[r]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {editFormRole === 'admin' && (
+                <div className="space-y-1">
+                  <Label htmlFor="edit-barbearia">Barbearia</Label>
+                  <Select
+                    value={editFormBarbeariaId || undefined}
+                    onValueChange={(v) => setEditFormBarbeariaId(v)}
+                  >
+                    <SelectTrigger id="edit-barbearia" className="w-full">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {barbearias.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Ao salvar, vínculos anteriores de administrador com barbearias são substituídos por
+                    este.
+                  </p>
+                </div>
+              )}
+              <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
+                Alterar email e vínculos exige{' '}
+                <code className="text-foreground">SUPABASE_SERVICE_ROLE_KEY</code> no servidor.
+              </p>
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditProfile(null)
+                setEditBaseline(null)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => void handleSaveEdit()}
+              disabled={
+                !editProfile ||
+                isSavingEdit ||
+                currentUserId === editProfile.id ||
+                !editFormNome.trim() ||
+                !editFormEmail.trim() ||
+                (editFormRole === 'admin' && !editFormBarbeariaId) ||
+                !editFormIsDirty()
+              }
+            >
+              {isSavingEdit ? <Spinner className="mr-2" /> : null}
+              {isSavingEdit ? 'Salvando...' : 'Salvar'}
             </Button>
           </DialogFooter>
         </DialogContent>
