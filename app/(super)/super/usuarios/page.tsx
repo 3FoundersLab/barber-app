@@ -392,13 +392,17 @@ export default function SuperUsuariosPage() {
     if (tab === 'super') {
       rows = rows.filter((p) => p.role === 'super_admin')
     }
-    if (!search.trim()) return rows
-    const q = search.toLowerCase()
-    return rows.filter(
-      (p) =>
-        p.nome.toLowerCase().includes(q) ||
-        p.email.toLowerCase().includes(q) ||
-        ROLE_LABELS[p.role].toLowerCase().includes(q),
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      rows = rows.filter(
+        (p) =>
+          p.nome.toLowerCase().includes(q) ||
+          p.email.toLowerCase().includes(q) ||
+          ROLE_LABELS[p.role].toLowerCase().includes(q),
+      )
+    }
+    return [...rows].sort((a, b) =>
+      (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' }),
     )
   }, [profiles, search, tab])
 
