@@ -19,7 +19,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
+import { TeamMemberListSkeleton } from '@/components/shared/loading-skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import {
   DropdownMenu,
@@ -188,7 +188,7 @@ export default function AdminEquipePage() {
             <AlertTitle>{error}</AlertTitle>
           </Alert>
         ) : isLoading ? (
-          <LoadingSkeleton count={3} />
+          <TeamMemberListSkeleton count={3} />
         ) : barbeiros.length > 0 ? (
           barbeiros.map((barbeiro) => (
             <Card key={barbeiro.id} className={!barbeiro.ativo ? 'opacity-60' : ''}>

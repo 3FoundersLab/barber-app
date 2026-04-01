@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
+import { AppointmentListSkeleton } from '@/components/shared/loading-skeleton'
 import { ViewToggle, type ViewMode } from '@/components/shared/view-toggle'
 import { DateNavigatorCalendar } from '@/components/shared/date-navigator-calendar'
 import { formatDate, DIAS_SEMANA_ABREV } from '@/lib/constants'
@@ -302,7 +302,7 @@ export default function AdminAgendamentosPage() {
               <AlertTitle>{error}</AlertTitle>
             </Alert>
           ) : isLoading ? (
-            <LoadingSkeleton count={4} />
+            <AppointmentListSkeleton count={4} />
           ) : appointmentsOfSelectedDate.length > 0 ? (
             appointmentsOfSelectedDate.map((agendamento) => (
               <AppointmentCard

@@ -8,7 +8,7 @@ import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
+import { AppointmentListSkeleton } from '@/components/shared/loading-skeleton'
 import { createClient } from '@/lib/supabase/client'
 import type { Agendamento, AppointmentStatus, PaymentStatus } from '@/types'
 
@@ -151,7 +151,7 @@ export default function AdminFinanceiroPage() {
             <AlertTitle>{error}</AlertTitle>
           </Alert>
         ) : isLoading ? (
-          <LoadingSkeleton count={4} />
+          <AppointmentListSkeleton count={4} />
         ) : agendamentos.length > 0 ? (
           <div className="space-y-3">
             {agendamentos.map((agendamento) => (

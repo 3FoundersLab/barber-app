@@ -17,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
+import { ClientCardListSkeleton } from '@/components/shared/loading-skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { createClient } from '@/lib/supabase/client'
 import type { Cliente } from '@/types'
@@ -169,7 +169,7 @@ export default function AdminClientesPage() {
 
         <div className="space-y-3">
           {isLoading ? (
-            <LoadingSkeleton count={5} />
+            <ClientCardListSkeleton count={5} />
           ) : filteredClientes.length > 0 ? (
             filteredClientes.map((cliente) => (
               <ClienteCard

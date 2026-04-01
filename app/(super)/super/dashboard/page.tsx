@@ -11,6 +11,7 @@ import {
   ALERT_DEFAULT_AUTO_CLOSE_MS,
 } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { formatCurrency } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 
@@ -104,7 +105,11 @@ export default function SuperDashboardPage() {
                 <Building2 className="h-4 w-4" />
                 <span className="text-xs">Barbearias</span>
               </div>
-              <p className="text-2xl font-bold">{isLoading ? '...' : stats.totalBarbearias}</p>
+              {isLoading ? (
+                <Skeleton className="mt-1 h-8 w-10" />
+              ) : (
+                <p className="text-2xl font-bold">{stats.totalBarbearias}</p>
+              )}
             </CardContent>
           </Card>
 
@@ -114,7 +119,11 @@ export default function SuperDashboardPage() {
                 <CreditCard className="h-4 w-4" />
                 <span className="text-xs">Assinaturas ativas</span>
               </div>
-              <p className="text-2xl font-bold">{isLoading ? '...' : stats.assinaturasAtivas}</p>
+              {isLoading ? (
+                <Skeleton className="mt-1 h-8 w-10" />
+              ) : (
+                <p className="text-2xl font-bold">{stats.assinaturasAtivas}</p>
+              )}
             </CardContent>
           </Card>
 
@@ -124,9 +133,11 @@ export default function SuperDashboardPage() {
                 <DollarSign className="h-4 w-4" />
                 <span className="text-xs">MRR estimado</span>
               </div>
-              <p className="text-2xl font-bold">
-                {isLoading ? '...' : formatCurrency(stats.receitaMensal)}
-              </p>
+              {isLoading ? (
+                <Skeleton className="mt-1 h-8 w-28" />
+              ) : (
+                <p className="text-2xl font-bold">{formatCurrency(stats.receitaMensal)}</p>
+              )}
             </CardContent>
           </Card>
         </div>

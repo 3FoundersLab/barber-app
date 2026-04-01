@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
+import { AdminConfiguracoesPageSkeleton } from '@/components/shared/loading-skeleton'
 import { Separator } from '@/components/ui/separator'
 import { createClient } from '@/lib/supabase/client'
 import { clearProfileCache } from '@/lib/profile-cache'
@@ -114,9 +115,9 @@ export default function AdminConfiguracoesPage() {
     return (
       <PageContainer>
         <AppPageHeader title="Configurações" profileHref="/admin/configuracoes" avatarFallback="A" />
-        <div className="flex flex-1 items-center justify-center">
-          <Spinner className="h-8 w-8" />
-        </div>
+        <PageContent className="space-y-6">
+          <AdminConfiguracoesPageSkeleton />
+        </PageContent>
       </PageContainer>
     )
   }

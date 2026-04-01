@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Spinner } from '@/components/ui/spinner'
+import { SuperGridEntityListSkeleton } from '@/components/shared/loading-skeleton'
 import { formatCurrency } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -194,9 +195,10 @@ export default function SuperPlanosPage() {
         )}
 
         {isLoading ? (
-          <div className="flex min-h-[200px] items-center justify-center">
-            <Spinner className="size-7 text-muted-foreground" />
-          </div>
+          <SuperGridEntityListSkeleton
+            count={6}
+            listClassName="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+          />
         ) : planos.length === 0 ? (
           <Card className="border-dashed border-border/60 bg-transparent shadow-none">
             <CardContent className="py-14 text-center text-sm text-muted-foreground">

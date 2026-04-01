@@ -9,7 +9,9 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
+import { HorariosScheduleSkeleton } from '@/components/shared/loading-skeleton'
 import { DIAS_SEMANA } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import type { HorarioTrabalho } from '@/types'
@@ -150,21 +152,6 @@ export default function BarbeiroHorariosPage() {
     setIsSaving(false)
   }
 
-  if (isLoading) {
-    return (
-      <PageContainer>
-        <AppPageHeader
-          title="Horários de Trabalho"
-          profileHref="/barbeiro/perfil/editar"
-          avatarFallback="B"
-        />
-        <div className="flex flex-1 items-center justify-center">
-          <Spinner className="h-8 w-8" />
-        </div>
-      </PageContainer>
-    )
-  }
-
   return (
     <PageContainer>
       <AppPageHeader
@@ -184,6 +171,9 @@ export default function BarbeiroHorariosPage() {
           </Alert>
         )}
 
+        {isLoading ? (
+          <HorariosScheduleSkeleton />
+        ) : (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Configure seus horários</CardTitle>
@@ -247,11 +237,16 @@ export default function BarbeiroHorariosPage() {
             ))}
           </CardContent>
         </Card>
+        )}
 
+        {!isLoading ? (
         <Button className="w-full" onClick={handleSave} disabled={isSaving}>
           {isSaving ? <Spinner className="mr-2" /> : null}
           {isSaving ? 'Salvando...' : 'Salvar Horários'}
         </Button>
+        ) : (
+          <Skeleton className="h-10 w-full" />
+        )}
       </PageContent>
     </PageContainer>
   )

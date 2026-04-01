@@ -9,6 +9,12 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AppointmentStatusBadge } from '@/components/shared/status-badge'
 import { ServiceCard } from '@/components/domain/service-card'
+import {
+  ClienteHomeBarbeariaSkeleton,
+  ClienteHomeQuickActionSkeleton,
+  ClienteProximoAgendamentoSkeleton,
+  ServiceCardSkeleton,
+} from '@/components/shared/loading-skeleton'
 import { formatDate, formatTime, formatCurrency } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import type { Agendamento, Barbearia, Servico } from '@/types'
@@ -92,26 +98,36 @@ export default function ClienteHomePage() {
 
       <PageContent className="space-y-6 md:space-y-8">
         {/* Barbearia Info */}
-        {barbearia && (
-          <Card className="overflow-hidden bg-accent/10 border-accent/20">
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent">
-                <Scissors className="h-6 w-6 text-accent-foreground" />
-              </div>
-              <div className="flex-1">
-                <h2 className="font-semibold">{barbearia.nome}</h2>
-                {barbearia.endereco && (
-                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
-                    {barbearia.endereco}
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+        {isLoading ? (
+          <ClienteHomeBarbeariaSkeleton />
+        ) : (
+          barbearia && (
+            <Card className="overflow-hidden bg-accent/10 border-accent/20">
+              <CardContent className="flex items-center gap-3 p-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent">
+                  <Scissors className="h-6 w-6 text-accent-foreground" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="font-semibold">{barbearia.nome}</h2>
+                  {barbearia.endereco && (
+                    <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <MapPin className="h-3 w-3" />
+                      {barbearia.endereco}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )
         )}
 
         {/* Quick Actions */}
+        {isLoading ? (
+          <div className="grid grid-cols-2 gap-3 md:gap-4">
+            <ClienteHomeQuickActionSkeleton />
+            <ClienteHomeQuickActionSkeleton />
+          </div>
+        ) : (
         <div className="grid grid-cols-2 gap-3 md:gap-4">
           <Link href="/cliente/agendar">
             <Card className="h-full cursor-pointer transition-colors hover:bg-accent/5">
@@ -134,6 +150,7 @@ export default function ClienteHomePage() {
             </Card>
           </Link>
         </div>
+        )}
 
         {/* Próximo Agendamento */}
         <div>
@@ -148,14 +165,7 @@ export default function ClienteHomePage() {
           </div>
 
           {isLoading ? (
-            <Card>
-              <CardContent className="p-4">
-                <div className="animate-pulse space-y-3">
-                  <div className="h-4 w-3/4 rounded bg-muted" />
-                  <div className="h-3 w-1/2 rounded bg-muted" />
-                </div>
-              </CardContent>
-            </Card>
+            <ClienteProximoAgendamentoSkeleton />
           ) : proximoAgendamento ? (
             <Card>
               <CardContent className="p-4">
@@ -216,14 +226,10 @@ export default function ClienteHomePage() {
 
           <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
             {isLoading ? (
-              <Card>
-                <CardContent className="p-4">
-                  <div className="animate-pulse space-y-3">
-                    <div className="h-4 w-3/4 rounded bg-muted" />
-                    <div className="h-3 w-1/2 rounded bg-muted" />
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+                <ServiceCardSkeleton />
+                <ServiceCardSkeleton />
+              </div>
             ) : servicos.length > 0 ? (
               servicos.map((servico) => (
                 <ServiceCard key={servico.id} service={servico} showActions={false} />

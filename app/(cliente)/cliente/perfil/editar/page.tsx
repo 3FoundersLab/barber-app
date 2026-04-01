@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
+import { ProfileFormCardSkeleton } from '@/components/shared/loading-skeleton'
 import { createClient } from '@/lib/supabase/client'
 import { setProfileCache } from '@/lib/profile-cache'
 import { ProfileAvatarUpload } from '@/components/shared/profile-avatar-upload'
@@ -117,9 +118,9 @@ export default function ClienteEditarPerfilPage() {
           profile={profile}
           avatarFallback="C"
         />
-        <div className="flex flex-1 items-center justify-center">
-          <Spinner className="h-8 w-8" />
-        </div>
+        <PageContent className="space-y-6">
+          <ProfileFormCardSkeleton />
+        </PageContent>
       </PageContainer>
     )
   }

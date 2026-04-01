@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
+import { SubscriptionListSkeleton } from '@/components/shared/loading-skeleton'
 import { createClient } from '@/lib/supabase/client'
 import type { Assinatura, Barbearia, Plano } from '@/types'
 
@@ -117,9 +118,7 @@ export default function SuperAssinaturasPage() {
         )}
 
         {isLoading ? (
-          <Card>
-            <CardContent className="py-8 text-center text-sm text-muted-foreground">Carregando...</CardContent>
-          </Card>
+          <SubscriptionListSkeleton count={5} />
         ) : assinaturas.length > 0 ? (
           assinaturas.map((assinatura) => (
             <Card key={assinatura.id}>

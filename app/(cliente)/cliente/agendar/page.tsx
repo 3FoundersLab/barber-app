@@ -12,6 +12,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { DateNavigatorCalendar } from '@/components/shared/date-navigator-calendar'
 import { Spinner } from '@/components/ui/spinner'
+import { AgendarFlowSkeleton } from '@/components/shared/loading-skeleton'
 import { formatCurrency, DIAS_SEMANA_ABREV } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -233,9 +234,9 @@ export default function AgendarPage() {
           profileHref="/cliente/perfil/editar"
           avatarFallback="C"
         />
-        <div className="flex flex-1 items-center justify-center">
-          <Spinner className="h-8 w-8" />
-        </div>
+        <PageContent className="space-y-4">
+          <AgendarFlowSkeleton count={5} />
+        </PageContent>
       </PageContainer>
     )
   }

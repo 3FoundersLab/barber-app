@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
+import { SuperUsuarioGridSkeleton } from '@/components/shared/loading-skeleton'
 import {
   Select,
   SelectContent,
@@ -527,20 +528,17 @@ export default function SuperUsuariosPage() {
           </Alert>
         ) : null}
 
+        {isLoading ? (
+          <SuperUsuarioGridSkeleton count={8} />
+        ) : (
         <div
           className={
-            !isLoading && filtered.length > 0
+            filtered.length > 0
               ? 'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
               : 'space-y-3'
           }
         >
-          {isLoading ? (
-            <Card>
-              <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                Carregando...
-              </CardContent>
-            </Card>
-          ) : filtered.length > 0 ? (
+          {filtered.length > 0 ? (
             paginated.map((p) => {
               const links = linksByUser[p.id] || []
               const isSelf = currentUserId === p.id
@@ -691,6 +689,7 @@ export default function SuperUsuariosPage() {
             </Card>
           )}
         </div>
+        )}
 
         {!isLoading && filtered.length > 0 && totalPages > 0 ? (
           <div className="border-t pt-4">

@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
+import { CadastroPlanoGridSkeleton } from '@/components/shared/loading-skeleton'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/constants'
 import type { Plano } from '@/types'
@@ -336,9 +337,7 @@ export default function CadastroBarbeariaPage() {
               <div className="space-y-2">
                 <Label>Escolha o plano</Label>
                 {isLoadingPlans ? (
-                  <Card className="border-dashed">
-                    <CardContent className="py-4 text-sm text-muted-foreground">Carregando planos...</CardContent>
-                  </Card>
+                  <CadastroPlanoGridSkeleton />
                 ) : planos.length > 0 ? (
                   <div className="grid gap-3 md:grid-cols-3">
                     {planos.map((plano) => {

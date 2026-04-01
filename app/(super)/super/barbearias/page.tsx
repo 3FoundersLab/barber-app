@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
+import { SuperGridEntityListSkeleton } from '@/components/shared/loading-skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -333,9 +334,7 @@ export default function SuperBarbeariasPage() {
         )}
 
         {isLoading ? (
-          <Card>
-            <CardContent className="py-8 text-center text-sm text-muted-foreground">Carregando...</CardContent>
-          </Card>
+          <SuperGridEntityListSkeleton count={8} />
         ) : filtered.length > 0 ? (
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {paginated.map((barbearia) => {

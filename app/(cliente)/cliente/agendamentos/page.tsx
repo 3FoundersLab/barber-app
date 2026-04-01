@@ -8,7 +8,7 @@ import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AppointmentStatusBadge, PaymentStatusBadge } from '@/components/shared/status-badge'
-import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
+import { ClienteAgendamentoListSkeleton } from '@/components/shared/loading-skeleton'
 import { formatDate, formatTime, formatCurrency } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import type { Agendamento } from '@/types'
@@ -164,7 +164,7 @@ export default function MeusAgendamentosPage() {
 
           <TabsContent value="proximos" className="mt-4 space-y-3">
             {isLoading ? (
-              <LoadingSkeleton count={3} />
+              <ClienteAgendamentoListSkeleton count={3} />
             ) : proximos.length > 0 ? (
               proximos.map((agendamento) => (
                 <AgendamentoCard key={agendamento.id} agendamento={agendamento} />
@@ -176,7 +176,7 @@ export default function MeusAgendamentosPage() {
 
           <TabsContent value="historico" className="mt-4 space-y-3">
             {isLoading ? (
-              <LoadingSkeleton count={3} />
+              <ClienteAgendamentoListSkeleton count={3} />
             ) : historico.length > 0 ? (
               historico.map((agendamento) => (
                 <AgendamentoCard key={agendamento.id} agendamento={agendamento} />

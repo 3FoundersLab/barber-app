@@ -9,6 +9,11 @@ import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AppointmentStatusBadge } from '@/components/shared/status-badge'
+import {
+  AdminDashboardAppointmentRowSkeleton,
+  ClienteHomeBarbeariaSkeleton,
+  StatCardSkeletonGrid,
+} from '@/components/shared/loading-skeleton'
 import { formatCurrency, formatTime } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import type { Agendamento, Barbearia } from '@/types'
@@ -182,7 +187,9 @@ export default function AdminDashboardPage() {
         )}
 
         {/* Barbearia Name */}
-        {!error && barbearia && (
+        {!error && (isLoading ? (
+          <ClienteHomeBarbeariaSkeleton />
+        ) : barbearia ? (
           <Card className="bg-accent/10 border-accent/20">
             <CardContent className="flex items-center gap-3 p-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent">
@@ -194,9 +201,12 @@ export default function AdminDashboardPage() {
               </div>
             </CardContent>
           </Card>
-        )}
+        ) : null)}
 
         {/* Stats Grid */}
+        {isLoading ? (
+          <StatCardSkeletonGrid count={4} />
+        ) : (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           <Card>
             <CardContent className="p-4">
@@ -243,6 +253,7 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
         </div>
+        )}
 
         {/* Next Appointments */}
         <Card>
@@ -261,9 +272,9 @@ export default function AdminDashboardPage() {
                 Não foi possível exibir os agendamentos. Veja o aviso acima.
               </p>
             ) : isLoading ? (
-              <div className="animate-pulse space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-16 rounded bg-muted" />
+              <div className="space-y-3">
+                {[0, 1, 2].map((i) => (
+                  <AdminDashboardAppointmentRowSkeleton key={i} />
                 ))}
               </div>
             ) : proximosAgendamentos.length > 0 ? (

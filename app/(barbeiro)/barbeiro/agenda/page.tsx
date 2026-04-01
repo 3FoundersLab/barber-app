@@ -8,7 +8,7 @@ import { AppointmentCard } from '@/components/domain/appointment-card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
-import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
+import { AppointmentListSkeleton } from '@/components/shared/loading-skeleton'
 import { ViewToggle, type ViewMode } from '@/components/shared/view-toggle'
 import { DateNavigatorCalendar } from '@/components/shared/date-navigator-calendar'
 import { formatDate, DIAS_SEMANA_ABREV } from '@/lib/constants'
@@ -283,7 +283,7 @@ export default function BarbeiroAgendaPage() {
               <AlertTitle>{error}</AlertTitle>
             </Alert>
           ) : isLoading ? (
-            <LoadingSkeleton count={3} />
+            <AppointmentListSkeleton count={3} />
           ) : appointmentsOfSelectedDate.length > 0 ? (
             appointmentsOfSelectedDate.map((agendamento) => (
               <AppointmentCard
