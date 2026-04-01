@@ -10,8 +10,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
 
-export function ThemeToggle() {
+interface ThemeToggleProps {
+  inline?: boolean
+  className?: string
+}
+
+export function ThemeToggle({ inline = false, className }: ThemeToggleProps) {
   const { theme, resolvedTheme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
@@ -28,7 +34,12 @@ export function ThemeToggle() {
     : Sun
 
   return (
-    <div className="fixed right-16 top-4 z-50">
+    <div
+      className={cn(
+        inline ? 'flex items-center' : 'fixed right-16 top-4 z-50',
+        className
+      )}
+    >
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon" className="h-9 w-9 shadow-sm">

@@ -6,7 +6,7 @@ import { Calendar, Clock, Scissors, ChevronRight, MapPin } from 'lucide-react'
 import { PageContainer, PageHeader, PageTitle, PageContent } from '@/components/shared/page-container'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { UserHeaderMenu } from '@/components/shared/user-header-menu'
 import { AppointmentStatusBadge } from '@/components/shared/status-badge'
 import { ServiceCard } from '@/components/domain/service-card'
 import { formatDate, formatTime, formatCurrency } from '@/lib/constants'
@@ -101,12 +101,11 @@ export default function ClienteHomePage() {
           <p className="text-sm text-muted-foreground">{getGreeting()},</p>
           <PageTitle>{profile?.nome?.split(' ')[0] || 'Cliente'}</PageTitle>
         </div>
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={profile?.avatar} />
-          <AvatarFallback>
-            {profile?.nome?.charAt(0).toUpperCase() || 'C'}
-          </AvatarFallback>
-        </Avatar>
+        <UserHeaderMenu
+          avatarSrc={profile?.avatar}
+          fallback={profile?.nome?.charAt(0).toUpperCase() || 'C'}
+          profileHref="/cliente/perfil"
+        />
       </PageHeader>
 
       <PageContent className="space-y-6 md:space-y-8">

@@ -6,7 +6,7 @@ import { Calendar, DollarSign, Users, Scissors, TrendingUp, ChevronRight } from 
 import { PageContainer, PageHeader, PageTitle, PageContent } from '@/components/shared/page-container'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { UserHeaderMenu } from '@/components/shared/user-header-menu'
 import { AppointmentStatusBadge } from '@/components/shared/status-badge'
 import { formatCurrency, formatTime } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
@@ -178,12 +178,11 @@ export default function AdminDashboardPage() {
           <p className="text-sm text-muted-foreground">{getGreeting()},</p>
           <PageTitle>{profile?.nome?.split(' ')[0] || 'Admin'}</PageTitle>
         </div>
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={profile?.avatar} />
-          <AvatarFallback>
-            {profile?.nome?.charAt(0).toUpperCase() || 'A'}
-          </AvatarFallback>
-        </Avatar>
+        <UserHeaderMenu
+          avatarSrc={profile?.avatar}
+          fallback={profile?.nome?.charAt(0).toUpperCase() || 'A'}
+          profileHref="/admin/configuracoes"
+        />
       </PageHeader>
 
       <PageContent className="space-y-6 md:space-y-8">

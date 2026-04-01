@@ -9,13 +9,15 @@ import { Card, CardContent } from '@/components/ui/card'
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
 import { ViewToggle, type ViewMode } from '@/components/shared/view-toggle'
 import { DateNavigatorCalendar } from '@/components/shared/date-navigator-calendar'
+import { UserHeaderMenu } from '@/components/shared/user-header-menu'
 import { formatDate, DIAS_SEMANA_ABREV } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
-import type { Agendamento } from '@/types'
+import type { Agendamento, Profile } from '@/types'
 
 export default function BarbeiroAgendaPage() {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([])
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
@@ -44,6 +46,13 @@ export default function BarbeiroAgendaPage() {
       setIsLoading(false)
       return
     }
+
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+    if (profileData) setProfile(profileData)
 
     // Get barbeiro record
     const { data: barbeiro } = await supabase
@@ -173,11 +182,18 @@ export default function BarbeiroAgendaPage() {
     <PageContainer>
       <PageHeader>
         <PageTitle>Minha Agenda</PageTitle>
-        {!isToday && (
-          <Button variant="outline" size="sm" onClick={handleToday}>
-            Hoje
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {!isToday && (
+            <Button variant="outline" size="sm" onClick={handleToday}>
+              Hoje
+            </Button>
+          )}
+          <UserHeaderMenu
+            avatarSrc={profile?.avatar}
+            fallback={profile?.nome?.charAt(0).toUpperCase() || 'B'}
+            profileHref="/barbeiro/perfil"
+          />
+        </div>
       </PageHeader>
 
       <PageContent className="space-y-4">

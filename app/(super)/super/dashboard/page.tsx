@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import { Building2, CreditCard, DollarSign } from 'lucide-react'
 import { PageContainer, PageContent, PageHeader, PageTitle } from '@/components/shared/page-container'
 import { Card, CardContent } from '@/components/ui/card'
+import { UserHeaderMenu } from '@/components/shared/user-header-menu'
 import { formatCurrency } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
+import type { Profile } from '@/types'
 
 interface SuperStats {
   totalBarbearias: number
@@ -14,6 +16,7 @@ interface SuperStats {
 }
 
 export default function SuperDashboardPage() {
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [stats, setStats] = useState<SuperStats>({
     totalBarbearias: 0,
     assinaturasAtivas: 0,
@@ -26,6 +29,18 @@ export default function SuperDashboardPage() {
     async function loadData() {
       const supabase = createClient()
       setError(null)
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        if (profileData) setProfile(profileData)
+      }
 
       const { count: barbeariasCount } = await supabase
         .from('barbearias')
@@ -65,6 +80,11 @@ export default function SuperDashboardPage() {
     <PageContainer>
       <PageHeader>
         <PageTitle>Super Admin</PageTitle>
+        <UserHeaderMenu
+          avatarSrc={profile?.avatar}
+          fallback={profile?.nome?.charAt(0).toUpperCase() || 'S'}
+          profileHref="/super/dashboard"
+        />
       </PageHeader>
 
       <PageContent className="space-y-4">

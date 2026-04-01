@@ -28,12 +28,6 @@ npm install
 cp .env.example .env.local
 ```
 
-No Windows (PowerShell):
-
-```powershell
-Copy-Item .env.example .env.local
-```
-
 3. Preencha os valores no arquivo `.env.local`.
 
 4. Inicie o ambiente de desenvolvimento:
