@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { Plus, Search } from 'lucide-react'
-import { PageContainer, PageHeader, PageTitle, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { AppPageHeader } from '@/components/shared/app-page-header'
 import { ClienteCard } from '@/components/domain/cliente-card'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -147,27 +148,25 @@ export default function AdminClientesPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Clientes</PageTitle>
-        <Button size="sm" onClick={handleOpenNew}>
-          <Plus className="mr-1 h-4 w-4" />
-          Novo
-        </Button>
-      </PageHeader>
+      <AppPageHeader title="Clientes" profileHref="/admin/configuracoes" avatarFallback="A" />
 
       <PageContent className="space-y-4">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar cliente..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar cliente..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button className="w-full shrink-0 sm:w-auto" size="sm" onClick={handleOpenNew}>
+            <Plus className="mr-1 h-4 w-4" />
+            Novo
+          </Button>
         </div>
 
-        {/* Clients List */}
         <div className="space-y-3">
           {isLoading ? (
             <LoadingSkeleton count={5} />

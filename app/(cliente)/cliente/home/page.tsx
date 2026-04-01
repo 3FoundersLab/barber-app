@@ -3,18 +3,17 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Calendar, Clock, Scissors, ChevronRight, MapPin } from 'lucide-react'
-import { PageContainer, PageHeader, PageTitle, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageTitle, PageContent } from '@/components/shared/page-container'
+import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { UserHeaderMenu } from '@/components/shared/user-header-menu'
 import { AppointmentStatusBadge } from '@/components/shared/status-badge'
 import { ServiceCard } from '@/components/domain/service-card'
 import { formatDate, formatTime, formatCurrency } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
-import type { Agendamento, Profile, Barbearia, Servico } from '@/types'
+import type { Agendamento, Barbearia, Servico } from '@/types'
 
 export default function ClienteHomePage() {
-  const [profile, setProfile] = useState<Profile | null>(null)
   const [barbearia, setBarbearia] = useState<Barbearia | null>(null)
   const [proximoAgendamento, setProximoAgendamento] = useState<Agendamento | null>(null)
   const [servicos, setServicos] = useState<Servico[]>([])
@@ -28,17 +27,6 @@ export default function ClienteHomePage() {
       const { data: { user } } = await supabase.auth.getUser()
       
       if (user) {
-        // Get profile
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-        
-        if (profileData) {
-          setProfile(profileData)
-        }
-
         // Get barbearia (first one for demo)
         const { data: barbeariaData } = await supabase
           .from('barbearias')
@@ -96,17 +84,16 @@ export default function ClienteHomePage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <div>
-          <p className="text-sm text-muted-foreground">{getGreeting()},</p>
-          <PageTitle>{profile?.nome?.split(' ')[0] || 'Cliente'}</PageTitle>
-        </div>
-        <UserHeaderMenu
-          avatarSrc={profile?.avatar}
-          fallback={profile?.nome?.charAt(0).toUpperCase() || 'C'}
-          profileHref="/cliente/perfil"
-        />
-      </PageHeader>
+      <AppPageHeader
+        profileHref="/cliente/perfil"
+        avatarFallback="C"
+        renderTitle={(p) => (
+          <>
+            <p className="text-sm text-muted-foreground">{getGreeting()},</p>
+            <PageTitle>{p?.nome?.split(' ')[0] || 'Cliente'}</PageTitle>
+          </>
+        )}
+      />
 
       <PageContent className="space-y-6 md:space-y-8">
         {/* Barbearia Info */}

@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Check } from 'lucide-react'
-import { PageContainer, PageHeader, PageTitle, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageTitle, PageContent } from '@/components/shared/page-container'
+import { AppPageHeader } from '@/components/shared/app-page-header'
 import { ServiceCard } from '@/components/domain/service-card'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -214,10 +215,24 @@ export default function AgendarPage() {
     }
   }
 
+  const headerLeading = (
+    <div className="flex min-w-0 items-center gap-3">
+      <Button variant="ghost" size="icon" onClick={handleBack}>
+        <ChevronLeft className="h-5 w-5" />
+      </Button>
+      <PageTitle className="truncate">{getStepTitle()}</PageTitle>
+    </div>
+  )
+
   if (isLoading) {
     return (
       <PageContainer>
-        <div className="flex min-h-screen items-center justify-center">
+        <AppPageHeader
+          leading={headerLeading}
+          profileHref="/cliente/perfil"
+          avatarFallback="C"
+        />
+        <div className="flex flex-1 items-center justify-center">
           <Spinner className="h-8 w-8" />
         </div>
       </PageContainer>
@@ -226,14 +241,11 @@ export default function AgendarPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={handleBack}>
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <PageTitle>{getStepTitle()}</PageTitle>
-        </div>
-      </PageHeader>
+      <AppPageHeader
+        leading={headerLeading}
+        profileHref="/cliente/perfil"
+        avatarFallback="C"
+      />
 
       <PageContent className="space-y-4">
         {error && (

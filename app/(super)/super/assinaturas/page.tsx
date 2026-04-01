@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
-import { PageContainer, PageContent, PageHeader, PageTitle } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -90,15 +91,20 @@ export default function SuperAssinaturasPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Assinaturas</PageTitle>
-        <Button size="sm" onClick={() => setIsDialogOpen(true)}>
-          <Plus className="mr-1 h-4 w-4" />
-          Nova
-        </Button>
-      </PageHeader>
+      <AppPageHeader
+        title="Assinaturas"
+        profileHref="/super/dashboard"
+        avatarFallback="S"
+      />
 
       <PageContent className="space-y-3">
+        <div className="flex justify-end">
+          <Button onClick={() => setIsDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova assinatura
+          </Button>
+        </div>
+
         {error && (
           <Card className="border-dashed">
             <CardContent className="py-6 text-center text-sm text-destructive">{error}</CardContent>

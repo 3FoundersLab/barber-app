@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
-import { PageContainer, PageHeader, PageTitle, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { AppPageHeader } from '@/components/shared/app-page-header'
 import { AppointmentCard } from '@/components/domain/appointment-card'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -194,15 +195,16 @@ export default function AdminAgendamentosPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Agendamentos</PageTitle>
-        <Button size="sm">
-          <Plus className="mr-1 h-4 w-4" />
-          Novo
-        </Button>
-      </PageHeader>
+      <AppPageHeader title="Agendamentos" profileHref="/admin/configuracoes" avatarFallback="A" />
 
       <PageContent className="space-y-4">
+        <div className="flex justify-end">
+          <Button size="sm">
+            <Plus className="mr-1 h-4 w-4" />
+            Novo
+          </Button>
+        </div>
+
         {/* Date Navigation */}
         <div className="flex items-center justify-between">
           <Button variant="ghost" size="icon" onClick={handlePrevDay}>

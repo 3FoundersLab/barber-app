@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
-import { PageContainer, PageHeader, PageTitle, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { AppPageHeader } from '@/components/shared/app-page-header'
 import { ServiceCard } from '@/components/domain/service-card'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -133,15 +134,16 @@ export default function AdminServicosPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Serviços</PageTitle>
-        <Button size="sm" onClick={handleOpenNew}>
-          <Plus className="mr-1 h-4 w-4" />
-          Novo
-        </Button>
-      </PageHeader>
+      <AppPageHeader title="Serviços" profileHref="/admin/configuracoes" avatarFallback="A" />
 
       <PageContent className="space-y-3">
+        <div className="flex justify-end">
+          <Button size="sm" onClick={handleOpenNew}>
+            <Plus className="mr-1 h-4 w-4" />
+            Novo
+          </Button>
+        </div>
+
         {isLoading ? (
           <LoadingSkeleton count={4} />
         ) : servicos.length > 0 ? (

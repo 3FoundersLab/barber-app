@@ -1,7 +1,7 @@
 'use client'
 
 import { Search, X } from 'lucide-react'
-import { useCallback, useState, useTransition } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -25,31 +25,43 @@ export function SearchInput({
 }: SearchInputProps) {
   const [internalValue, setInternalValue] = useState('')
   const [isPending, startTransition] = useTransition()
-  
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const value = controlledValue !== undefined ? controlledValue : internalValue
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value
-      
+
       if (controlledValue === undefined) {
         setInternalValue(newValue)
       }
-      
+
       onChange?.(newValue)
 
-      if (onSearch && debounceMs > 0) {
-        startTransition(() => {
-          const timeoutId = setTimeout(() => {
+      if (!onSearch) return
+
+      if (debounceMs > 0) {
+        if (debounceRef.current) clearTimeout(debounceRef.current)
+        debounceRef.current = setTimeout(() => {
+          debounceRef.current = null
+          startTransition(() => {
             onSearch(newValue)
-          }, debounceMs)
-          return () => clearTimeout(timeoutId)
+          })
+        }, debounceMs)
+      } else {
+        startTransition(() => {
+          onSearch(newValue)
         })
-      } else if (onSearch) {
-        onSearch(newValue)
       }
     },
-    [controlledValue, onChange, onSearch, debounceMs]
+    [controlledValue, onChange, onSearch, debounceMs, startTransition]
   )
 
   const handleClear = useCallback(() => {

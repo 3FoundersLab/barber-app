@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { PageContainer, PageHeader, PageTitle, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { AppPageHeader } from '@/components/shared/app-page-header'
 import { AppointmentCard } from '@/components/domain/appointment-card'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton'
 import { ViewToggle, type ViewMode } from '@/components/shared/view-toggle'
 import { DateNavigatorCalendar } from '@/components/shared/date-navigator-calendar'
-import { UserHeaderMenu } from '@/components/shared/user-header-menu'
 import { formatDate, DIAS_SEMANA_ABREV } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import type { Agendamento, Profile } from '@/types'
@@ -180,21 +180,19 @@ export default function BarbeiroAgendaPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Minha Agenda</PageTitle>
-        <div className="flex items-center gap-2">
-          {!isToday && (
+      <AppPageHeader
+        title="Minha Agenda"
+        profileHref="/barbeiro/perfil"
+        profile={profile}
+        avatarFallback="B"
+        actions={
+          !isToday ? (
             <Button variant="outline" size="sm" onClick={handleToday}>
               Hoje
             </Button>
-          )}
-          <UserHeaderMenu
-            avatarSrc={profile?.avatar}
-            fallback={profile?.nome?.charAt(0).toUpperCase() || 'B'}
-            profileHref="/barbeiro/perfil"
-          />
-        </div>
-      </PageHeader>
+          ) : null
+        }
+      />
 
       <PageContent className="space-y-4">
         {/* Date Navigation */}

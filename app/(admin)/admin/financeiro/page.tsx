@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { PageContainer, PageContent, PageHeader, PageTitle } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { AppPageHeader } from '@/components/shared/app-page-header'
 import { AppointmentCard } from '@/components/domain/appointment-card'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -111,9 +112,7 @@ export default function AdminFinanceiroPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Financeiro</PageTitle>
-      </PageHeader>
+      <AppPageHeader title="Financeiro" profileHref="/admin/configuracoes" avatarFallback="A" />
 
       <PageContent className="space-y-4">
         <div className="grid grid-cols-2 gap-2">

@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Calendar, DollarSign, Users, Scissors, TrendingUp, ChevronRight } from 'lucide-react'
-import { PageContainer, PageHeader, PageTitle, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageTitle, PageContent } from '@/components/shared/page-container'
+import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { UserHeaderMenu } from '@/components/shared/user-header-menu'
 import { AppointmentStatusBadge } from '@/components/shared/status-badge'
 import { formatCurrency, formatTime } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
-import type { Agendamento, Profile, Barbearia } from '@/types'
+import type { Agendamento, Barbearia } from '@/types'
 
 interface Stats {
   agendamentosHoje: number
@@ -22,7 +22,6 @@ interface Stats {
 }
 
 export default function AdminDashboardPage() {
-  const [profile, setProfile] = useState<Profile | null>(null)
   const [barbearia, setBarbearia] = useState<Barbearia | null>(null)
   const [stats, setStats] = useState<Stats | null>(null)
   const [proximosAgendamentos, setProximosAgendamentos] = useState<Agendamento[]>([])
@@ -42,15 +41,6 @@ export default function AdminDashboardPage() {
       }
 
       if (user) {
-        // Profile
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-        
-        if (profileData) setProfile(profileData)
-
         // Barbearia (get from barbearia_users)
         const { data: barbeariaUser } = await supabase
           .from('barbearia_users')
@@ -173,17 +163,16 @@ export default function AdminDashboardPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <div>
-          <p className="text-sm text-muted-foreground">{getGreeting()},</p>
-          <PageTitle>{profile?.nome?.split(' ')[0] || 'Admin'}</PageTitle>
-        </div>
-        <UserHeaderMenu
-          avatarSrc={profile?.avatar}
-          fallback={profile?.nome?.charAt(0).toUpperCase() || 'A'}
-          profileHref="/admin/configuracoes"
-        />
-      </PageHeader>
+      <AppPageHeader
+        profileHref="/admin/configuracoes"
+        avatarFallback="A"
+        renderTitle={(p) => (
+          <>
+            <p className="text-sm text-muted-foreground">{getGreeting()},</p>
+            <PageTitle>{p?.nome?.split(' ')[0] || 'Admin'}</PageTitle>
+          </>
+        )}
+      />
 
       <PageContent className="space-y-6 md:space-y-8">
         {error && (

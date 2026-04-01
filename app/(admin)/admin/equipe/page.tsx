@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { Plus, Phone, Mail } from 'lucide-react'
-import { PageContainer, PageHeader, PageTitle, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -167,15 +168,16 @@ export default function AdminEquipePage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Equipe</PageTitle>
-        <Button size="sm" onClick={handleOpenNew}>
-          <Plus className="mr-1 h-4 w-4" />
-          Novo
-        </Button>
-      </PageHeader>
+      <AppPageHeader title="Equipe" profileHref="/admin/configuracoes" avatarFallback="A" />
 
       <PageContent className="space-y-3">
+        <div className="flex justify-end">
+          <Button size="sm" onClick={handleOpenNew}>
+            <Plus className="mr-1 h-4 w-4" />
+            Novo
+          </Button>
+        </div>
+
         {error ? (
           <Card className="border-dashed">
             <CardContent className="py-8 text-center text-sm text-destructive">{error}</CardContent>

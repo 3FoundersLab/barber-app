@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LogOut, User, Mail, Phone, ChevronRight } from 'lucide-react'
-import { PageContainer, PageHeader, PageTitle, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -55,9 +56,12 @@ export default function PerfilPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Perfil</PageTitle>
-      </PageHeader>
+      <AppPageHeader
+        title="Perfil"
+        profileHref="/cliente/perfil"
+        profile={profile}
+        avatarFallback="C"
+      />
 
       <PageContent className="space-y-6">
         {error && (

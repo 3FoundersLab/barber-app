@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { Calendar, Clock, Scissors, User } from 'lucide-react'
-import { PageContainer, PageHeader, PageTitle, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AppointmentStatusBadge, PaymentStatusBadge } from '@/components/shared/status-badge'
@@ -132,9 +133,11 @@ export default function MeusAgendamentosPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Meus Agendamentos</PageTitle>
-      </PageHeader>
+      <AppPageHeader
+        title="Meus Agendamentos"
+        profileHref="/cliente/perfil"
+        avatarFallback="C"
+      />
 
       <PageContent>
         {error && (

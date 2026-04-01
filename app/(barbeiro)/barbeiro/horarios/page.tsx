@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { PageContainer, PageHeader, PageTitle, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -151,7 +152,12 @@ export default function BarbeiroHorariosPage() {
   if (isLoading) {
     return (
       <PageContainer>
-        <div className="flex min-h-screen items-center justify-center">
+        <AppPageHeader
+          title="Horários de Trabalho"
+          profileHref="/barbeiro/perfil"
+          avatarFallback="B"
+        />
+        <div className="flex flex-1 items-center justify-center">
           <Spinner className="h-8 w-8" />
         </div>
       </PageContainer>
@@ -160,9 +166,11 @@ export default function BarbeiroHorariosPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Horários de Trabalho</PageTitle>
-      </PageHeader>
+      <AppPageHeader
+        title="Horários de Trabalho"
+        profileHref="/barbeiro/perfil"
+        avatarFallback="B"
+      />
 
       <PageContent className="space-y-4">
         {error && (

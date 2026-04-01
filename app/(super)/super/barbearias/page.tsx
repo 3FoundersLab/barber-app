@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Search } from 'lucide-react'
-import { PageContainer, PageContent, PageHeader, PageTitle } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -128,23 +129,30 @@ export default function SuperBarbeariasPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Barbearias</PageTitle>
-        <Button size="sm" onClick={() => setIsDialogOpen(true)}>
-          <Plus className="mr-1 h-4 w-4" />
-          Nova
-        </Button>
-      </PageHeader>
+      <AppPageHeader
+        title="Barbearias"
+        profileHref="/super/dashboard"
+        avatarFallback="S"
+      />
 
       <PageContent className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou slug..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome ou slug..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button
+            className="w-full shrink-0 sm:w-auto"
+            onClick={() => setIsDialogOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Nova barbearia
+          </Button>
         </div>
 
         {error && (

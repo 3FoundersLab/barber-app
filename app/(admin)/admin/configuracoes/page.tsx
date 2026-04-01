@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LogOut, Store, MapPin, Phone, Mail, Save } from 'lucide-react'
-import { PageContainer, PageHeader, PageTitle, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -109,7 +110,8 @@ export default function AdminConfiguracoesPage() {
   if (isLoading) {
     return (
       <PageContainer>
-        <div className="flex min-h-screen items-center justify-center">
+        <AppPageHeader title="Configurações" profileHref="/admin/configuracoes" avatarFallback="A" />
+        <div className="flex flex-1 items-center justify-center">
           <Spinner className="h-8 w-8" />
         </div>
       </PageContainer>
@@ -118,9 +120,7 @@ export default function AdminConfiguracoesPage() {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <PageTitle>Configurações</PageTitle>
-      </PageHeader>
+      <AppPageHeader title="Configurações" profileHref="/admin/configuracoes" avatarFallback="A" />
 
       <PageContent className="space-y-6">
         {error && (
