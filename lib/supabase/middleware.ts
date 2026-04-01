@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { fetchSessionProfile } from '@/lib/supabase/fetch-session-profile'
 
 export async function updateSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -55,18 +56,27 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
+  const sessionProfile = user ? await fetchSessionProfile(supabase, user.id) : null
+
+  if (user && sessionProfile && sessionProfile.ativo === false) {
+    await supabase.auth.signOut()
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    url.searchParams.set('reason', 'inactive')
+    const redirectResponse = NextResponse.redirect(url)
+    for (const c of supabaseResponse.cookies.getAll()) {
+      redirectResponse.cookies.set(c.name, c.value)
+    }
+    return redirectResponse
+  }
+
   if (pathname.startsWith('/super')) {
     if (!user) {
       const url = request.nextUrl.clone()
       url.pathname = '/login'
       return NextResponse.redirect(url)
     }
-    const { data: superProfile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    if (superProfile?.role !== 'super_admin') {
+    if (sessionProfile?.role !== 'super_admin') {
       const url = request.nextUrl.clone()
       url.pathname = '/'
       return NextResponse.redirect(url)
@@ -85,13 +95,8 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (pathname === '/login' && user) {
-    const { data: loginProfile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
     const url = request.nextUrl.clone()
-    const r = loginProfile?.role
+    const r = sessionProfile?.role
     if (r === 'super_admin') url.pathname = '/super/dashboard'
     else if (r === 'admin') url.pathname = '/admin/dashboard'
     else if (r === 'barbeiro') url.pathname = '/barbeiro/agenda'

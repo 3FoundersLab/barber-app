@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Spinner } from '@/components/ui/spinner'
 import { createClient } from '@/lib/supabase/client'
 import { clearProfileCache } from '@/lib/profile-cache'
+import { fetchSessionProfile } from '@/lib/supabase/fetch-session-profile'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -79,11 +80,14 @@ export default function LoginPage() {
           }
         }
 
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single()
+        const profile = await fetchSessionProfile(supabase, user.id)
+
+        if (profile?.ativo === false) {
+          setError('Esta conta está desativada. Entre em contato com o administrador da plataforma.')
+          clearProfileCache()
+          await supabase.auth.signOut()
+          return
+        }
 
         // Redirect based on role
         if (profile?.role === 'super_admin') {
@@ -102,6 +106,8 @@ export default function LoginPage() {
       setIsLoading(false)
     }
   }
+
+  const inactiveRedirect = searchParams.get('reason') === 'inactive'
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -122,6 +128,11 @@ export default function LoginPage() {
             <CardDescription>
               Digite suas credenciais para acessar
             </CardDescription>
+            {inactiveRedirect ? (
+              <p className="pt-2 text-sm text-amber-700 dark:text-amber-400">
+                Sua sessão foi encerrada porque esta conta está desativada.
+              </p>
+            ) : null}
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">

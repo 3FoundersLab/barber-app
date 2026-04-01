@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Plus, Search, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Search, Trash2, UserCheck, UserX } from 'lucide-react'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,15 @@ import {
   PaginationEllipsis,
   PaginationItem,
 } from '@/components/ui/pagination'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 const ROLES: UserRole[] = ['super_admin', 'admin', 'barbeiro', 'cliente']
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const
@@ -58,6 +67,15 @@ function pageNumberItems(current: number, total: number): (number | 'ellipsis')[
   return out
 }
 
+function buildLinksMap(rows: BarbeariaLink[]): Record<string, BarbeariaLink[]> {
+  const map: Record<string, BarbeariaLink[]> = {}
+  for (const r of rows) {
+    if (!map[r.user_id]) map[r.user_id] = []
+    map[r.user_id].push(r)
+  }
+  return map
+}
+
 type BarbeariaLink = {
   id: string
   user_id: string
@@ -76,8 +94,11 @@ export default function SuperUsuariosPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [linksNotice, setLinksNotice] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [confirmDeactivate, setConfirmDeactivate] = useState<Profile | null>(null)
+  const [togglingAtivoId, setTogglingAtivoId] = useState<string | null>(null)
   const [form, setForm] = useState({
     nome: '',
     email: '',
@@ -89,6 +110,7 @@ export default function SuperUsuariosPage() {
   const loadAll = useCallback(async () => {
     const supabase = createClient()
     setError(null)
+    setLinksNotice(null)
 
     const { data: auth } = await supabase.auth.getUser()
     setCurrentUserId(auth.user?.id ?? null)
@@ -114,21 +136,54 @@ export default function SuperUsuariosPage() {
     if (ids.length === 0) {
       setLinksByUser({})
     } else {
-      const { data: linkRows, error: linksError } = await supabase
-        .from('barbearia_users')
-        .select('id, user_id, role, barbearia:barbearias(id, nome)')
-        .in('user_id', ids)
+      let rows: BarbeariaLink[] | null = null
+      let apiFailed = false
 
-      if (linksError) {
-        setLinksByUser({})
-      } else {
-        const map: Record<string, BarbeariaLink[]> = {}
-        for (const row of linkRows || []) {
-          const r = row as unknown as BarbeariaLink
-          if (!map[r.user_id]) map[r.user_id] = []
-          map[r.user_id].push(r)
+      try {
+        const res = await fetch(
+          `/api/super/barbearia-links?user_ids=${encodeURIComponent(ids.join(','))}`,
+          { credentials: 'include' },
+        )
+        const json = (await res.json().catch(() => ({}))) as { links?: unknown; error?: string }
+        if (res.ok && Array.isArray(json.links)) {
+          rows = json.links as unknown as BarbeariaLink[]
+        } else if (res.status === 503) {
+          apiFailed = true
+          setLinksNotice(
+            'Configure SUPABASE_SERVICE_ROLE_KEY no servidor para listar vínculos de todos os usuários, ou aplique o script SQL scripts/013_barbearia_users_select_super_admin_is_fn.sql no Supabase.',
+          )
+        } else if (!res.ok && typeof json.error === 'string') {
+          apiFailed = true
+          setLinksNotice(json.error)
         }
-        setLinksByUser(map)
+      } catch {
+        apiFailed = true
+        // rede: tenta leitura direta abaixo
+      }
+
+      if (rows === null) {
+        const { data: linkRows, error: linksError } = await supabase
+          .from('barbearia_users')
+          .select('id, user_id, role, barbearia:barbearias(id, nome)')
+          .in('user_id', ids)
+
+        if (linksError) {
+          setError('Não foi possível carregar os vínculos com as barbearias.')
+          setLinksByUser({})
+        } else {
+          const map = buildLinksMap((linkRows || []) as unknown as BarbeariaLink[])
+          setLinksByUser(map)
+          const anyLinks = Object.keys(map).length > 0
+          if (apiFailed && !anyLinks && !linksError) {
+            setLinksNotice(
+              (n) =>
+                n ??
+                'Não foi possível obter os vínculos pelo servidor. Verifique a service role ou o script SQL 013.',
+            )
+          }
+        }
+      } else {
+        setLinksByUser(buildLinksMap(rows))
       }
     }
 
@@ -194,6 +249,19 @@ export default function SuperUsuariosPage() {
       return
     }
     setProfiles((prev) => prev.map((p) => (p.id === profileId ? { ...p, role } : p)))
+  }
+
+  async function handleAtivoToggle(profileId: string, ativo: boolean) {
+    const supabase = createClient()
+    setError(null)
+    setTogglingAtivoId(profileId)
+    const { error: upErr } = await supabase.from('profiles').update({ ativo }).eq('id', profileId)
+    setTogglingAtivoId(null)
+    if (upErr) {
+      setError('Não foi possível atualizar o status do usuário.')
+      return
+    }
+    setProfiles((prev) => prev.map((p) => (p.id === profileId ? { ...p, ativo } : p)))
   }
 
   async function handleRevokeLink(linkId: string) {
@@ -330,6 +398,14 @@ export default function SuperUsuariosPage() {
           </Card>
         )}
 
+        {linksNotice ? (
+          <Card className="border-dashed border-amber-500/40 bg-amber-500/5">
+            <CardContent className="py-3 text-sm text-amber-900 dark:text-amber-100/90">
+              {linksNotice}
+            </CardContent>
+          </Card>
+        ) : null}
+
         <div className="space-y-3">
           {isLoading ? (
             <Card>
@@ -341,9 +417,13 @@ export default function SuperUsuariosPage() {
             paginated.map((p) => {
               const links = linksByUser[p.id] || []
               const isSelf = currentUserId === p.id
+              const isAtivo = p.ativo !== false
 
               return (
-                <Card key={p.id}>
+                <Card
+                  key={p.id}
+                  className={cn(!isAtivo && 'border-muted-foreground/25 bg-muted/20')}
+                >
                   <CardContent className="space-y-4 p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0 flex-1 space-y-1">
@@ -355,6 +435,11 @@ export default function SuperUsuariosPage() {
                           >
                             {ROLE_LABELS[p.role]}
                           </Badge>
+                          {!isAtivo ? (
+                            <Badge variant="outline" className="border-destructive/50 text-destructive">
+                              Inativo
+                            </Badge>
+                          ) : null}
                         </div>
                         <p className="truncate text-sm text-muted-foreground">{p.email}</p>
                         <p className="text-xs text-muted-foreground">
@@ -385,6 +470,46 @@ export default function SuperUsuariosPage() {
                             Você não pode alterar seu próprio papel aqui.
                           </p>
                         ) : null}
+                        <div className="pt-2">
+                          {isAtivo ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="w-full border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              disabled={isSelf || togglingAtivoId === p.id}
+                              onClick={() => setConfirmDeactivate(p)}
+                              title={
+                                isSelf
+                                  ? 'Você não pode desativar a própria conta aqui.'
+                                  : 'Desativar usuário'
+                              }
+                            >
+                              {togglingAtivoId === p.id ? (
+                                <Spinner className="mr-2 h-4 w-4" />
+                              ) : (
+                                <UserX className="mr-2 h-4 w-4" />
+                              )}
+                              Desativar
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                              disabled={togglingAtivoId === p.id}
+                              onClick={() => void handleAtivoToggle(p.id, true)}
+                            >
+                              {togglingAtivoId === p.id ? (
+                                <Spinner className="mr-2 h-4 w-4" />
+                              ) : (
+                                <UserCheck className="mr-2 h-4 w-4" />
+                              )}
+                              Reativar
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -503,6 +628,40 @@ export default function SuperUsuariosPage() {
           </div>
         ) : null}
       </PageContent>
+
+      <AlertDialog
+        open={!!confirmDeactivate}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDeactivate(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desativar usuário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDeactivate
+                ? `${confirmDeactivate.nome} não poderá entrar no sistema até ser reativado.`
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={!confirmDeactivate || !!togglingAtivoId}
+              onClick={() => {
+                const target = confirmDeactivate
+                if (!target) return
+                setConfirmDeactivate(null)
+                void handleAtivoToggle(target.id, false)
+              }}
+            >
+              {togglingAtivoId ? <Spinner className="mr-2 h-4 w-4" /> : null}
+              Desativar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
