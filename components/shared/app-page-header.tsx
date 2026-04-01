@@ -57,11 +57,9 @@ export function AppPageHeader(props: AppPageHeaderProps) {
   } = props
 
   const shouldFetch = profileFromParent === undefined
-  const [internalProfile, setInternalProfile] = useState<Profile | null>(() => {
-    if (!shouldFetch) return null
-    const stored = getStoredProfileCache()
-    return stored?.profile ?? null
-  })
+  // Não ler sessionStorage no estado inicial: no servidor sempre null, no cliente
+  // o cache daria outro valor e quebraria a hidratação (ex.: fallback "S" vs "3").
+  const [internalProfile, setInternalProfile] = useState<Profile | null>(null)
   const effectiveProfile = shouldFetch ? internalProfile : profileFromParent
 
   useEffect(() => {
