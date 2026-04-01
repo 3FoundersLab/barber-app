@@ -94,3 +94,40 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({ links })
 }
+
+/**
+ * Remove vínculo barbearia_users (super admin). Usa service role para não depender de RLS no cliente.
+ */
+export async function DELETE(request: NextRequest) {
+  const auth = await requireSuperAdmin()
+  if ('response' in auth) return auth.response
+
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!serviceKey || !url) {
+    return NextResponse.json(
+      {
+        error:
+          'Configure SUPABASE_SERVICE_ROLE_KEY no servidor para revogar vínculos entre usuários e barbearias.',
+      },
+      { status: 503 },
+    )
+  }
+
+  const id = request.nextUrl.searchParams.get('id')?.trim()
+  if (!id) {
+    return NextResponse.json({ error: 'Parâmetro id é obrigatório.' }, { status: 400 })
+  }
+
+  const admin = createClient(url, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+
+  const { error } = await admin.from('barbearia_users').delete().eq('id', id)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true })
+}

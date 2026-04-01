@@ -98,6 +98,12 @@ export default function SuperUsuariosPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [confirmDeactivate, setConfirmDeactivate] = useState<Profile | null>(null)
+  const [confirmRevokeLink, setConfirmRevokeLink] = useState<{
+    linkId: string
+    usuarioNome: string
+    barbeariaNome: string
+  } | null>(null)
+  const [revokingLinkId, setRevokingLinkId] = useState<string | null>(null)
   const [togglingAtivoId, setTogglingAtivoId] = useState<string | null>(null)
   const [form, setForm] = useState({
     nome: '',
@@ -265,20 +271,35 @@ export default function SuperUsuariosPage() {
   }
 
   async function handleRevokeLink(linkId: string) {
-    const supabase = createClient()
     setError(null)
-    const { error: delErr } = await supabase.from('barbearia_users').delete().eq('id', linkId)
-    if (delErr) {
-      setError('Não foi possível revogar o acesso à barbearia.')
-      return
-    }
-    setLinksByUser((prev) => {
-      const next = { ...prev }
-      for (const uid of Object.keys(next)) {
-        next[uid] = next[uid].filter((l) => l.id !== linkId)
+    setRevokingLinkId(linkId)
+    try {
+      const res = await fetch(
+        `/api/super/barbearia-links?id=${encodeURIComponent(linkId)}`,
+        { method: 'DELETE', credentials: 'include' },
+      )
+      const json = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) {
+        setError(
+          typeof json.error === 'string'
+            ? json.error
+            : 'Não foi possível revogar o acesso à barbearia.',
+        )
+        setRevokingLinkId(null)
+        return
       }
-      return next
-    })
+      setLinksByUser((prev) => {
+        const next = { ...prev }
+        for (const uid of Object.keys(next)) {
+          next[uid] = next[uid].filter((l) => l.id !== linkId)
+        }
+        return next
+      })
+      setConfirmRevokeLink((c) => (c?.linkId === linkId ? null : c))
+    } catch {
+      setError('Não foi possível revogar o acesso à barbearia.')
+    }
+    setRevokingLinkId(null)
   }
 
   const filtered = useMemo(() => {
@@ -540,7 +561,13 @@ export default function SuperUsuariosPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="shrink-0 text-destructive hover:text-destructive"
-                                onClick={() => handleRevokeLink(l.id)}
+                                onClick={() =>
+                                  setConfirmRevokeLink({
+                                    linkId: l.id,
+                                    usuarioNome: p.nome,
+                                    barbeariaNome: l.barbearia?.nome ?? 'Barbearia',
+                                  })
+                                }
                                 title="Revogar acesso"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -658,6 +685,51 @@ export default function SuperUsuariosPage() {
             >
               {togglingAtivoId ? <Spinner className="mr-2 h-4 w-4" /> : null}
               Desativar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!confirmRevokeLink}
+        onOpenChange={(open) => {
+          if (!open) setConfirmRevokeLink(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revogar acesso à barbearia?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmRevokeLink ? (
+                <>
+                  Remover o acesso de{' '}
+                  <span className="font-medium text-foreground">
+                    {confirmRevokeLink.usuarioNome}
+                  </span>{' '}
+                  à barbearia{' '}
+                  <span className="font-medium text-foreground">
+                    {confirmRevokeLink.barbeariaNome}
+                  </span>
+                  . Essa pessoa deixa de ver e usar essa barbearia no sistema.
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={!confirmRevokeLink || revokingLinkId === confirmRevokeLink?.linkId}
+              onClick={() => {
+                const target = confirmRevokeLink
+                if (!target) return
+                void handleRevokeLink(target.linkId)
+              }}
+            >
+              {confirmRevokeLink && revokingLinkId === confirmRevokeLink.linkId ? (
+                <Spinner className="mr-2 h-4 w-4" />
+              ) : null}
+              Revogar acesso
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
