@@ -13,13 +13,28 @@ CREATE POLICY "profiles_update_own" ON public.profiles
 CREATE POLICY "profiles_insert_own" ON public.profiles 
   FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Super admin pode ver todos os profiles
+-- Evita recursão RLS: política em profiles não pode subconsultar profiles sem SECURITY DEFINER
+CREATE OR REPLACE FUNCTION public.is_super_admin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles p
+    WHERE p.id = auth.uid() AND p.role = 'super_admin'
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.is_super_admin() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_super_admin() TO authenticated;
+
+-- Super admin vê apenas perfis super_admin e admin (gestão da plataforma)
 CREATE POLICY "profiles_select_super_admin" ON public.profiles 
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p 
-      WHERE p.id = auth.uid() AND p.role = 'super_admin'
-    )
+    (SELECT public.is_super_admin())
+    AND role IN ('super_admin', 'admin')
   );
 
 -- ===========================================

@@ -67,6 +67,7 @@ export default function SuperUsuariosPage() {
     const { data: profileRows, error: profilesError } = await supabase
       .from('profiles')
       .select('*')
+      .in('role', ['super_admin', 'admin'])
       .order('created_at', { ascending: false })
 
     if (profilesError) {
@@ -200,8 +201,9 @@ export default function SuperUsuariosPage() {
 
       <PageContent className="space-y-4 pb-20 md:pb-6">
         <p className="text-sm text-muted-foreground">
-          Cadastro, listagem e papéis globais. Para administradores e barbeiros, vincule uma barbearia
-          no cadastro. Você pode revogar o acesso por barbearia abaixo.
+          Listagem de contas com papéis Super Admin e Admin. Cadastre também barbeiros e clientes pelo
+          formulário abaixo (eles não aparecem nesta lista). Para administradores e barbeiros, vincule
+          uma barbearia. Você pode revogar o acesso por barbearia abaixo.
         </p>
 
         <div className="flex w-full max-w-md gap-2 rounded-lg border bg-muted/40 p-1">
