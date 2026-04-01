@@ -54,21 +54,48 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
-  const isProtectedRoute = 
+
+  if (pathname.startsWith('/super')) {
+    if (!user) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
+    const { data: superProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    if (superProfile?.role !== 'super_admin') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
+  }
+
+  const isProtectedRoute =
     pathname.startsWith('/cliente') ||
     pathname.startsWith('/barbeiro') ||
     pathname.startsWith('/admin')
-  
+
   if (isProtectedRoute && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
-  
-  // Se usuário logado tentar acessar login, redireciona para home
+
   if (pathname === '/login' && user) {
+    const { data: loginProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
     const url = request.nextUrl.clone()
-    url.pathname = '/cliente/home'
+    const r = loginProfile?.role
+    if (r === 'super_admin') url.pathname = '/super/dashboard'
+    else if (r === 'admin') url.pathname = '/admin/dashboard'
+    else if (r === 'barbeiro') url.pathname = '/barbeiro/agenda'
+    else url.pathname = '/cliente/home'
     return NextResponse.redirect(url)
   }
 
