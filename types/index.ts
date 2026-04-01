@@ -29,6 +29,8 @@ export interface Barbearia {
   endereco?: string
   telefone?: string
   email?: string
+  /** false = desativada pelo super admin; omitido em bases antigas = ativa */
+  ativo?: boolean
   created_at: string
   updated_at: string
 }

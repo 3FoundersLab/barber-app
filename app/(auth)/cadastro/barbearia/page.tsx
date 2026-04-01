@@ -32,6 +32,7 @@ export default function CadastroBarbeariaPage() {
   const [showConfirmarSenha, setShowConfirmarSenha] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [slugAutofill, setSlugAutofill] = useState(true)
   const [formData, setFormData] = useState({
     nomeBarbearia: '',
     slug: '',
@@ -193,7 +194,7 @@ export default function CadastroBarbeariaPage() {
                       setFormData((prev) => ({
                         ...prev,
                         nomeBarbearia: e.target.value,
-                        slug: prev.slug || slugify(e.target.value),
+                        ...(slugAutofill ? { slug: slugify(e.target.value) } : {}),
                       }))
                     }
                     disabled={isSubmitting}
@@ -207,7 +208,10 @@ export default function CadastroBarbeariaPage() {
                     id="slug"
                     placeholder="minha-barbearia"
                     value={formData.slug}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, slug: slugify(e.target.value) }))}
+                    onChange={(e) => {
+                      setSlugAutofill(false)
+                      setFormData((prev) => ({ ...prev, slug: slugify(e.target.value) }))
+                    }}
                     disabled={isSubmitting}
                     required
                   />
