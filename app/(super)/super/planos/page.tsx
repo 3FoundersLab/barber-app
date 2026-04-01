@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Pencil, Plus, Search, Trash2 } from 'lucide-react'
-import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { useRouter } from 'next/navigation'
+import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import {
   AlertDialog,
@@ -19,6 +20,19 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+} from '@/components/ui/pagination'
 import { Switch } from '@/components/ui/switch'
 import { Spinner } from '@/components/ui/spinner'
 import { SuperGridEntityListSkeleton } from '@/components/shared/loading-skeleton'
@@ -26,6 +40,36 @@ import { formatCurrency } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Plano } from '@/types'
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50] as const
+type PlanosPageSize = (typeof PAGE_SIZE_OPTIONS)[number]
+
+const PLANOS_SORT_OPTIONS = [
+  { value: 'nome_asc', label: 'Nome (A–Z)' },
+  { value: 'nome_desc', label: 'Nome (Z–A)' },
+  { value: 'preco_asc', label: 'Preço (menor)' },
+  { value: 'preco_desc', label: 'Preço (maior)' },
+] as const
+type PlanosSort = (typeof PLANOS_SORT_OPTIONS)[number]['value']
+
+function pageNumberItems(current: number, total: number): (number | 'ellipsis')[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1)
+  }
+  const set = new Set<number>([1, total])
+  for (let i = current - 1; i <= current + 1; i++) {
+    if (i >= 1 && i <= total) set.add(i)
+  }
+  const sorted = [...set].sort((a, b) => a - b)
+  const out: (number | 'ellipsis')[] = []
+  let prev = 0
+  for (const p of sorted) {
+    if (p - prev > 1) out.push('ellipsis')
+    out.push(p)
+    prev = p
+  }
+  return out
+}
 
 const emptyForm = {
   nome: '',
@@ -36,8 +80,12 @@ const emptyForm = {
 }
 
 export default function SuperPlanosPage() {
+  const router = useRouter()
   const [planos, setPlanos] = useState<Plano[]>([])
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<PlanosPageSize>(10)
+  const [sortBy, setSortBy] = useState<PlanosSort>('preco_asc')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -48,14 +96,47 @@ export default function SuperPlanosPage() {
   const [form, setForm] = useState(emptyForm)
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return planos
-    const q = search.toLowerCase().trim()
-    return planos.filter((p) => p.nome.toLowerCase().includes(q))
-  }, [planos, search])
+    let rows = planos
+    if (search.trim()) {
+      const q = search.toLowerCase().trim()
+      rows = rows.filter((p) => p.nome.toLowerCase().includes(q))
+    }
+    return [...rows].sort((a, b) => {
+      if (sortBy === 'nome_asc' || sortBy === 'nome_desc') {
+        const cmp = (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' })
+        return sortBy === 'nome_asc' ? cmp : -cmp
+      }
+      const pa = a.preco_mensal ?? 0
+      const pb = b.preco_mensal ?? 0
+      return sortBy === 'preco_asc' ? pa - pb : pb - pa
+    })
+  }, [planos, search, sortBy])
+
+  const totalPages =
+    filtered.length === 0 ? 0 : Math.ceil(filtered.length / pageSize)
+  const currentPage = totalPages === 0 ? 1 : Math.min(page, totalPages)
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filtered.slice(start, start + pageSize)
+  }, [filtered, currentPage, pageSize])
+
+  const pageItems = useMemo(
+    () => (totalPages > 0 ? pageNumberItems(currentPage, totalPages) : []),
+    [currentPage, totalPages],
+  )
 
   useEffect(() => {
     loadPlanos()
   }, [])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, sortBy])
+
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) setPage(totalPages)
+  }, [totalPages, page])
 
   async function loadPlanos() {
     const supabase = createClient()
@@ -157,31 +238,105 @@ export default function SuperPlanosPage() {
   }
 
   return (
-    <PageContainer className="bg-muted/30">
-      <AppPageHeader title="Planos" profileHref="/super/perfil/editar" avatarFallback="S" />
+    <PageContainer>
+      <AppPageHeader greetingOnly profileHref="/super/perfil/editar" avatarFallback="S" />
 
-      <PageContent className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <div className="relative min-w-0 flex-1">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-              strokeWidth={1.75}
-            />
-            <Input
-              placeholder="Pesquisar plano..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-10 rounded-lg border-border/80 bg-background pl-9 shadow-none"
-            />
+      <PageContent className="space-y-4 pb-20 md:pb-6">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+          <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-9 shrink-0"
+              onClick={() => router.back()}
+              aria-label="Voltar"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <PageTitle className="min-w-0 truncate">Planos</PageTitle>
           </div>
           <Button
-            size="sm"
-            className="h-10 w-full shrink-0 rounded-lg shadow-sm sm:w-auto"
+            type="button"
+            className="w-full shrink-0 sm:w-auto"
             onClick={openCreate}
           >
-            <Plus className="size-4" />
-            Plano
+            <Plus className="mr-2 h-4 w-4" />
+            Novo plano
           </Button>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex w-full shrink-0 flex-wrap items-center gap-x-3 gap-y-2 sm:w-auto sm:justify-end">
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-initial sm:min-w-0">
+              <Label
+                htmlFor="planos-sort"
+                className="text-sm text-muted-foreground whitespace-nowrap"
+              >
+                Ordenar
+              </Label>
+              <Select
+                value={sortBy}
+                onValueChange={(v) => {
+                  const opt = PLANOS_SORT_OPTIONS.find((o) => o.value === v)
+                  if (opt) setSortBy(opt.value)
+                }}
+              >
+                <SelectTrigger
+                  id="planos-sort"
+                  className="h-9 min-w-[9.5rem] flex-1 sm:flex-initial sm:min-w-[10rem]"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PLANOS_SORT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label
+                htmlFor="planos-page-size"
+                className="text-sm text-muted-foreground whitespace-nowrap"
+              >
+                Itens por página
+              </Label>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(v) => {
+                  const n = Number(v)
+                  const opt = PAGE_SIZE_OPTIONS.find((x) => x === n)
+                  if (opt !== undefined) {
+                    setPageSize(opt)
+                    setPage(1)
+                  }
+                }}
+              >
+                <SelectTrigger id="planos-page-size" className="h-9 w-[4.5rem]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt} value={String(opt)}>
+                      {opt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         {error && (
@@ -213,7 +368,7 @@ export default function SuperPlanosPage() {
           </Card>
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((plano) => (
+            {paginated.map((plano) => (
               <li key={plano.id}>
                 <article
                   className={cn(
@@ -278,6 +433,71 @@ export default function SuperPlanosPage() {
             ))}
           </ul>
         )}
+
+        {!isLoading && filtered.length > 0 && totalPages > 0 ? (
+          <div className="border-t pt-4">
+            <Pagination className="mx-0 flex w-full max-w-full flex-col items-center gap-2">
+              <PaginationContent className="flex h-9 flex-row flex-wrap items-center justify-center gap-1">
+                <PaginationItem>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-1 px-2.5"
+                    disabled={currentPage <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    aria-label="Página anterior"
+                  >
+                    <ChevronLeft className="h-4 w-4 shrink-0" />
+                    <span className="hidden sm:inline">Anterior</span>
+                  </Button>
+                </PaginationItem>
+                {pageItems.map((item, idx) =>
+                  item === 'ellipsis' ? (
+                    <PaginationItem key={`e-${idx}`} className="flex h-9 items-center">
+                      <PaginationEllipsis className="size-9" />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item} className="flex h-9 items-center">
+                      <Button
+                        type="button"
+                        variant={item === currentPage ? 'default' : 'ghost'}
+                        size="icon"
+                        className={cn(
+                          'h-9 min-w-9',
+                          item === currentPage && 'pointer-events-none font-semibold',
+                        )}
+                        onClick={() => setPage(item)}
+                        aria-label={`Página ${item}`}
+                        aria-current={item === currentPage ? 'page' : undefined}
+                      >
+                        {item}
+                      </Button>
+                    </PaginationItem>
+                  ),
+                )}
+                <PaginationItem>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-1 px-2.5"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    aria-label="Próxima página"
+                  >
+                    <span className="hidden sm:inline">Próxima</span>
+                    <ChevronRight className="h-4 w-4 shrink-0" />
+                  </Button>
+                </PaginationItem>
+              </PaginationContent>
+              <p className="text-center text-xs text-muted-foreground">
+                Página {currentPage} de {totalPages} · {filtered.length}{' '}
+                {filtered.length === 1 ? 'plano' : 'planos'}
+              </p>
+            </Pagination>
+          </div>
+        ) : null}
       </PageContent>
 
       <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>

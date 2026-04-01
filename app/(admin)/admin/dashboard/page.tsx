@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Calendar, ChevronRight, DollarSign, Scissors, TrendingUp, Users } from 'lucide-react'
-import { PageContainer, PageTitle, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -163,16 +163,9 @@ export default function AdminDashboardPage() {
   return (
     <PageContainer>
       <AppPageHeader
+        greetingOnly
         profileHref="/admin/configuracoes"
         avatarFallback="A"
-        renderTitle={(p) => {
-          const nome = p?.nome?.trim()
-          return (
-            <PageTitle className="text-lg">
-              {nome ? `Olá, ${nome}` : 'Olá'}
-            </PageTitle>
-          )
-        }}
       />
 
       <PageContent className="space-y-6 md:space-y-8">

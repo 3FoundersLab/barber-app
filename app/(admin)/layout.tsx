@@ -4,6 +4,7 @@ import { LayoutDashboard, Calendar, Scissors, Users, Settings, DollarSign } from
 import { BottomTabs, type TabItem } from '@/components/shared/bottom-tabs'
 import { AdminDrawer } from '@/components/shared/admin-drawer'
 import { DesktopSidebar } from '@/components/shared/desktop-sidebar'
+import { AppPageHeadingProvider } from '@/components/shared/app-page-heading-context'
 
 const adminTabs: TabItem[] = [
   { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
@@ -26,7 +27,7 @@ export default function AdminLayout({
         <DesktopSidebar title="Painel Admin" tabs={adminTabs} />
         <div className="hidden md:block md:w-64 md:shrink-0" />
         <div className="min-w-0 flex-1">
-          {children}
+          <AppPageHeadingProvider>{children}</AppPageHeadingProvider>
         </div>
       </div>
       <BottomTabs tabs={adminTabs} />

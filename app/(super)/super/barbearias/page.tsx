@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, LogIn, Pencil, Plus, Search } from 'lucide-react'
-import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
@@ -34,6 +34,14 @@ import { cn } from '@/lib/utils'
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const
 type BarbeariasPageSize = (typeof PAGE_SIZE_OPTIONS)[number]
+
+const SORT_OPTIONS = [
+  { value: 'nome_asc', label: 'Nome (A–Z)' },
+  { value: 'nome_desc', label: 'Nome (Z–A)' },
+  { value: 'slug_asc', label: 'Slug (A–Z)' },
+  { value: 'slug_desc', label: 'Slug (Z–A)' },
+] as const
+type BarbeariasSort = (typeof SORT_OPTIONS)[number]['value']
 
 function slugify(text: string) {
   return text
@@ -79,6 +87,7 @@ export default function SuperBarbeariasPage() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<BarbeariasPageSize>(10)
+  const [sortBy, setSortBy] = useState<BarbeariasSort>('nome_asc')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
@@ -98,7 +107,7 @@ export default function SuperBarbeariasPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [search])
+  }, [search, sortBy])
 
   async function loadBarbearias() {
     const supabase = createClient()
@@ -239,10 +248,15 @@ export default function SuperBarbeariasPage() {
       const q = search.toLowerCase()
       rows = rows.filter((b) => b.nome.toLowerCase().includes(q) || b.slug.toLowerCase().includes(q))
     }
-    return [...rows].sort((a, b) =>
-      (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' }),
-    )
-  }, [barbearias, search])
+    return [...rows].sort((a, b) => {
+      if (sortBy === 'nome_asc' || sortBy === 'nome_desc') {
+        const cmp = (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' })
+        return sortBy === 'nome_asc' ? cmp : -cmp
+      }
+      const cmp = (a.slug || '').localeCompare(b.slug || '', 'pt-BR', { sensitivity: 'base' })
+      return sortBy === 'slug_asc' ? cmp : -cmp
+    })
+  }, [barbearias, search, sortBy])
 
   const totalPages =
     filtered.length === 0 ? 0 : Math.ceil(filtered.length / pageSize)
@@ -264,44 +278,31 @@ export default function SuperBarbeariasPage() {
 
   return (
     <PageContainer>
-      <AppPageHeader
-        title="Barbearias"
-        profileHref="/super/perfil/editar"
-        avatarFallback="S"
-      />
+      <AppPageHeader greetingOnly profileHref="/super/perfil/editar" avatarFallback="S" />
 
       <PageContent className="space-y-4 pb-20 md:pb-6">
-        <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-3">
-          <div className="flex shrink-0 items-center gap-2">
-            <Label
-              htmlFor="barbearias-page-size"
-              className="text-sm text-muted-foreground whitespace-nowrap"
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+          <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-9 shrink-0"
+              onClick={() => router.back()}
+              aria-label="Voltar"
             >
-              Itens por página
-            </Label>
-            <Select
-              value={String(pageSize)}
-              onValueChange={(v) => {
-                const n = Number(v)
-                const opt = PAGE_SIZE_OPTIONS.find((x) => x === n)
-                if (opt !== undefined) {
-                  setPageSize(opt)
-                  setPage(1)
-                }
-              }}
-            >
-              <SelectTrigger id="barbearias-page-size" className="h-9 w-[4.5rem]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAGE_SIZE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt} value={String(opt)}>
-                    {opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <PageTitle className="min-w-0 truncate">Barbearias</PageTitle>
           </div>
+          <Button
+            type="button"
+            className="w-full shrink-0 sm:w-auto"
+            onClick={() => setIsDialogOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Nova barbearia
+          </Button>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
@@ -314,13 +315,64 @@ export default function SuperBarbeariasPage() {
               className="pl-9"
             />
           </div>
-          <Button
-            className="w-full shrink-0 sm:w-auto"
-            onClick={() => setIsDialogOpen(true)}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Nova barbearia
-          </Button>
+          <div className="flex w-full shrink-0 flex-wrap items-center gap-x-3 gap-y-2 sm:w-auto sm:justify-end">
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-initial sm:min-w-0">
+              <Label
+                htmlFor="barbearias-sort"
+                className="text-sm text-muted-foreground whitespace-nowrap"
+              >
+                Ordenar
+              </Label>
+              <Select
+                value={sortBy}
+                onValueChange={(v) => {
+                  const opt = SORT_OPTIONS.find((o) => o.value === v)
+                  if (opt) setSortBy(opt.value)
+                }}
+              >
+                <SelectTrigger id="barbearias-sort" className="h-9 min-w-[9.5rem] flex-1 sm:flex-initial sm:min-w-[10rem]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SORT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label
+                htmlFor="barbearias-page-size"
+                className="text-sm text-muted-foreground whitespace-nowrap"
+              >
+                Itens por página
+              </Label>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(v) => {
+                  const n = Number(v)
+                  const opt = PAGE_SIZE_OPTIONS.find((x) => x === n)
+                  if (opt !== undefined) {
+                    setPageSize(opt)
+                    setPage(1)
+                  }
+                }}
+              >
+                <SelectTrigger id="barbearias-page-size" className="h-9 w-[4.5rem]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt} value={String(opt)}>
+                      {opt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         {error && (

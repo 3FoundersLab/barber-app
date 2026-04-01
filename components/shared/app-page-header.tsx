@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { PageHeader, PageTitle } from '@/components/shared/page-container'
+import { useEffect, useState, type ReactNode } from 'react'
+import { PageHeader } from '@/components/shared/page-container'
+import { useOptionalAppPageHeading } from '@/components/shared/app-page-heading-context'
 import { UserHeaderMenu } from '@/components/shared/user-header-menu'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -13,6 +14,27 @@ import type { Profile } from '@/types'
 import { cn } from '@/lib/utils'
 
 const MOBILE_DRAWER_PADDING = 'pl-16 md:pl-6'
+
+function greetingFromProfile(profile: Profile | null) {
+  const nome = profile?.nome?.trim()
+  return nome ? `Olá, ${nome}` : 'Olá'
+}
+
+function RegisterPageHeading({
+  title,
+  subtitle,
+}: {
+  title: string
+  subtitle?: ReactNode
+}) {
+  const setHeading = useOptionalAppPageHeading()?.setHeading
+  useEffect(() => {
+    if (!setHeading) return
+    setHeading({ title, subtitle })
+    return () => setHeading(null)
+  }, [title, subtitle, setHeading])
+  return null
+}
 
 type BaseAppPageHeaderProps = {
   profileHref: string
@@ -28,24 +50,30 @@ type TitleVariant = BaseAppPageHeaderProps & {
   title: string
   subtitle?: React.ReactNode
   leading?: never
-  renderTitle?: never
+  greetingOnly?: never
+  contentTitle?: never
 }
 
 type LeadingVariant = BaseAppPageHeaderProps & {
   leading: React.ReactNode
+  /** Título da página (h1) — renderizado em `PageContent`, não no header */
+  contentTitle: string
+  contentSubtitle?: React.ReactNode
   title?: never
   subtitle?: never
-  renderTitle?: never
+  greetingOnly?: never
 }
 
-type RenderTitleVariant = BaseAppPageHeaderProps & {
-  renderTitle: (profile: Profile | null) => React.ReactNode
+/** Dashboard / home: só a saudação no header (como o texto acima do título nas demais telas), sem h1 extra no conteúdo. */
+type GreetingOnlyVariant = BaseAppPageHeaderProps & {
+  greetingOnly: true
   title?: never
   subtitle?: never
   leading?: never
+  contentTitle?: never
 }
 
-export type AppPageHeaderProps = TitleVariant | LeadingVariant | RenderTitleVariant
+export type AppPageHeaderProps = TitleVariant | LeadingVariant | GreetingOnlyVariant
 
 export function AppPageHeader(props: AppPageHeaderProps) {
   const {
@@ -57,8 +85,6 @@ export function AppPageHeader(props: AppPageHeaderProps) {
   } = props
 
   const shouldFetch = profileFromParent === undefined
-  // Não ler sessionStorage no estado inicial: no servidor sempre null, no cliente
-  // o cache daria outro valor e quebraria a hidratação (ex.: fallback "S" vs "3").
   const [internalProfile, setInternalProfile] = useState<Profile | null>(null)
   const effectiveProfile = shouldFetch ? internalProfile : profileFromParent
 
@@ -100,41 +126,55 @@ export function AppPageHeader(props: AppPageHeaderProps) {
     }
   }, [shouldFetch])
 
+  const greeting = greetingFromProfile(effectiveProfile)
+  const greetingMuted = (
+    <p className="text-sm text-muted-foreground">{greeting}</p>
+  )
+
   let left: React.ReactNode
-  if ('leading' in props && props.leading != null) {
-    left = props.leading
-  } else if ('renderTitle' in props && props.renderTitle) {
-    left = <div className="min-w-0">{props.renderTitle(effectiveProfile)}</div>
-  } else if ('title' in props && props.title != null) {
+  let headingSync: React.ReactNode = null
+
+  if ('greetingOnly' in props && props.greetingOnly) {
+    left = <div className="min-w-0 flex-1">{greetingMuted}</div>
+  } else if ('leading' in props && props.leading != null) {
+    headingSync = (
+      <RegisterPageHeading
+        title={props.contentTitle}
+        subtitle={props.contentSubtitle}
+      />
+    )
     left = (
-      <div className="min-w-0">
-        {props.subtitle != null &&
-          (typeof props.subtitle === 'string' ? (
-            <p className="text-sm text-muted-foreground">{props.subtitle}</p>
-          ) : (
-            props.subtitle
-          ))}
-        <PageTitle>{props.title}</PageTitle>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        {greetingMuted}
+        <div className="flex min-w-0 items-center gap-3">{props.leading}</div>
       </div>
     )
+  } else if ('title' in props && props.title != null) {
+    headingSync = (
+      <RegisterPageHeading title={props.title} subtitle={props.subtitle} />
+    )
+    left = <div className="min-w-0 flex-1">{greetingMuted}</div>
   } else {
-    left = <div className="min-w-0" />
+    left = <div className="min-w-0 flex-1" />
   }
 
   const fallbackLetter =
     effectiveProfile?.nome?.charAt(0).toUpperCase() || avatarFallback
 
   return (
-    <PageHeader className={cn(MOBILE_DRAWER_PADDING, className)}>
-      <div className="flex min-w-0 flex-1 items-center gap-3">{left}</div>
-      <div className="flex shrink-0 items-center gap-2">
-        {actions}
-        <UserHeaderMenu
-          avatarSrc={effectiveProfile?.avatar}
-          fallback={fallbackLetter}
-          profileHref={profileHref}
-        />
-      </div>
-    </PageHeader>
+    <>
+      {headingSync}
+      <PageHeader className={cn(MOBILE_DRAWER_PADDING, className)}>
+        <div className="flex min-w-0 flex-1 items-center gap-3">{left}</div>
+        <div className="flex shrink-0 items-center gap-2">
+          {actions}
+          <UserHeaderMenu
+            avatarSrc={effectiveProfile?.avatar}
+            fallback={fallbackLetter}
+            profileHref={profileHref}
+          />
+        </div>
+      </PageHeader>
+    </>
   )
 }

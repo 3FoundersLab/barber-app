@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Building2, CreditCard, DollarSign } from 'lucide-react'
-import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import {
   Alert,
@@ -72,14 +72,7 @@ export default function SuperDashboardPage() {
   return (
     <PageContainer>
       <AppPageHeader
-        renderTitle={(profile) => {
-          const nome = profile?.nome?.trim()
-          return (
-            <PageTitle className="text-lg">
-              {nome ? `Olá, ${nome}` : 'Olá'}
-            </PageTitle>
-          )
-        }}
+        greetingOnly
         profileHref="/super/perfil/editar"
         avatarFallback="S"
       />

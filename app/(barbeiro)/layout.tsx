@@ -3,6 +3,7 @@
 import { Calendar, Clock, User } from 'lucide-react'
 import { BottomTabs, type TabItem } from '@/components/shared/bottom-tabs'
 import { DesktopSidebar } from '@/components/shared/desktop-sidebar'
+import { AppPageHeadingProvider } from '@/components/shared/app-page-heading-context'
 
 const barbeiroTabs: TabItem[] = [
   { label: 'Agenda', href: '/barbeiro/agenda', icon: Calendar },
@@ -21,7 +22,7 @@ export default function BarbeiroLayout({
         <DesktopSidebar title="Painel Barbeiro" tabs={barbeiroTabs} />
         <div className="hidden md:block md:w-64 md:shrink-0" />
         <div className="min-w-0 flex-1">
-          {children}
+          <AppPageHeadingProvider>{children}</AppPageHeadingProvider>
         </div>
       </div>
       <BottomTabs tabs={barbeiroTabs} />

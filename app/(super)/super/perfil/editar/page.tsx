@@ -3,11 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Save, User, Phone, Mail } from 'lucide-react'
-import {
-  PageContainer,
-  PageContent,
-  PageTitle,
-} from '@/components/shared/page-container'
+import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -106,125 +102,115 @@ export default function SuperEditarPerfilPage() {
     router.push('/super/dashboard')
   }
 
-  const headerLeading = (
-    <div className="flex min-w-0 items-center gap-3">
-      <Button variant="ghost" size="icon" onClick={() => router.back()}>
-        <ChevronLeft className="h-5 w-5" />
-      </Button>
-      <PageTitle className="truncate">Perfil</PageTitle>
-    </div>
-  )
-
-  if (isLoading) {
-    return (
-      <PageContainer>
-        <AppPageHeader
-          leading={headerLeading}
-          profileHref="/super/perfil/editar"
-          profile={profile}
-          avatarFallback="S"
-        />
-        <PageContent className="space-y-6">
-          <ProfileFormCardSkeleton />
-        </PageContent>
-      </PageContainer>
-    )
-  }
-
   return (
     <PageContainer>
-      <AppPageHeader
-        leading={headerLeading}
-        profileHref="/super/perfil/editar"
-        profile={profile}
-        avatarFallback="S"
-      />
+      <AppPageHeader greetingOnly profileHref="/super/perfil/editar" profile={profile} avatarFallback="S" />
 
       <PageContent className="space-y-6">
-        {error && (
-          <Alert
-            variant="danger"
-            onClose={() => setError(null)}
-            autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+        <div className="flex min-w-0 items-center gap-1 sm:gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-9 shrink-0"
+            onClick={() => router.back()}
+            aria-label="Voltar"
           >
-            <AlertTitle>{error}</AlertTitle>
-          </Alert>
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <PageTitle className="min-w-0 truncate">Perfil</PageTitle>
+        </div>
+
+        {isLoading ? (
+          <ProfileFormCardSkeleton />
+        ) : (
+          <>
+            {error && (
+              <Alert
+                variant="danger"
+                onClose={() => setError(null)}
+                autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+              >
+                <AlertTitle>{error}</AlertTitle>
+              </Alert>
+            )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <User className="h-5 w-5" />
+                  Seus dados
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="flex items-center gap-1">
+                    <Mail className="h-3.5 w-3.5" />
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    value={profile?.email || ''}
+                    disabled
+                    className="bg-muted"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    O email não pode ser alterado aqui.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="nome">Nome</Label>
+                  <Input
+                    id="nome"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Seu nome"
+                    autoComplete="name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="telefone" className="flex items-center gap-1">
+                    <Phone className="h-3.5 w-3.5" />
+                    Telefone
+                  </Label>
+                  <Input
+                    id="telefone"
+                    value={telefone}
+                    onChange={(e) => setTelefone(e.target.value)}
+                    placeholder="(00) 00000-0000"
+                    autoComplete="tel"
+                  />
+                </div>
+
+                {profile ? (
+                  <ProfileAvatarUpload
+                    userId={profile.id}
+                    avatarUrl={avatar}
+                    onAvatarUrlChange={setAvatar}
+                    fallbackLetter={nome.trim().charAt(0).toUpperCase() || 'S'}
+                    disabled={isSaving}
+                    onError={setError}
+                  />
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <Button
+              className="w-full"
+              onClick={handleSave}
+              disabled={isSaving || !profile}
+            >
+              {isSaving ? (
+                <Spinner className="mr-2 h-4 w-4" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Salvar alterações
+            </Button>
+          </>
         )}
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <User className="h-5 w-5" />
-              Seus dados
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-1">
-                <Mail className="h-3.5 w-3.5" />
-                Email
-              </Label>
-              <Input
-                id="email"
-                value={profile?.email || ''}
-                disabled
-                className="bg-muted"
-              />
-              <p className="text-xs text-muted-foreground">
-                O email não pode ser alterado aqui.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="nome">Nome</Label>
-              <Input
-                id="nome"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="Seu nome"
-                autoComplete="name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="telefone" className="flex items-center gap-1">
-                <Phone className="h-3.5 w-3.5" />
-                Telefone
-              </Label>
-              <Input
-                id="telefone"
-                value={telefone}
-                onChange={(e) => setTelefone(e.target.value)}
-                placeholder="(00) 00000-0000"
-                autoComplete="tel"
-              />
-            </div>
-
-            {profile ? (
-              <ProfileAvatarUpload
-                userId={profile.id}
-                avatarUrl={avatar}
-                onAvatarUrlChange={setAvatar}
-                fallbackLetter={nome.trim().charAt(0).toUpperCase() || 'S'}
-                disabled={isSaving}
-                onError={setError}
-              />
-            ) : null}
-          </CardContent>
-        </Card>
-
-        <Button
-          className="w-full"
-          onClick={handleSave}
-          disabled={isSaving || !profile}
-        >
-          {isSaving ? (
-            <Spinner className="mr-2 h-4 w-4" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          Salvar alterações
-        </Button>
       </PageContent>
     </PageContainer>
   )

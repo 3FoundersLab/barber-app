@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,7 +12,7 @@ import {
   UserCheck,
   UserX,
 } from 'lucide-react'
-import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -64,6 +65,16 @@ const SUPER_USUARIOS_ROLES: UserRole[] = ['super_admin', 'admin']
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const
 type UsuariosPageSize = (typeof PAGE_SIZE_OPTIONS)[number]
 
+const USUARIOS_SORT_OPTIONS = [
+  { value: 'nome_asc', label: 'Nome (A–Z)' },
+  { value: 'nome_desc', label: 'Nome (Z–A)' },
+  { value: 'email_asc', label: 'Email (A–Z)' },
+  { value: 'email_desc', label: 'Email (Z–A)' },
+  { value: 'created_desc', label: 'Mais recentes' },
+  { value: 'created_asc', label: 'Mais antigos' },
+] as const
+type UsuariosSort = (typeof USUARIOS_SORT_OPTIONS)[number]['value']
+
 function pageNumberItems(current: number, total: number): (number | 'ellipsis')[] {
   if (total <= 7) {
     return Array.from({ length: total }, (_, i) => i + 1)
@@ -100,6 +111,7 @@ type BarbeariaLink = {
 }
 
 export default function SuperUsuariosPage() {
+  const router = useRouter()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [linksByUser, setLinksByUser] = useState<Record<string, BarbeariaLink[]>>({})
   const [barbearias, setBarbearias] = useState<Barbearia[]>([])
@@ -107,6 +119,7 @@ export default function SuperUsuariosPage() {
   const [tab, setTab] = useState<'todos' | 'super'>('todos')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<UsuariosPageSize>(10)
+  const [sortBy, setSortBy] = useState<UsuariosSort>('nome_asc')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -233,7 +246,7 @@ export default function SuperUsuariosPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [search, tab])
+  }, [search, tab, sortBy])
 
   async function handleCreate() {
     if (!form.nome || !form.email || form.password.length < 6) return
@@ -408,10 +421,25 @@ export default function SuperUsuariosPage() {
           ROLE_LABELS[p.role].toLowerCase().includes(q),
       )
     }
-    return [...rows].sort((a, b) =>
-      (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' }),
-    )
-  }, [profiles, search, tab])
+    return [...rows].sort((a, b) => {
+      switch (sortBy) {
+        case 'nome_asc':
+          return (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' })
+        case 'nome_desc':
+          return (b.nome || '').localeCompare(a.nome || '', 'pt-BR', { sensitivity: 'base' })
+        case 'email_asc':
+          return (a.email || '').localeCompare(b.email || '', 'pt-BR', { sensitivity: 'base' })
+        case 'email_desc':
+          return (b.email || '').localeCompare(a.email || '', 'pt-BR', { sensitivity: 'base' })
+        case 'created_desc':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        case 'created_asc':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        default:
+          return 0
+      }
+    })
+  }, [profiles, search, tab, sortBy])
 
   const totalPages =
     filtered.length === 0 ? 0 : Math.ceil(filtered.length / pageSize)
@@ -433,63 +461,55 @@ export default function SuperUsuariosPage() {
 
   return (
     <PageContainer>
-      <AppPageHeader title="Usuários" profileHref="/super/perfil/editar" avatarFallback="S" />
+      <AppPageHeader greetingOnly profileHref="/super/perfil/editar" avatarFallback="S" />
 
       <PageContent className="space-y-4 pb-20 md:pb-6">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+          <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-9 shrink-0"
+              onClick={() => router.back()}
+              aria-label="Voltar"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <PageTitle className="min-w-0 truncate">Usuários</PageTitle>
+          </div>
+          <Button
+            type="button"
+            className="w-full shrink-0 sm:w-auto"
+            onClick={() => setIsDialogOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Novo usuário
+          </Button>
+        </div>
+
         <p className="text-sm text-muted-foreground">
           Listagem de contas com papéis Super Admin e Admin. Administradores precisam estar vinculados a
           uma barbearia. Você pode revogar o acesso por barbearia abaixo.
         </p>
 
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-          <div className="flex min-w-0 flex-1 gap-2 rounded-lg border bg-muted/40 p-1 sm:max-w-md">
-            <Button
-              type="button"
-              variant={tab === 'todos' ? 'default' : 'ghost'}
-              className="flex-1"
-              onClick={() => setTab('todos')}
-            >
-              Todos
-            </Button>
-            <Button
-              type="button"
-              variant={tab === 'super' ? 'default' : 'ghost'}
-              className="flex-1"
-              onClick={() => setTab('super')}
-            >
-              Super Admins
-            </Button>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <Label
-              htmlFor="usuarios-page-size"
-              className="text-sm text-muted-foreground whitespace-nowrap"
-            >
-              Itens por página
-            </Label>
-            <Select
-              value={String(pageSize)}
-              onValueChange={(v) => {
-                const n = Number(v)
-                const opt = PAGE_SIZE_OPTIONS.find((x) => x === n)
-                if (opt !== undefined) {
-                  setPageSize(opt)
-                  setPage(1)
-                }
-              }}
-            >
-              <SelectTrigger id="usuarios-page-size" className="h-9 w-[4.5rem]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAGE_SIZE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt} value={String(opt)}>
-                    {opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="flex w-full max-w-md gap-2 rounded-lg border bg-muted/40 p-1">
+          <Button
+            type="button"
+            variant={tab === 'todos' ? 'default' : 'ghost'}
+            className="flex-1"
+            onClick={() => setTab('todos')}
+          >
+            Todos
+          </Button>
+          <Button
+            type="button"
+            variant={tab === 'super' ? 'default' : 'ghost'}
+            className="flex-1"
+            onClick={() => setTab('super')}
+          >
+            Super Admins
+          </Button>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
@@ -502,10 +522,67 @@ export default function SuperUsuariosPage() {
               className="pl-9"
             />
           </div>
-          <Button className="w-full shrink-0 sm:w-auto" onClick={() => setIsDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo usuário
-          </Button>
+          <div className="flex w-full shrink-0 flex-wrap items-center gap-x-3 gap-y-2 sm:w-auto sm:justify-end">
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-initial sm:min-w-0">
+              <Label
+                htmlFor="usuarios-sort"
+                className="text-sm text-muted-foreground whitespace-nowrap"
+              >
+                Ordenar
+              </Label>
+              <Select
+                value={sortBy}
+                onValueChange={(v) => {
+                  const opt = USUARIOS_SORT_OPTIONS.find((o) => o.value === v)
+                  if (opt) setSortBy(opt.value)
+                }}
+              >
+                <SelectTrigger
+                  id="usuarios-sort"
+                  className="h-9 min-w-[9.5rem] flex-1 sm:flex-initial sm:min-w-[10.5rem]"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {USUARIOS_SORT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label
+                htmlFor="usuarios-page-size"
+                className="text-sm text-muted-foreground whitespace-nowrap"
+              >
+                Itens por página
+              </Label>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(v) => {
+                  const n = Number(v)
+                  const opt = PAGE_SIZE_OPTIONS.find((x) => x === n)
+                  if (opt !== undefined) {
+                    setPageSize(opt)
+                    setPage(1)
+                  }
+                }}
+              >
+                <SelectTrigger id="usuarios-page-size" className="h-9 w-[4.5rem]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt} value={String(opt)}>
+                      {opt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         {error && (

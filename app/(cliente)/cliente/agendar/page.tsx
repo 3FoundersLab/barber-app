@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Check } from 'lucide-react'
-import { PageContainer, PageTitle, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { ServiceCard } from '@/components/domain/service-card'
 import { Button } from '@/components/ui/button'
@@ -218,12 +218,9 @@ export default function AgendarPage() {
   }
 
   const headerLeading = (
-    <div className="flex min-w-0 items-center gap-3">
-      <Button variant="ghost" size="icon" onClick={handleBack}>
-        <ChevronLeft className="h-5 w-5" />
-      </Button>
-      <PageTitle className="truncate">{getStepTitle()}</PageTitle>
-    </div>
+    <Button variant="ghost" size="icon" onClick={handleBack} aria-label="Voltar">
+      <ChevronLeft className="h-5 w-5" />
+    </Button>
   )
 
   if (isLoading) {
@@ -231,6 +228,7 @@ export default function AgendarPage() {
       <PageContainer>
         <AppPageHeader
           leading={headerLeading}
+          contentTitle={getStepTitle()}
           profileHref="/cliente/perfil/editar"
           avatarFallback="C"
         />
@@ -245,6 +243,7 @@ export default function AgendarPage() {
     <PageContainer>
       <AppPageHeader
         leading={headerLeading}
+        contentTitle={getStepTitle()}
         profileHref="/cliente/perfil/editar"
         avatarFallback="C"
       />

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { AppointmentCard } from '@/components/domain/appointment-card'
 import { Button } from '@/components/ui/button'
@@ -182,17 +182,7 @@ export default function BarbeiroAgendaPage() {
   return (
     <PageContainer>
       <AppPageHeader
-        renderTitle={(p) => {
-          const nome = p?.nome?.trim()
-          return (
-            <div className="min-w-0">
-              <PageTitle className="text-lg">
-                {nome ? `Olá, ${nome}` : 'Olá'}
-              </PageTitle>
-              <p className="text-sm text-muted-foreground">Minha Agenda</p>
-            </div>
-          )
-        }}
+        title="Minha Agenda"
         profileHref="/barbeiro/perfil/editar"
         profile={profile}
         avatarFallback="B"

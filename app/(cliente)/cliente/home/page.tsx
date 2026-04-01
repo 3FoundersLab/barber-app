@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Calendar, Clock, Scissors, ChevronRight, MapPin } from 'lucide-react'
-import { PageContainer, PageTitle, PageContent } from '@/components/shared/page-container'
+import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -84,16 +84,9 @@ export default function ClienteHomePage() {
   return (
     <PageContainer>
       <AppPageHeader
+        greetingOnly
         profileHref="/cliente/perfil/editar"
         avatarFallback="C"
-        renderTitle={(p) => {
-          const nome = p?.nome?.trim()
-          return (
-            <PageTitle className="text-lg">
-              {nome ? `Olá, ${nome}` : 'Olá'}
-            </PageTitle>
-          )
-        }}
       />
 
       <PageContent className="space-y-6 md:space-y-8">

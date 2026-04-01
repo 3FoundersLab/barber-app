@@ -1,6 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import { useOptionalAppPageHeading } from '@/components/shared/app-page-heading-context'
 
 interface PageContainerProps {
   children: React.ReactNode
@@ -64,8 +65,22 @@ interface PageContentProps {
 }
 
 export function PageContent({ children, className }: PageContentProps) {
+  const headingCtx = useOptionalAppPageHeading()
+  const heading = headingCtx?.heading ?? null
+
   return (
     <div className={cn('flex-1 p-4 md:p-6', className)}>
+      {heading ? (
+        <div className="mb-4 space-y-1 md:mb-6">
+          <PageTitle>{heading.title}</PageTitle>
+          {heading.subtitle != null &&
+            (typeof heading.subtitle === 'string' ? (
+              <p className="text-sm text-muted-foreground">{heading.subtitle}</p>
+            ) : (
+              heading.subtitle
+            ))}
+        </div>
+      ) : null}
       {children}
     </div>
   )
