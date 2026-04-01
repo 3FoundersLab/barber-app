@@ -154,19 +154,24 @@ export default function AdminDashboardPage() {
     loadData()
   }, [])
 
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Bom dia'
+    if (hour < 18) return 'Boa tarde'
+    return 'Boa noite'
+  }
+
   return (
     <PageContainer>
       <AppPageHeader
         profileHref="/admin/configuracoes"
         avatarFallback="A"
-        renderTitle={(p) => {
-          const nome = p?.nome?.trim()
-          return (
-            <PageTitle className="text-lg">
-              {nome ? `Olá, ${nome}` : 'Olá'}
-            </PageTitle>
-          )
-        }}
+        renderTitle={(p) => (
+          <>
+            <p className="text-sm text-muted-foreground">{getGreeting()},</p>
+            <PageTitle>{p?.nome?.split(' ')[0] || 'Admin'}</PageTitle>
+          </>
+        )}
       />
 
       <PageContent className="space-y-6 md:space-y-8">
