@@ -182,7 +182,7 @@ export default function BarbeiroAgendaPage() {
     <PageContainer>
       <AppPageHeader
         title="Minha Agenda"
-        profileHref="/barbeiro/perfil"
+        profileHref="/barbeiro/perfil/editar"
         profile={profile}
         avatarFallback="B"
         actions={

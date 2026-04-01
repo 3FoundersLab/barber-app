@@ -7,7 +7,7 @@ import { DesktopSidebar } from '@/components/shared/desktop-sidebar'
 const barbeiroTabs: TabItem[] = [
   { label: 'Agenda', href: '/barbeiro/agenda', icon: Calendar },
   { label: 'Horários', href: '/barbeiro/horarios', icon: Clock },
-  { label: 'Perfil', href: '/barbeiro/perfil', icon: User },
+  { label: 'Perfil', href: '/barbeiro/perfil/editar', icon: User },
 ]
 
 export default function BarbeiroLayout({

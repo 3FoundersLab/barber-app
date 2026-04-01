@@ -66,7 +66,7 @@ export default function SuperDashboardPage() {
     <PageContainer>
       <AppPageHeader
         title="Super Admin"
-        profileHref="/super/dashboard"
+        profileHref="/super/perfil/editar"
         avatarFallback="S"
       />
 

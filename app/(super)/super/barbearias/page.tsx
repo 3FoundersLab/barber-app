@@ -131,7 +131,7 @@ export default function SuperBarbeariasPage() {
     <PageContainer>
       <AppPageHeader
         title="Barbearias"
-        profileHref="/super/dashboard"
+        profileHref="/super/perfil/editar"
         avatarFallback="S"
       />
 

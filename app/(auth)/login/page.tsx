@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { createClient } from '@/lib/supabase/client'
+import { clearProfileCache } from '@/lib/profile-cache'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -72,6 +73,7 @@ export default function LoginPage() {
 
           if (!vinculo || vinculo.length === 0) {
             setError('Seu usuário não pertence à barbearia da URL')
+            clearProfileCache()
             await supabase.auth.signOut()
             return
           }

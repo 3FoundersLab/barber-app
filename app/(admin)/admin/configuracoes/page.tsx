@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { Separator } from '@/components/ui/separator'
 import { createClient } from '@/lib/supabase/client'
+import { clearProfileCache } from '@/lib/profile-cache'
 import type { Barbearia } from '@/types'
 
 export default function AdminConfiguracoesPage() {
@@ -103,6 +104,7 @@ export default function AdminConfiguracoesPage() {
 
   const handleLogout = async () => {
     const supabase = createClient()
+    clearProfileCache()
     await supabase.auth.signOut()
     router.push('/login')
   }

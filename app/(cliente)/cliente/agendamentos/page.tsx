@@ -135,7 +135,7 @@ export default function MeusAgendamentosPage() {
     <PageContainer>
       <AppPageHeader
         title="Meus Agendamentos"
-        profileHref="/cliente/perfil"
+        profileHref="/cliente/perfil/editar"
         avatarFallback="C"
       />
 

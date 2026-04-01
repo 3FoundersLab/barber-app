@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { createClient } from '@/lib/supabase/client'
+import { clearProfileCache } from '@/lib/profile-cache'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 
@@ -27,6 +28,7 @@ export function UserHeaderMenu({ avatarSrc, fallback, profileHref }: UserHeaderM
 
   const handleLogout = async () => {
     const supabase = createClient()
+    clearProfileCache()
     await supabase.auth.signOut()
     router.push('/login')
   }
@@ -54,10 +56,16 @@ export function UserHeaderMenu({ avatarSrc, fallback, profileHref }: UserHeaderM
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-40">
-          <DropdownMenuItem asChild className="cursor-pointer">
+          <DropdownMenuItem
+            asChild
+            className="cursor-pointer focus:bg-muted focus:text-foreground data-[highlighted]:bg-muted data-[highlighted]:text-foreground"
+          >
             <Link href={profileHref}>Meu Perfil</Link>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+          <DropdownMenuItem
+            onClick={handleLogout}
+            className="cursor-pointer focus:bg-muted focus:text-foreground data-[highlighted]:bg-muted data-[highlighted]:text-foreground"
+          >
             Sair
           </DropdownMenuItem>
         </DropdownMenuContent>

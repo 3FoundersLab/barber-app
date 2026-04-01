@@ -4,6 +4,11 @@ import { useEffect, useState } from 'react'
 import { PageHeader, PageTitle } from '@/components/shared/page-container'
 import { UserHeaderMenu } from '@/components/shared/user-header-menu'
 import { createClient } from '@/lib/supabase/client'
+import {
+  clearProfileCache,
+  getStoredProfileCache,
+  setProfileCache,
+} from '@/lib/profile-cache'
 import type { Profile } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -51,8 +56,12 @@ export function AppPageHeader(props: AppPageHeaderProps) {
     avatarFallback = 'U',
   } = props
 
-  const [internalProfile, setInternalProfile] = useState<Profile | null>(null)
   const shouldFetch = profileFromParent === undefined
+  const [internalProfile, setInternalProfile] = useState<Profile | null>(() => {
+    if (!shouldFetch) return null
+    const stored = getStoredProfileCache()
+    return stored?.profile ?? null
+  })
   const effectiveProfile = shouldFetch ? internalProfile : profileFromParent
 
   useEffect(() => {
@@ -63,9 +72,29 @@ export function AppPageHeader(props: AppPageHeaderProps) {
       const {
         data: { user },
       } = await supabase.auth.getUser()
-      if (!user || cancelled) return
+      if (!user) {
+        if (!cancelled) {
+          clearProfileCache()
+          setInternalProfile(null)
+        }
+        return
+      }
+      if (cancelled) return
+
+      const stored = getStoredProfileCache()
+      if (!stored || stored.userId !== user.id) {
+        clearProfileCache()
+        if (!cancelled) setInternalProfile(null)
+      } else if (!cancelled) {
+        setInternalProfile(stored.profile)
+      }
+
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      if (!cancelled && data) setInternalProfile(data)
+      if (cancelled) return
+      if (data) {
+        setProfileCache(user.id, data)
+        setInternalProfile(data)
+      }
     }
     void load()
     return () => {

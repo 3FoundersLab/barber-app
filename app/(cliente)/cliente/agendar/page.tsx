@@ -229,7 +229,7 @@ export default function AgendarPage() {
       <PageContainer>
         <AppPageHeader
           leading={headerLeading}
-          profileHref="/cliente/perfil"
+          profileHref="/cliente/perfil/editar"
           avatarFallback="C"
         />
         <div className="flex flex-1 items-center justify-center">
@@ -243,7 +243,7 @@ export default function AgendarPage() {
     <PageContainer>
       <AppPageHeader
         leading={headerLeading}
-        profileHref="/cliente/perfil"
+        profileHref="/cliente/perfil/editar"
         avatarFallback="C"
       />
 

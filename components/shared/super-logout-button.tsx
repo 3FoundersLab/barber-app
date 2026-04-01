@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
+import { clearProfileCache } from '@/lib/profile-cache'
 import { cn } from '@/lib/utils'
 
 type SuperLogoutButtonProps = {
@@ -16,6 +17,7 @@ export function SuperLogoutButton({ variant = 'button', className }: SuperLogout
 
   const handleLogout = async () => {
     const supabase = createClient()
+    clearProfileCache()
     await supabase.auth.signOut()
     router.push('/login')
   }

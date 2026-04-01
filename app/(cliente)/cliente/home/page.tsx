@@ -85,7 +85,7 @@ export default function ClienteHomePage() {
   return (
     <PageContainer>
       <AppPageHeader
-        profileHref="/cliente/perfil"
+        profileHref="/cliente/perfil/editar"
         avatarFallback="C"
         renderTitle={(p) => (
           <>

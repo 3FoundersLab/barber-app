@@ -8,7 +8,7 @@ const clienteTabs: TabItem[] = [
   { label: 'Início', href: '/cliente/home', icon: Home },
   { label: 'Agendar', href: '/cliente/agendar', icon: Calendar },
   { label: 'Meus Horários', href: '/cliente/agendamentos', icon: Clock },
-  { label: 'Perfil', href: '/cliente/perfil', icon: User },
+  { label: 'Perfil', href: '/cliente/perfil/editar', icon: User },
 ]
 
 export default function ClienteLayout({

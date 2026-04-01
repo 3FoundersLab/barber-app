@@ -93,7 +93,7 @@ export default function SuperAssinaturasPage() {
     <PageContainer>
       <AppPageHeader
         title="Assinaturas"
-        profileHref="/super/dashboard"
+        profileHref="/super/perfil/editar"
         avatarFallback="S"
       />
 

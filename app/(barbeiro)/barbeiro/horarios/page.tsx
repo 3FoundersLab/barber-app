@@ -154,7 +154,7 @@ export default function BarbeiroHorariosPage() {
       <PageContainer>
         <AppPageHeader
           title="Horários de Trabalho"
-          profileHref="/barbeiro/perfil"
+          profileHref="/barbeiro/perfil/editar"
           avatarFallback="B"
         />
         <div className="flex flex-1 items-center justify-center">
@@ -168,7 +168,7 @@ export default function BarbeiroHorariosPage() {
     <PageContainer>
       <AppPageHeader
         title="Horários de Trabalho"
-        profileHref="/barbeiro/perfil"
+        profileHref="/barbeiro/perfil/editar"
         avatarFallback="B"
       />
 
