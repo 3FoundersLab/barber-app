@@ -450,7 +450,7 @@ export default function SuperBarbeariasPage() {
                               type="button"
                               variant="default"
                               size="icon-sm"
-                              className="size-8 rounded-lg border-0 bg-black text-white shadow-none hover:bg-black/90 hover:text-white focus-visible:ring-black/35 dark:bg-white dark:text-zinc-950 dark:hover:bg-white/90 dark:hover:text-zinc-950 dark:focus-visible:ring-white/40 [&_svg]:text-white dark:[&_svg]:text-zinc-950"
+                              className="size-8 rounded-lg border-0 bg-black text-white shadow-none hover:bg-black/80 hover:text-white focus-visible:ring-black/35 dark:bg-white dark:text-zinc-950 dark:hover:bg-white/80 dark:hover:text-zinc-950 dark:focus-visible:ring-white/40 [&_svg]:text-white dark:[&_svg]:text-zinc-950"
                               onClick={() => handleImpersonate(barbearia.id)}
                               aria-label="Acessar Barbearia"
                             >
