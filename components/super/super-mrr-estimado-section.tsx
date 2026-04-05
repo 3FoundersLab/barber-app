@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useId, useMemo, type ReactNode } from 'react'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart'
 import {
@@ -89,12 +90,15 @@ export function SuperMrrEstimadoSection({
       ? formatPctVariacao(resumo.crescimentoJanUltimoPct)
       : '—'
 
+  const isLgUp = useMediaQuery('(min-width: 1024px)')
+
   return (
-    <div className={cn('flex min-h-0 w-full flex-1 flex-col gap-4', className)}>
+    <div className={cn('flex min-h-0 w-full flex-1 flex-col gap-4 lg:min-h-0 lg:gap-3', className)}>
       <div
         className={cn(
           'grid shrink-0 grid-cols-2 gap-x-4 gap-y-4 border-b border-dashed border-border/60 pb-4',
-          'sm:grid-cols-3 lg:grid-cols-6 lg:gap-x-3',
+          'sm:grid-cols-3 lg:grid-cols-6 lg:gap-x-4 lg:gap-y-3 lg:pb-3',
+          'lg:justify-items-center lg:[&>div]:text-center',
         )}
         aria-label="Resumo executivo MRR"
       >
@@ -122,9 +126,9 @@ export function SuperMrrEstimadoSection({
         />
       </div>
 
-      <div className="flex w-full min-h-[240px] flex-1 flex-col sm:min-h-[260px] lg:min-h-[280px]">
+      <div className="flex w-full min-h-[240px] flex-1 flex-col sm:min-h-[260px] lg:min-h-[300px]">
         <div
-          className="grid min-h-0 w-full flex-1 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-stretch gap-1 sm:gap-2"
+          className="grid min-h-0 w-full flex-1 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-stretch gap-1 sm:gap-2 lg:grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] lg:gap-2"
           aria-label="Gráfico de MRR estimado por mês"
         >
           <div className="flex min-h-0 items-center justify-center self-stretch">
@@ -156,12 +160,16 @@ export function SuperMrrEstimadoSection({
               className={cn(
                 'aspect-auto !h-full min-h-[200px] w-full flex-1 justify-stretch',
                 '[&_.recharts-responsive-container]:!h-full [&_.recharts-responsive-container]:min-h-[180px]',
-                'sm:min-h-[220px] lg:min-h-[240px]',
+                'sm:min-h-[220px] lg:min-h-[260px] xl:min-h-[288px]',
               )}
             >
               <AreaChart
                 data={visibleChartRows}
-                margin={{ top: 10, right: 6, left: 0, bottom: 6 }}
+                margin={
+                  isLgUp
+                    ? { top: 12, right: 8, left: 0, bottom: 8 }
+                    : { top: 10, right: 6, left: 0, bottom: 6 }
+                }
               >
                 <defs>
                   <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">

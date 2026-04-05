@@ -11,6 +11,7 @@ import {
   useMonthWindowState,
   useVisibleMonthCount,
 } from '@/lib/chart-month-navigation'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import { cn } from '@/lib/utils'
 import {
   formatPctBR,
@@ -62,10 +63,18 @@ export function SuperBarbeariasMensalStackedChart({
 
   const { onTouchStart, onTouchEnd, onMouseDown } = useMonthSwipeHandlers(goPrev, goNext)
 
+  const isLgUp = useMediaQuery('(min-width: 1024px)')
+  const barCategoryGap = isLgUp ? '14%' : '18%'
+  const barGap = isLgUp ? 2 : 3
+  const maxBarSize = isLgUp ? 68 : 72
+
   return (
     <div className={cn('flex min-h-0 w-full flex-1 flex-col', className)}>
       <div
-        className="grid min-h-0 w-full flex-1 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-stretch gap-1 sm:gap-2"
+        className={cn(
+          'grid min-h-0 w-full flex-1 grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-stretch gap-1 sm:gap-2 lg:grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] lg:gap-2',
+          'lg:h-[238px] lg:min-h-[238px] lg:max-h-[238px] lg:flex-none',
+        )}
         aria-label="Gráfico de barbearias por mês"
       >
         <div className="flex min-h-0 items-center justify-center self-stretch">
@@ -83,7 +92,7 @@ export function SuperBarbeariasMensalStackedChart({
 
         <div
           className={cn(
-            'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
+            'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:h-full lg:min-h-0',
             'cursor-grab touch-pan-y select-none active:cursor-grabbing',
             'transition-opacity duration-300 ease-out',
           )}
@@ -97,14 +106,19 @@ export function SuperBarbeariasMensalStackedChart({
             className={cn(
               'aspect-auto !h-full min-h-[200px] w-full flex-1 justify-stretch',
               '[&_.recharts-responsive-container]:!h-full [&_.recharts-responsive-container]:min-h-[180px]',
-              'sm:min-h-[220px]',
+              'sm:min-h-[220px] lg:min-h-0 lg:flex-none lg:!h-full',
+              'lg:[&_.recharts-responsive-container]:min-h-0',
             )}
           >
             <BarChart
               data={visibleRows}
-              margin={{ top: 8, right: 2, left: 0, bottom: 2 }}
-              barCategoryGap="18%"
-              barGap={3}
+              margin={
+                isLgUp
+                  ? { top: 10, right: 4, left: 0, bottom: 4 }
+                  : { top: 8, right: 2, left: 0, bottom: 2 }
+              }
+              barCategoryGap={barCategoryGap}
+              barGap={barGap}
             >
               <CartesianGrid
                 vertical={false}
@@ -171,7 +185,7 @@ export function SuperBarbeariasMensalStackedChart({
                 stackId="barbearias"
                 fill="var(--color-pctAtivo)"
                 radius={[0, 0, 6, 6]}
-                maxBarSize={72}
+                maxBarSize={maxBarSize}
                 animationDuration={380}
               >
                 <LabelList
@@ -193,7 +207,7 @@ export function SuperBarbeariasMensalStackedChart({
                 stackId="barbearias"
                 fill="var(--color-pctInativo)"
                 radius={[6, 6, 0, 0]}
-                maxBarSize={72}
+                maxBarSize={maxBarSize}
                 animationDuration={380}
               >
                 <LabelList
@@ -231,7 +245,7 @@ export function SuperBarbeariasMensalStackedChart({
       <div
         className={cn(
           'border-border/50 mt-3 flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-dashed pt-3 text-xs',
-          'sm:mt-auto sm:pt-3.5',
+          'sm:mt-auto sm:pt-3.5 lg:mt-auto lg:pt-2.5',
         )}
       >
         <div className="flex items-center gap-2">
