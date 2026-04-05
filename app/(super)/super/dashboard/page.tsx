@@ -10,6 +10,7 @@ import {
   AlertTitle,
   ALERT_DEFAULT_AUTO_CLOSE_MS,
 } from '@/components/ui/alert'
+import { SuperDashboardChartsSection } from '@/components/super/super-dashboard-charts-section'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatCurrency } from '@/lib/constants'
@@ -134,6 +135,8 @@ export default function SuperDashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        <SuperDashboardChartsSection />
       </PageContent>
     </PageContainer>
   )

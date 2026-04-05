@@ -7,4 +7,6 @@ __v0_jsx-dev-runtime.ts
 node_modules
 .next/
 .env*.local
+# Evita commit acidental: Next.js não lê este nome (use .env.local)
+env.local
 .DS_Store
