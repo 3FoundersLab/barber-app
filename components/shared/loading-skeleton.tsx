@@ -342,12 +342,89 @@ export function SubscriptionRowSkeleton({ className }: { className?: string }) {
   )
 }
 
+/** Linha da tabela de assinaturas (desktop) */
+export function SubscriptionTableRowSkeleton({ className }: { className?: string }) {
+  return (
+    <tr className={cn('border-b border-border', className)}>
+      <td className="px-4 py-3">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-36" />
+          <Skeleton className="h-3 w-28" />
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <Skeleton className="h-4 w-24" />
+      </td>
+      <td className="px-4 py-3">
+        <Skeleton className="h-6 w-20 rounded-full" />
+      </td>
+      <td className="px-4 py-3">
+        <Skeleton className="h-4 w-24" />
+      </td>
+      <td className="px-4 py-3 text-right">
+        <Skeleton className="ml-auto h-8 w-28" />
+      </td>
+    </tr>
+  )
+}
+
 export function SubscriptionListSkeleton({ count = 4, className }: ListSkeletonProps) {
   return (
     <div className={cn('space-y-3', className)}>
       {Array.from({ length: count }).map((_, i) => (
         <SubscriptionRowSkeleton key={i} />
       ))}
+    </div>
+  )
+}
+
+/** Página de assinaturas: cards de KPI + busca + tabela (lg) ou lista de cards */
+export function SuperAssinaturasPageSkeleton({ count = 5 }: ListSkeletonProps) {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Card>
+          <CardContent className="flex items-center gap-4 p-4">
+            <Skeleton className="h-12 w-12 shrink-0 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-8 w-12" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-4">
+            <Skeleton className="h-12 w-12 shrink-0 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-8 w-12" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Skeleton className="h-9 w-full sm:max-w-md" />
+        <Skeleton className="h-9 w-full sm:w-[140px]" />
+      </div>
+      <div className="hidden overflow-hidden rounded-xl border bg-card lg:block">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/40">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <th key={i} className="px-4 py-3 text-left">
+                  <Skeleton className="h-3 w-20" />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: count }).map((_, i) => (
+              <SubscriptionTableRowSkeleton key={i} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <SubscriptionListSkeleton count={count} className="lg:hidden" />
     </div>
   )
 }
