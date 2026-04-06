@@ -1,9 +1,11 @@
--- Self-service signup for barbershops
--- Allows public selection of active plans and creates barbearia + assinatura for the logged-in new admin.
--- Assinatura inicia como "pendente" ate confirmacao de pagamento (super admin). Endereco preenchido depois em Configuracoes.
+-- Endereco removido da RPC de cadastro (preenchimento opcional em Configuracoes do admin).
 
-CREATE POLICY "planos_select_public_active" ON public.planos
-  FOR SELECT USING (ativo = true);
+DROP FUNCTION IF EXISTS public.criar_barbearia_com_assinatura(
+  TEXT, TEXT, TEXT, TEXT, TEXT, UUID, TEXT, TEXT, TEXT
+);
+DROP FUNCTION IF EXISTS public.criar_barbearia_com_assinatura(
+  TEXT, TEXT, TEXT, TEXT, UUID, TEXT
+);
 
 CREATE OR REPLACE FUNCTION public.criar_barbearia_com_assinatura(
   p_nome TEXT,

@@ -39,11 +39,7 @@ export default function CadastroBarbeariaPage() {
     nomeBarbearia: '',
     slug: '',
     telefoneBarbearia: '',
-    emailBarbearia: '',
-    enderecoBarbearia: '',
-    nomeResponsavel: '',
     emailResponsavel: '',
-    telefoneResponsavel: '',
     senha: '',
     confirmarSenha: '',
     planoId: '',
@@ -115,8 +111,8 @@ export default function CadastroBarbeariaPage() {
         password: formData.senha,
         options: {
           data: {
-            nome: formData.nomeResponsavel,
-            telefone: formData.telefoneResponsavel || null,
+            nome: formData.nomeBarbearia,
+            telefone: formData.telefoneBarbearia || null,
             role: 'admin',
           },
         },
@@ -137,18 +133,16 @@ export default function CadastroBarbeariaPage() {
         p_nome: formData.nomeBarbearia,
         p_slug: slug,
         p_telefone: formData.telefoneBarbearia || null,
-        p_email: formData.emailBarbearia || null,
-        p_endereco: formData.enderecoBarbearia || null,
         p_plano_id: formData.planoId,
-        p_nome_responsavel: formData.nomeResponsavel,
         p_email_responsavel: formData.emailResponsavel,
-        p_telefone_responsavel: formData.telefoneResponsavel || null,
       })
 
       if (rpcError) {
         setError(rpcError.message || 'Nao foi possivel finalizar o cadastro da barbearia')
         return
       }
+
+      await supabase.auth.refreshSession()
 
       setSuccess('Barbearia cadastrada com sucesso! Redirecionando para o painel...')
       setTimeout(() => {
@@ -179,7 +173,7 @@ export default function CadastroBarbeariaPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Dados da barbearia e responsavel</CardTitle>
+            <CardTitle>Dados da barbearia e acesso</CardTitle>
             <CardDescription>
               Preencha as informacoes abaixo para criar sua barbearia e contratar um plano.
             </CardDescription>
@@ -220,7 +214,7 @@ export default function CadastroBarbeariaPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="telefoneBarbearia">Telefone da barbearia</Label>
+                  <Label htmlFor="telefoneBarbearia">Telefone</Label>
                   <Input
                     id="telefoneBarbearia"
                     value={formData.telefoneBarbearia}
@@ -228,42 +222,10 @@ export default function CadastroBarbeariaPage() {
                     disabled={isSubmitting}
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="emailBarbearia">Email da barbearia</Label>
-                  <Input
-                    id="emailBarbearia"
-                    type="email"
-                    value={formData.emailBarbearia}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, emailBarbearia: e.target.value }))}
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="enderecoBarbearia">Endereco</Label>
-                  <Input
-                    id="enderecoBarbearia"
-                    value={formData.enderecoBarbearia}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, enderecoBarbearia: e.target.value }))}
-                    disabled={isSubmitting}
-                  />
-                </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="nomeResponsavel">Nome do responsavel</Label>
-                  <Input
-                    id="nomeResponsavel"
-                    value={formData.nomeResponsavel}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, nomeResponsavel: e.target.value }))}
-                    disabled={isSubmitting}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="emailResponsavel">Email de acesso</Label>
                   <Input
                     id="emailResponsavel"
@@ -272,16 +234,6 @@ export default function CadastroBarbeariaPage() {
                     onChange={(e) => setFormData((prev) => ({ ...prev, emailResponsavel: e.target.value }))}
                     disabled={isSubmitting}
                     required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="telefoneResponsavel">Telefone do responsavel</Label>
-                  <Input
-                    id="telefoneResponsavel"
-                    value={formData.telefoneResponsavel}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, telefoneResponsavel: e.target.value }))}
-                    disabled={isSubmitting}
                   />
                 </div>
 
@@ -377,7 +329,8 @@ export default function CadastroBarbeariaPage() {
                 <Card className="border-dashed">
                   <CardContent className="py-3 text-sm text-muted-foreground">
                     Plano selecionado: <span className="font-medium text-foreground">{selectedPlan.nome}</span> (
-                    {formatCurrency(selectedPlan.preco_mensal)} / mes)
+                    {formatCurrency(selectedPlan.preco_mensal)} / mes). O plano ficara pendente ate a confirmacao do
+                    pagamento.
                   </CardContent>
                 </Card>
               )}
@@ -406,7 +359,6 @@ export default function CadastroBarbeariaPage() {
                     isLoadingPlans ||
                     !formData.nomeBarbearia ||
                     !formData.slug ||
-                    !formData.nomeResponsavel ||
                     !formData.emailResponsavel ||
                     !formData.senha ||
                     !formData.confirmarSenha ||

@@ -117,7 +117,7 @@ export interface HorarioTrabalho {
   created_at: string
 }
 
-export type AssinaturaStatus = 'ativa' | 'trial' | 'inadimplente' | 'cancelada'
+export type AssinaturaStatus = 'pendente' | 'ativa' | 'trial' | 'inadimplente' | 'cancelada'
 
 export interface Plano {
   id: string

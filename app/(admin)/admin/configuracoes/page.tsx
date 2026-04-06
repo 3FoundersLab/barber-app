@@ -2,10 +2,25 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { LogOut, Store, MapPin, Phone, Mail, Save } from 'lucide-react'
+import {
+  CreditCard,
+  LogOut,
+  Mail,
+  MapPin,
+  Phone,
+  Save,
+  Store,
+  User,
+} from 'lucide-react'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
-import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  ALERT_DEFAULT_AUTO_CLOSE_MS,
+} from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,18 +28,38 @@ import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { AdminConfiguracoesPageSkeleton } from '@/components/shared/loading-skeleton'
 import { Separator } from '@/components/ui/separator'
+import { ProfileAvatarUpload } from '@/components/shared/profile-avatar-upload'
 import { createClient } from '@/lib/supabase/client'
-import { clearProfileCache } from '@/lib/profile-cache'
-import type { Barbearia } from '@/types'
+import { clearProfileCache, setProfileCache } from '@/lib/profile-cache'
+import { formatCurrency } from '@/lib/constants'
+import type { Assinatura, Barbearia, Plano, Profile } from '@/types'
+
+function labelAssinaturaStatus(status: string) {
+  const map: Record<string, string> = {
+    pendente: 'Pagamento pendente',
+    ativa: 'Ativa',
+    trial: 'Trial',
+    inadimplente: 'Inadimplente',
+    cancelada: 'Cancelada',
+  }
+  return map[status] ?? status
+}
 
 export default function AdminConfiguracoesPage() {
   const router = useRouter()
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [barbearia, setBarbearia] = useState<Barbearia | null>(null)
+  const [assinatura, setAssinatura] = useState<(Assinatura & { plano?: Plano | null }) | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
+  const [isSavingBarbearia, setIsSavingBarbearia] = useState(false)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
-  const [formData, setFormData] = useState({
+
+  const [nomePerfil, setNomePerfil] = useState('')
+  const [telefonePerfil, setTelefonePerfil] = useState('')
+  const [avatar, setAvatar] = useState('')
+
+  const [formBarbearia, setFormBarbearia] = useState({
     nome: '',
     endereco: '',
     telefone: '',
@@ -32,76 +67,173 @@ export default function AdminConfiguracoesPage() {
   })
 
   useEffect(() => {
-    async function loadBarbearia() {
+    async function load() {
       const supabase = createClient()
       setError(null)
-      
-      const { data: { user } } = await supabase.auth.getUser()
 
-      if (!user) {
+      await supabase.auth.refreshSession()
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
+
+      if (userError || !user) {
         setError('Usuário não autenticado')
         setIsLoading(false)
         return
       }
 
-      const { data: barbeariaUser } = await supabase
-        .from('barbearia_users')
-        .select('barbearia_id')
-        .eq('user_id', user.id)
-        .single()
+      const { data: profileData, error: profileErr } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle()
 
-      if (!barbeariaUser) {
-        setError('Barbearia não encontrada para este usuário')
+      if (profileErr) {
+        setError(profileErr.message || 'Não foi possível carregar o perfil')
         setIsLoading(false)
         return
       }
 
-      const { data } = await supabase
-        .from('barbearias')
-        .select('*')
-        .eq('id', barbeariaUser.barbearia_id)
-        .single()
-      
-      if (!data) {
-        setError('Barbearia não encontrada')
-      } else {
-        setBarbearia(data)
-        setFormData({
-          nome: data.nome,
-          endereco: data.endereco || '',
-          telefone: data.telefone || '',
-          email: data.email || '',
-        })
+      if (profileData) {
+        setProfile(profileData)
+        setNomePerfil(profileData.nome || '')
+        setTelefonePerfil(profileData.telefone || '')
+        setAvatar(profileData.avatar || '')
       }
-      
+
+      let b: Barbearia | null = null
+
+      const { data: linkRow, error: linkErr } = await supabase
+        .from('barbearia_users')
+        .select('barbearia_id, barbearias(*)')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (linkErr) {
+        const { data: buOnly, error: buErr } = await supabase
+          .from('barbearia_users')
+          .select('barbearia_id')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        if (buErr || !buOnly?.barbearia_id) {
+          setError(linkErr.message || 'Não foi possível carregar o vínculo com a barbearia')
+        } else {
+          const { data: bDirect, error: bErr } = await supabase
+            .from('barbearias')
+            .select('*')
+            .eq('id', buOnly.barbearia_id)
+            .maybeSingle()
+          if (bErr) {
+            setError(bErr.message || 'Não foi possível carregar a barbearia')
+          } else {
+            b = bDirect
+          }
+        }
+      } else if (linkRow?.barbearia_id) {
+        const embedded = linkRow.barbearias as Barbearia | Barbearia[] | null
+        b = Array.isArray(embedded) ? embedded[0] ?? null : embedded
+        if (!b) {
+          const { data: bDirect, error: bErr } = await supabase
+            .from('barbearias')
+            .select('*')
+            .eq('id', linkRow.barbearia_id)
+            .maybeSingle()
+          if (bErr) {
+            setError(bErr.message || 'Não foi possível carregar a barbearia')
+          } else {
+            b = bDirect
+          }
+        }
+      }
+
+      if (b) {
+        setBarbearia(b)
+        setFormBarbearia({
+          nome: b.nome,
+          endereco: b.endereco || '',
+          telefone: b.telefone || '',
+          email: b.email || '',
+        })
+
+        const { data: assinaturaData } = await supabase
+          .from('assinaturas')
+          .select('*, plano:planos(*)')
+          .eq('barbearia_id', b.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        setAssinatura(assinaturaData as (Assinatura & { plano?: Plano | null }) | null)
+      }
+
       setIsLoading(false)
     }
-    
-    loadBarbearia()
+
+    void load()
   }, [])
 
-  const handleSave = async () => {
+  const handleSaveBarbearia = async () => {
     if (!barbearia) return
-    
-    setIsSaving(true)
+
+    setIsSavingBarbearia(true)
     setError(null)
     const supabase = createClient()
-    
-    const { error: updateError } = await supabase
+
+    const { data: updatedB, error: updateError } = await supabase
       .from('barbearias')
       .update({
-        nome: formData.nome,
-        endereco: formData.endereco || null,
-        telefone: formData.telefone || null,
-        email: formData.email || null,
+        nome: formBarbearia.nome,
+        endereco: formBarbearia.endereco || null,
+        telefone: formBarbearia.telefone || null,
+        email: formBarbearia.email || null,
       })
       .eq('id', barbearia.id)
+      .select('*')
+      .single()
 
     if (updateError) {
-      setError('Não foi possível salvar as configurações')
+      setError('Não foi possível salvar os dados da barbearia')
+    } else if (updatedB) {
+      setBarbearia(updatedB)
     }
-    
-    setIsSaving(false)
+
+    setIsSavingBarbearia(false)
+  }
+
+  const handleSaveProfile = async () => {
+    if (!profile) return
+    const trimmedNome = nomePerfil.trim()
+    if (!trimmedNome) {
+      setError('Informe seu nome')
+      return
+    }
+
+    setIsSavingProfile(true)
+    setError(null)
+    const supabase = createClient()
+
+    const { data: updated, error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        nome: trimmedNome,
+        telefone: telefonePerfil.trim() || null,
+        avatar: avatar.trim() || null,
+      })
+      .eq('id', profile.id)
+      .select('*')
+      .single()
+
+    if (updateError || !updated) {
+      setError('Não foi possível salvar os dados da conta')
+      setIsSavingProfile(false)
+      return
+    }
+
+    setProfile(updated)
+    setProfileCache(profile.id, updated)
+    setIsSavingProfile(false)
   }
 
   const handleLogout = async () => {
@@ -122,11 +254,31 @@ export default function AdminConfiguracoesPage() {
     )
   }
 
+  const showAguardandoPagamento =
+    assinatura?.status === 'pendente' ||
+    (profile?.role === 'admin' && !barbearia && !error)
+
   return (
     <PageContainer>
-      <AppPageHeader title="Configurações" profileHref="/admin/configuracoes" avatarFallback="A" />
+      <AppPageHeader
+        title="Configurações"
+        profileHref="/admin/configuracoes"
+        profile={profile}
+        avatarFallback="A"
+      />
 
       <PageContent className="space-y-6">
+        {showAguardandoPagamento && (
+          <Alert variant="warning" className="text-left">
+            <AlertTitle>Aguardando confirmação de pagamento</AlertTitle>
+            <AlertDescription>
+              Seu plano fica pendente até o administrador da plataforma confirmar o pagamento. Enquanto isso, você pode
+              usar o painel normalmente; os dados da barbearia podem levar alguns instantes para aparecer — atualize a
+              página se necessário.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {error && (
           <Alert
             variant="danger"
@@ -137,78 +289,171 @@ export default function AdminConfiguracoesPage() {
           </Alert>
         )}
 
-        {/* Barbearia Info */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Store className="h-5 w-5" />
-              Dados da Barbearia
+              <User className="h-5 w-5" />
+              Sua conta
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="nome">Nome da Barbearia</Label>
+              <Label htmlFor="nomePerfil">Nome</Label>
               <Input
-                id="nome"
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                placeholder="Nome da barbearia"
+                id="nomePerfil"
+                value={nomePerfil}
+                onChange={(e) => setNomePerfil(e.target.value)}
+                placeholder="Nome de exibição"
+                autoComplete="name"
               />
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="endereco" className="flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" />
-                Endereço
+              <Label htmlFor="emailPerfil" className="flex items-center gap-1">
+                <Mail className="h-3.5 w-3.5" />
+                Email de acesso
               </Label>
-              <Input
-                id="endereco"
-                value={formData.endereco}
-                onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                placeholder="Rua, número, bairro, cidade"
-              />
+              <Input id="emailPerfil" value={profile?.email || ''} disabled className="bg-muted" />
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="telefone" className="flex items-center gap-1">
+              <Label htmlFor="telefonePerfil" className="flex items-center gap-1">
                 <Phone className="h-3.5 w-3.5" />
                 Telefone
               </Label>
               <Input
-                id="telefone"
-                value={formData.telefone}
-                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                id="telefonePerfil"
+                value={telefonePerfil}
+                onChange={(e) => setTelefonePerfil(e.target.value)}
                 placeholder="(00) 00000-0000"
+                autoComplete="tel"
               />
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-1">
-                <Mail className="h-3.5 w-3.5" />
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="contato@barbearia.com"
+
+            {profile?.id ? (
+              <ProfileAvatarUpload
+                userId={profile.id}
+                avatarUrl={avatar}
+                onAvatarUrlChange={setAvatar}
+                fallbackLetter={nomePerfil.trim().charAt(0).toUpperCase() || 'A'}
+                disabled={isSavingProfile}
+                onError={setError}
               />
-            </div>
-            
-            <Button className="w-full" onClick={handleSave} disabled={isSaving}>
-              {isSaving ? <Spinner className="mr-2" /> : <Save className="mr-2 h-4 w-4" />}
-              {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+            ) : null}
+
+            <Button className="w-full" onClick={handleSaveProfile} disabled={isSavingProfile || !profile}>
+              {isSavingProfile ? <Spinner className="mr-2" /> : <Save className="mr-2 h-4 w-4" />}
+              {isSavingProfile ? 'Salvando...' : 'Salvar dados da conta'}
             </Button>
           </CardContent>
         </Card>
 
-        <Separator />
-
-        {/* Account */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Conta</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Store className="h-5 w-5" />
+              Dados da barbearia
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {barbearia ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="slug">Identificador (slug)</Label>
+                  <Input id="slug" value={barbearia.slug} readOnly disabled className="bg-muted font-mono text-sm" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="nomeBarbearia">Nome da barbearia</Label>
+                  <Input
+                    id="nomeBarbearia"
+                    value={formBarbearia.nome}
+                    onChange={(e) => setFormBarbearia({ ...formBarbearia, nome: e.target.value })}
+                    placeholder="Nome da barbearia"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="endereco" className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5" />
+                    Endereço
+                  </Label>
+                  <Input
+                    id="endereco"
+                    value={formBarbearia.endereco}
+                    onChange={(e) => setFormBarbearia({ ...formBarbearia, endereco: e.target.value })}
+                    placeholder="Opcional — rua, número, bairro, cidade"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="telefoneBarbearia" className="flex items-center gap-1">
+                    <Phone className="h-3.5 w-3.5" />
+                    Telefone de contato
+                  </Label>
+                  <Input
+                    id="telefoneBarbearia"
+                    value={formBarbearia.telefone}
+                    onChange={(e) => setFormBarbearia({ ...formBarbearia, telefone: e.target.value })}
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="emailBarbearia" className="flex items-center gap-1">
+                    <Mail className="h-3.5 w-3.5" />
+                    Email de contato da barbearia
+                  </Label>
+                  <Input
+                    id="emailBarbearia"
+                    type="email"
+                    value={formBarbearia.email}
+                    onChange={(e) => setFormBarbearia({ ...formBarbearia, email: e.target.value })}
+                    placeholder="Opcional — contato@barbearia.com"
+                  />
+                </div>
+
+                <Button className="w-full" onClick={handleSaveBarbearia} disabled={isSavingBarbearia}>
+                  {isSavingBarbearia ? <Spinner className="mr-2" /> : <Save className="mr-2 h-4 w-4" />}
+                  {isSavingBarbearia ? 'Salvando...' : 'Salvar dados da barbearia'}
+                </Button>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Quando o cadastro estiver sincronizado, o nome, telefone e demais dados da barbearia aparecerão aqui para
+                edição.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {assinatura && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CreditCard className="h-5 w-5" />
+                Plano contratado
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">{assinatura.plano?.nome ?? 'Plano'}</span>
+                <Badge variant={assinatura.status === 'ativa' ? 'default' : 'secondary'}>
+                  {labelAssinaturaStatus(assinatura.status)}
+                </Badge>
+              </div>
+              {assinatura.plano != null && (
+                <p className="text-muted-foreground">{formatCurrency(assinatura.plano.preco_mensal)} / mês</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <Separator />
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Sessão</CardTitle>
           </CardHeader>
           <CardContent>
             <Button

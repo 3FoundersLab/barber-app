@@ -1,14 +1,15 @@
--- Self-service signup for barbershops
--- Allows public selection of active plans and creates barbearia + assinatura for the logged-in new admin.
--- Assinatura inicia como "pendente" ate confirmacao de pagamento (super admin). Endereco preenchido depois em Configuracoes.
+-- Cadastro self-service: formulário simplificado + assinatura inicia como "pendente"
+-- até confirmação de pagamento pelo super admin.
 
-CREATE POLICY "planos_select_public_active" ON public.planos
-  FOR SELECT USING (ativo = true);
+DROP FUNCTION IF EXISTS public.criar_barbearia_com_assinatura(
+  TEXT, TEXT, TEXT, TEXT, TEXT, UUID, TEXT, TEXT, TEXT
+);
 
 CREATE OR REPLACE FUNCTION public.criar_barbearia_com_assinatura(
   p_nome TEXT,
   p_slug TEXT,
   p_telefone TEXT DEFAULT NULL,
+  p_endereco TEXT DEFAULT NULL,
   p_plano_id UUID DEFAULT NULL,
   p_email_responsavel TEXT DEFAULT NULL
 )
@@ -48,7 +49,7 @@ BEGIN
   END IF;
 
   INSERT INTO public.barbearias (nome, slug, telefone, email, endereco)
-  VALUES (p_nome, p_slug, p_telefone, NULL, NULL)
+  VALUES (p_nome, p_slug, p_telefone, NULL, p_endereco)
   RETURNING id INTO v_barbearia_id;
 
   INSERT INTO public.barbearia_users (barbearia_id, user_id, role)
@@ -71,5 +72,5 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.criar_barbearia_com_assinatura(
-  TEXT, TEXT, TEXT, UUID, TEXT
+  TEXT, TEXT, TEXT, TEXT, UUID, TEXT
 ) TO authenticated;

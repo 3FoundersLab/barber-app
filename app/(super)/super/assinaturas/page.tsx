@@ -15,7 +15,7 @@ import { SubscriptionListSkeleton } from '@/components/shared/loading-skeleton'
 import { createClient } from '@/lib/supabase/client'
 import type { Assinatura, Barbearia, Plano } from '@/types'
 
-const STATUS_OPTIONS = ['trial', 'ativa', 'inadimplente', 'cancelada'] as const
+const STATUS_OPTIONS = ['pendente', 'trial', 'ativa', 'inadimplente', 'cancelada'] as const
 
 export default function SuperAssinaturasPage() {
   const [assinaturas, setAssinaturas] = useState<Assinatura[]>([])
@@ -23,6 +23,7 @@ export default function SuperAssinaturasPage() {
   const [planos, setPlanos] = useState<Plano[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [form, setForm] = useState({
@@ -91,6 +92,23 @@ export default function SuperAssinaturasPage() {
     loadData()
   }
 
+  async function handleConfirmarPagamento(assinaturaId: string) {
+    setConfirmingId(assinaturaId)
+    setError(null)
+    const supabase = createClient()
+    const { error: updateError } = await supabase
+      .from('assinaturas')
+      .update({ status: 'ativa' })
+      .eq('id', assinaturaId)
+
+    if (updateError) {
+      setError('Não foi possível confirmar o pagamento')
+    } else {
+      loadData()
+    }
+    setConfirmingId(null)
+  }
+
   return (
     <PageContainer>
       <AppPageHeader
@@ -122,14 +140,26 @@ export default function SuperAssinaturasPage() {
         ) : assinaturas.length > 0 ? (
           assinaturas.map((assinatura) => (
             <Card key={assinatura.id}>
-              <CardContent className="flex items-center justify-between gap-3 p-4">
+              <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{assinatura.barbearia?.nome || 'Barbearia'}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {assinatura.plano?.nome || 'Plano'} - {assinatura.status}
+                    {assinatura.plano?.nome || 'Plano'} — {assinatura.status}
                   </p>
                 </div>
-                <p className="text-xs text-muted-foreground">{assinatura.inicio_em}</p>
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <p className="text-xs text-muted-foreground">{assinatura.inicio_em}</p>
+                  {assinatura.status === 'pendente' && (
+                    <Button
+                      size="sm"
+                      disabled={confirmingId === assinatura.id}
+                      onClick={() => handleConfirmarPagamento(assinatura.id)}
+                    >
+                      {confirmingId === assinatura.id ? <Spinner className="mr-2 h-4 w-4" /> : null}
+                      Confirmar pagamento
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))
