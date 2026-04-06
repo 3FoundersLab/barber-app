@@ -39,6 +39,7 @@ export default function CadastroBarbeariaPage() {
     nomeBarbearia: '',
     slug: '',
     telefoneBarbearia: '',
+    enderecoBarbearia: '',
     emailResponsavel: '',
     senha: '',
     confirmarSenha: '',
@@ -135,6 +136,7 @@ export default function CadastroBarbeariaPage() {
         p_telefone: formData.telefoneBarbearia || null,
         p_plano_id: formData.planoId,
         p_email_responsavel: formData.emailResponsavel,
+        p_endereco: formData.enderecoBarbearia || null,
       })
 
       if (rpcError) {
@@ -219,6 +221,19 @@ export default function CadastroBarbeariaPage() {
                     id="telefoneBarbearia"
                     value={formData.telefoneBarbearia}
                     onChange={(e) => setFormData((prev) => ({ ...prev, telefoneBarbearia: e.target.value }))}
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="enderecoBarbearia">Endereço</Label>
+                  <Input
+                    id="enderecoBarbearia"
+                    placeholder="Rua, numero, bairro, cidade"
+                    value={formData.enderecoBarbearia}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, enderecoBarbearia: e.target.value }))
+                    }
                     disabled={isSubmitting}
                   />
                 </div>
