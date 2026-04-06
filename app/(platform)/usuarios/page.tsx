@@ -9,6 +9,7 @@ import {
   Plus,
   Search,
   Trash2,
+  Link2,
   UserCheck,
   UserX,
 } from 'lucide-react'
@@ -41,6 +42,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { createClient } from '@/lib/supabase/client'
 import { ROLE_LABELS } from '@/lib/constants'
 import type { Barbearia, Profile, UserRole } from '@/types'
@@ -62,6 +64,8 @@ import {
 } from '@/components/ui/alert-dialog'
 
 const SUPER_USUARIOS_ROLES: UserRole[] = ['super_admin', 'admin']
+/** Papel do usuário dentro da barbearia ao vincular por e-mail */
+const VINCULO_NA_BARBEARIA_ROLES: UserRole[] = ['admin', 'barbeiro', 'cliente']
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const
 type UsuariosPageSize = (typeof PAGE_SIZE_OPTIONS)[number]
 
@@ -152,6 +156,16 @@ export default function SuperUsuariosPage() {
     password: '',
     role: 'admin' as UserRole,
     barbearia_id: '',
+  })
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false)
+  const [linkSaving, setLinkSaving] = useState(false)
+  const [linkForm, setLinkForm] = useState({
+    email: '',
+    barbearia_id: '',
+    role: 'admin' as UserRole,
+    createIfMissing: false,
+    nome: '',
+    password: '',
   })
 
   const loadAll = useCallback(async () => {
@@ -282,6 +296,64 @@ export default function SuperUsuariosPage() {
     setIsSaving(false)
     setIsDialogOpen(false)
     setForm({ nome: '', email: '', password: '', role: 'admin', barbearia_id: '' })
+    setIsLoading(true)
+    await loadAll()
+  }
+
+  async function handleLinkByEmail() {
+    const email = linkForm.email.trim().toLowerCase()
+    if (!email || !linkForm.barbearia_id) return
+    if (linkForm.createIfMissing) {
+      if (!linkForm.nome.trim() || linkForm.password.length < 6) return
+    }
+
+    setLinkSaving(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/platform/barbearia-links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          barbearia_id: linkForm.barbearia_id,
+          email,
+          role: linkForm.role,
+          create_if_missing: linkForm.createIfMissing,
+          ...(linkForm.createIfMissing
+            ? { nome: linkForm.nome.trim(), password: linkForm.password }
+            : {}),
+        }),
+      })
+      const json = (await res.json().catch(() => ({}))) as {
+        error?: string
+        already_linked?: boolean
+        created_user?: boolean
+      }
+      if (!res.ok) {
+        setError(
+          typeof json.error === 'string'
+            ? json.error
+            : 'Não foi possível vincular o usuário à barbearia.',
+        )
+        setLinkSaving(false)
+        return
+      }
+    } catch {
+      setError('Não foi possível vincular o usuário à barbearia.')
+      setLinkSaving(false)
+      return
+    }
+
+    setLinkSaving(false)
+    setLinkDialogOpen(false)
+    setLinkForm({
+      email: '',
+      barbearia_id: '',
+      role: 'admin',
+      createIfMissing: false,
+      nome: '',
+      password: '',
+    })
     setIsLoading(true)
     await loadAll()
   }
@@ -478,19 +550,28 @@ export default function SuperUsuariosPage() {
             </Button>
             <PageTitle className="min-w-0 truncate">Usuários</PageTitle>
           </div>
-          <Button
-            type="button"
-            className="w-full shrink-0 sm:w-auto"
-            onClick={() => setIsDialogOpen(true)}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Novo usuário
-          </Button>
+          <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => setLinkDialogOpen(true)}
+            >
+              <Link2 className="mr-2 h-4 w-4" />
+              Vincular por e-mail
+            </Button>
+            <Button type="button" className="w-full sm:w-auto" onClick={() => setIsDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo usuário
+            </Button>
+          </div>
         </div>
 
         <p className="text-sm text-muted-foreground">
           Listagem de contas com papéis Super Admin e Admin. Administradores precisam estar vinculados a
-          uma barbearia. Você pode revogar o acesso por barbearia abaixo.
+          uma barbearia. Use <span className="font-medium text-foreground">Vincular por e-mail</span> para
+          associar uma conta já existente (ou criar uma nova) a uma barbearia pelo e-mail. Você pode
+          revogar o acesso por barbearia abaixo.
         </p>
 
         <div className="flex w-full max-w-md gap-2 rounded-lg border bg-muted/40 p-1">
@@ -912,6 +993,147 @@ export default function SuperUsuariosPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog
+        open={linkDialogOpen}
+        onOpenChange={(open) => {
+          setLinkDialogOpen(open)
+          if (!open) {
+            setLinkForm({
+              email: '',
+              barbearia_id: '',
+              role: 'admin',
+              createIfMissing: false,
+              nome: '',
+              password: '',
+            })
+          }
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Vincular à barbearia por e-mail</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="link-email">E-mail do usuário</Label>
+              <Input
+                id="link-email"
+                type="email"
+                autoComplete="off"
+                value={linkForm.email}
+                onChange={(e) => setLinkForm((s) => ({ ...s, email: e.target.value }))}
+                placeholder="conta@exemplo.com"
+              />
+              <p className="text-xs text-muted-foreground">
+                O e-mail deve ser o mesmo cadastrado no login. Se não existir conta, ative a opção abaixo
+                para criar.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Label>Barbearia</Label>
+              <Select
+                value={linkForm.barbearia_id || undefined}
+                onValueChange={(v) => setLinkForm((s) => ({ ...s, barbearia_id: v }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione a barbearia..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {barbearias.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Papel nesta barbearia</Label>
+              <Select
+                value={linkForm.role}
+                onValueChange={(v) => setLinkForm((s) => ({ ...s, role: v as UserRole }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {VINCULO_NA_BARBEARIA_ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+              <div className="min-w-0 space-y-0.5">
+                <Label htmlFor="link-create-missing" className="text-sm font-medium">
+                  Criar usuário se o e-mail não existir
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Caso contrário, o sistema apenas retorna erro quando não encontrar o e-mail.
+                </p>
+              </div>
+              <Switch
+                id="link-create-missing"
+                checked={linkForm.createIfMissing}
+                onCheckedChange={(checked) =>
+                  setLinkForm((s) => ({ ...s, createIfMissing: checked }))
+                }
+              />
+            </div>
+            {linkForm.createIfMissing ? (
+              <>
+                <div className="space-y-1">
+                  <Label htmlFor="link-nome">Nome (nova conta)</Label>
+                  <Input
+                    id="link-nome"
+                    value={linkForm.nome}
+                    onChange={(e) => setLinkForm((s) => ({ ...s, nome: e.target.value }))}
+                    autoComplete="name"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="link-senha">Senha inicial</Label>
+                  <Input
+                    id="link-senha"
+                    type="password"
+                    autoComplete="new-password"
+                    value={linkForm.password}
+                    onChange={(e) => setLinkForm((s) => ({ ...s, password: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres.</p>
+                </div>
+              </>
+            ) : null}
+            <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
+              Vínculos duplicados (mesmo usuário e mesma barbearia) são ignorados com sucesso. Exige{' '}
+              <code className="text-foreground">SUPABASE_SERVICE_ROLE_KEY</code> no servidor.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => void handleLinkByEmail()}
+              disabled={
+                linkSaving ||
+                !linkForm.email.trim() ||
+                !linkForm.barbearia_id ||
+                (linkForm.createIfMissing &&
+                  (!linkForm.nome.trim() || linkForm.password.length < 6))
+              }
+            >
+              {linkSaving ? <Spinner className="mr-2" /> : null}
+              {linkSaving ? 'Vinculando...' : 'Vincular'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
