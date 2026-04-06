@@ -93,12 +93,12 @@ export function formatDuration(minutes: number): string {
   return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`
 }
 
-// Routes por role
+// Rotas iniciais por role (URLs sem segmento de papel; admin usa `/painel` para resolver slug)
 export const ROLE_DEFAULT_ROUTES: Record<UserRole, string> = {
-  super_admin: '/super/dashboard',
-  admin: '/admin/dashboard',
-  barbeiro: '/barbeiro/agenda',
-  cliente: '/cliente/home',
+  super_admin: '/dashboard',
+  admin: '/painel',
+  barbeiro: '/agenda',
+  cliente: '/inicio',
 }
 
 // API Endpoints base

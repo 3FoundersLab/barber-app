@@ -146,7 +146,7 @@ export default function CadastroBarbeariaPage() {
 
       setSuccess('Barbearia cadastrada com sucesso! Redirecionando para o painel...')
       setTimeout(() => {
-        router.push('/admin/dashboard')
+        router.push(`/b/${encodeURIComponent(slug)}/dashboard`)
       }, 900)
     } catch {
       setError('Erro inesperado ao cadastrar. Tente novamente.')

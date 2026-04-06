@@ -1,30 +1,36 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getAdminDashboardPathForUser } from '@/lib/admin-browse-path'
+import { fetchSessionProfile } from '@/lib/supabase/fetch-session-profile'
+import { CLIENT_PATHS, PLATFORM_PATHS, STAFF_PATHS, TENANT_ENTRY } from '@/lib/routes'
 
 export default async function Home() {
   const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   if (!user) {
     redirect('/login')
   }
-  
-  // Get user profile to determine role
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-  
-  // Redirect based on role
-  if (profile?.role === 'super_admin') {
-    redirect('/super/dashboard')
-  } else if (profile?.role === 'admin') {
-    redirect('/admin/dashboard')
-  } else if (profile?.role === 'barbeiro') {
-    redirect('/barbeiro/agenda')
-  } else {
-    redirect('/cliente/home')
+
+  const profile = await fetchSessionProfile(supabase, user.id)
+  if (profile?.ativo === false) {
+    redirect('/login?reason=inactive')
   }
+
+  const role = profile?.role
+
+  if (role === 'super_admin') {
+    redirect(PLATFORM_PATHS.dashboard)
+  }
+  if (role === 'admin') {
+    const adminPath = await getAdminDashboardPathForUser(supabase, user.id)
+    redirect(adminPath ?? TENANT_ENTRY)
+  }
+  if (role === 'barbeiro') {
+    redirect(STAFF_PATHS.agenda)
+  }
+  redirect(CLIENT_PATHS.inicio)
 }

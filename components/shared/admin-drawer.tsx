@@ -7,16 +7,16 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 
-const adminLinks = [
-  { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-  { label: 'Agenda', href: '/admin/agendamentos', icon: Calendar },
-  { label: 'Financeiro', href: '/admin/financeiro', icon: DollarSign },
-  { label: 'Serviços', href: '/admin/servicos', icon: Scissors },
-  { label: 'Equipe', href: '/admin/equipe', icon: Users },
-  { label: 'Configurações', href: '/admin/configuracoes', icon: Settings },
-]
+export function AdminDrawer({ basePath }: { basePath: string }) {
+  const adminLinks = [
+    { label: 'Dashboard', href: `${basePath}/dashboard`, icon: LayoutDashboard },
+    { label: 'Agenda', href: `${basePath}/agendamentos`, icon: Calendar },
+    { label: 'Financeiro', href: `${basePath}/financeiro`, icon: DollarSign },
+    { label: 'Serviços', href: `${basePath}/servicos`, icon: Scissors },
+    { label: 'Equipe', href: `${basePath}/equipe`, icon: Users },
+    { label: 'Configurações', href: `${basePath}/configuracoes`, icon: Settings },
+  ]
 
-export function AdminDrawer() {
   const pathname = usePathname()
 
   return (

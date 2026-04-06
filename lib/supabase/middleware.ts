@@ -1,7 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
+import type { User } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function updateSession(request: NextRequest) {
+export async function updateSessionWithUser(request: NextRequest): Promise<{
+  response: NextResponse
+  supabase: ReturnType<typeof createServerClient>
+  user: User | null
+}> {
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -29,7 +34,14 @@ export async function updateSession(request: NextRequest) {
     },
   )
 
-  await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  return supabaseResponse
+  return { response: supabaseResponse, supabase, user }
+}
+
+export async function updateSession(request: NextRequest) {
+  const { response } = await updateSessionWithUser(request)
+  return response
 }

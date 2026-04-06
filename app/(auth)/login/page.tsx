@@ -92,13 +92,13 @@ function LoginPageContent() {
 
         // Redirect based on role
         if (profile?.role === 'super_admin') {
-          router.push('/super/dashboard')
+          router.push('/dashboard')
         } else if (profile?.role === 'admin') {
-          router.push('/admin/dashboard')
+          router.push('/painel')
         } else if (profile?.role === 'barbeiro') {
-          router.push('/barbeiro/agenda')
+          router.push('/agenda')
         } else {
-          router.push('/cliente/home')
+          router.push('/inicio')
         }
       }
     } catch {
