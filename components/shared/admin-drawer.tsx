@@ -7,15 +7,29 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 
-export function AdminDrawer({ basePath }: { basePath: string }) {
-  const adminLinks = [
-    { label: 'Dashboard', href: `${basePath}/dashboard`, icon: LayoutDashboard },
-    { label: 'Agenda', href: `${basePath}/agendamentos`, icon: Calendar },
-    { label: 'Financeiro', href: `${basePath}/financeiro`, icon: DollarSign },
-    { label: 'Serviços', href: `${basePath}/servicos`, icon: Scissors },
-    { label: 'Equipe', href: `${basePath}/equipe`, icon: Users },
-    { label: 'Configurações', href: `${basePath}/configuracoes`, icon: Settings },
-  ]
+const FULL_ADMIN_LINKS = (basePath: string) => [
+  { label: 'Dashboard', href: `${basePath}/dashboard`, icon: LayoutDashboard },
+  { label: 'Agenda', href: `${basePath}/agendamentos`, icon: Calendar },
+  { label: 'Financeiro', href: `${basePath}/financeiro`, icon: DollarSign },
+  { label: 'Serviços', href: `${basePath}/servicos`, icon: Scissors },
+  { label: 'Equipe', href: `${basePath}/equipe`, icon: Users },
+  { label: 'Configurações', href: `${basePath}/configuracoes`, icon: Settings },
+]
+
+const LIMITED_ADMIN_LINKS = (basePath: string) => [
+  { label: 'Dashboard', href: `${basePath}/dashboard`, icon: LayoutDashboard },
+  { label: 'Configurações', href: `${basePath}/configuracoes`, icon: Settings },
+]
+
+export function AdminDrawer({
+  basePath,
+  limitedNav = false,
+}: {
+  basePath: string
+  /** Pagamento pendente: só dashboard + configurações */
+  limitedNav?: boolean
+}) {
+  const adminLinks = limitedNav ? LIMITED_ADMIN_LINKS(basePath) : FULL_ADMIN_LINKS(basePath)
 
   const pathname = usePathname()
 

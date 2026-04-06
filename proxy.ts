@@ -7,6 +7,7 @@ import {
   pathAllowedForRole,
   safeHomeForRole,
 } from '@/lib/routes'
+import { rpcUserIsMemberOfBarbearia } from '@/lib/barbearia-rpc'
 
 function forwardCookies(from: NextResponse, to: NextResponse) {
   from.cookies.getAll().forEach((c) => {
@@ -60,6 +61,40 @@ export async function proxy(request: NextRequest) {
     url.pathname = safeHomeForRole(role)
     url.searchParams.delete('next')
     return NextResponse.redirect(url)
+  }
+
+  // Admin de barbearia com pagamento pendente: só dashboard + configurações até o super aprovar o pagamento.
+  if (role === 'admin') {
+    const tenantMatch = pathname.match(/^\/b\/([^/]+)/)
+    if (tenantMatch) {
+      const slug = tenantMatch[1]
+      const allowedLimitedAdmin =
+        pathname === `/b/${slug}/dashboard` ||
+        pathname === `/b/${slug}/configuracoes` ||
+        pathname.startsWith(`/b/${slug}/configuracoes/`)
+      if (!allowedLimitedAdmin) {
+        const { data: barbearia, error: barErr } = await supabase
+          .from('barbearias')
+          .select('id, status_cadastro')
+          .eq('slug', slug)
+          .maybeSingle()
+        if (
+          !barErr &&
+          barbearia &&
+          (barbearia as { status_cadastro?: string }).status_cadastro === 'pagamento_pendente'
+        ) {
+          const isMember = await rpcUserIsMemberOfBarbearia(supabase, barbearia.id)
+          if (isMember) {
+            const url = request.nextUrl.clone()
+            url.pathname = `/b/${slug}/dashboard`
+            url.searchParams.delete('next')
+            const redirectRes = NextResponse.redirect(url)
+            forwardCookies(response, redirectRes)
+            return redirectRes
+          }
+        }
+      }
+    }
   }
 
   return response

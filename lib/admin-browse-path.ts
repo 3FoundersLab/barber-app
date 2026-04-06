@@ -1,13 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-
-function embedSlug(
-  row: { barbearias: unknown } | null,
-): string | null {
-  if (!row) return null
-  const b = row.barbearias as { slug: string } | { slug: string }[] | null | undefined
-  if (Array.isArray(b)) return b[0]?.slug ?? null
-  return b?.slug ?? null
-}
+import { resolveBarbeariaSlugForUser } from '@/lib/resolve-admin-barbearia-slug'
 
 /**
  * Caminho do dashboard da barbearia com slug (`/b/{slug}/dashboard`).
@@ -27,16 +19,10 @@ export async function getAdminDashboardPathForUser(
     return null
   }
 
-  const { data: row } = await supabase
-    .from('barbearia_users')
-    .select('barbearia_id, barbearias(slug)')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  const slug = embedSlug(row)
-  if (slug) return `/b/${slug}/dashboard`
+  const b = await resolveBarbeariaSlugForUser(supabase, userId)
+  if (b?.slug) {
+    return `/b/${b.slug}/dashboard`
+  }
 
   if (profile.role === 'super_admin') {
     return '/dashboard'

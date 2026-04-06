@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
@@ -16,6 +16,17 @@ import { createClient } from '@/lib/supabase/client'
 import type { Assinatura, Barbearia, Plano } from '@/types'
 
 const STATUS_OPTIONS = ['pendente', 'trial', 'ativa', 'inadimplente', 'cancelada'] as const
+
+function labelAssinaturaStatus(status: string) {
+  const map: Record<string, string> = {
+    pendente: 'Pagamento pendente',
+    ativa: 'Ativa',
+    trial: 'Trial',
+    inadimplente: 'Inadimplente',
+    cancelada: 'Cancelada',
+  }
+  return map[status] ?? status
+}
 
 export default function SuperAssinaturasPage() {
   const [assinaturas, setAssinaturas] = useState<Assinatura[]>([])
@@ -59,7 +70,9 @@ export default function SuperAssinaturasPage() {
       return
     }
 
-    setAssinaturas(assinaturasRes.data || [])
+    const list = (assinaturasRes.data || []) as Assinatura[]
+    list.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+    setAssinaturas(list)
     setBarbearias(barbeariasRes.data || [])
     setPlanos(planosRes.data || [])
     setIsLoading(false)
@@ -109,6 +122,45 @@ export default function SuperAssinaturasPage() {
     setConfirmingId(null)
   }
 
+  const { pendentesConfirmacao, demaisAssinaturas } = useMemo(() => {
+    const pendentes = assinaturas.filter((a) => a.status === 'pendente')
+    const demais = assinaturas.filter((a) => a.status !== 'pendente')
+    return { pendentesConfirmacao: pendentes, demaisAssinaturas: demais }
+  }, [assinaturas])
+
+  function renderAssinaturaCard(assinatura: Assinatura) {
+    return (
+      <Card key={assinatura.id}>
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="truncate font-medium">{assinatura.barbearia?.nome || 'Barbearia'}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {assinatura.plano?.nome || 'Plano'} — {labelAssinaturaStatus(assinatura.status)}
+            </p>
+            {assinatura.barbearia?.status_cadastro === 'pagamento_pendente' && (
+              <p className="truncate text-xs text-amber-700 dark:text-amber-500">
+                Cadastro da barbearia: pagamento pendente
+              </p>
+            )}
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <p className="text-xs text-muted-foreground">{assinatura.inicio_em}</p>
+            {assinatura.status === 'pendente' && (
+              <Button
+                size="sm"
+                disabled={confirmingId === assinatura.id}
+                onClick={() => handleConfirmarPagamento(assinatura.id)}
+              >
+                {confirmingId === assinatura.id ? <Spinner className="mr-2 h-4 w-4" /> : null}
+                Confirmar pagamento
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <PageContainer>
       <AppPageHeader
@@ -118,6 +170,11 @@ export default function SuperAssinaturasPage() {
       />
 
       <PageContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Barbearias cadastradas em <span className="font-medium text-foreground">/cadastro/barbearia</span> aparecem com
+          assinatura em <span className="font-medium text-foreground">pagamento pendente</span>. Confirme o pagamento
+          abaixo para liberar o painel completo da barbearia.
+        </p>
         <div className="flex justify-end">
           <Button onClick={() => setIsDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -138,31 +195,28 @@ export default function SuperAssinaturasPage() {
         {isLoading ? (
           <SubscriptionListSkeleton count={5} />
         ) : assinaturas.length > 0 ? (
-          assinaturas.map((assinatura) => (
-            <Card key={assinatura.id}>
-              <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{assinatura.barbearia?.nome || 'Barbearia'}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {assinatura.plano?.nome || 'Plano'} — {assinatura.status}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
-                  <p className="text-xs text-muted-foreground">{assinatura.inicio_em}</p>
-                  {assinatura.status === 'pendente' && (
-                    <Button
-                      size="sm"
-                      disabled={confirmingId === assinatura.id}
-                      onClick={() => handleConfirmarPagamento(assinatura.id)}
-                    >
-                      {confirmingId === assinatura.id ? <Spinner className="mr-2 h-4 w-4" /> : null}
-                      Confirmar pagamento
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))
+          <div className="space-y-6">
+            {pendentesConfirmacao.length > 0 ? (
+              <div className="space-y-3">
+                <h2 className="text-sm font-semibold text-foreground">
+                  Aguardando confirmação de pagamento
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Novas barbearias cadastradas em /cadastro/barbearia aparecem aqui. Ao confirmar, a assinatura fica
+                  ativa e o painel completo é liberado para o administrador da barbearia.
+                </p>
+                <div className="space-y-3">{pendentesConfirmacao.map(renderAssinaturaCard)}</div>
+              </div>
+            ) : null}
+            {demaisAssinaturas.length > 0 ? (
+              <div className="space-y-3">
+                {pendentesConfirmacao.length > 0 ? (
+                  <h2 className="text-sm font-semibold text-foreground">Demais assinaturas</h2>
+                ) : null}
+                <div className="space-y-3">{demaisAssinaturas.map(renderAssinaturaCard)}</div>
+              </div>
+            ) : null}
+          </div>
         ) : (
           <Card className="border-dashed">
             <CardContent className="py-8 text-center text-sm text-muted-foreground">

@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { CadastroPlanoGridSkeleton } from '@/components/shared/loading-skeleton'
 import { createClient } from '@/lib/supabase/client'
+import { resolveBarbeariaSlugForUser } from '@/lib/resolve-admin-barbearia-slug'
+import { rpcGetMyBarbeariaSlug } from '@/lib/barbearia-rpc'
 import { formatCurrency } from '@/lib/constants'
 import { linhasBeneficiosPlano } from '@/lib/plano-beneficios'
 import type { Plano } from '@/types'
@@ -46,9 +48,32 @@ export default function CadastroBarbeariaPage() {
     confirmarSenha: '',
     planoId: '',
   })
+  /** Já autenticado: só completa barbearia (ex.: confirmou e-mail antes). */
+  const [hasSession, setHasSession] = useState(false)
 
   useEffect(() => {
     loadPlanos()
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (cancelled) return
+      setHasSession(!!user)
+      if (user?.email) {
+        setFormData((p) => ({
+          ...p,
+          emailResponsavel: p.emailResponsavel || user.email || '',
+        }))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   async function loadPlanos() {
@@ -77,16 +102,6 @@ export default function CadastroBarbeariaPage() {
     setError(null)
     setSuccess(null)
 
-    if (formData.senha.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres')
-      return
-    }
-
-    if (formData.senha !== formData.confirmarSenha) {
-      setError('As senhas nao coincidem')
-      return
-    }
-
     if (!formData.planoId) {
       setError('Selecione um plano para continuar')
       return
@@ -105,6 +120,65 @@ export default function CadastroBarbeariaPage() {
 
       if (existingBarbearia) {
         setError('Esse identificador de barbearia ja esta em uso')
+        return
+      }
+
+      const {
+        data: { user: loggedInUser },
+      } = await supabase.auth.getUser()
+
+      /** Já autenticado (ex.: confirmou o e-mail e fez login): só chama o RPC, sem novo signUp. */
+      if (loggedInUser) {
+        const jaTemVinculo = await rpcGetMyBarbeariaSlug(supabase)
+
+        if (jaTemVinculo) {
+          const dest = await resolveBarbeariaSlugForUser(supabase, loggedInUser.id)
+          if (dest?.slug) {
+            router.push(`/b/${encodeURIComponent(dest.slug)}/dashboard`)
+          } else {
+            router.push('/painel')
+          }
+          return
+        }
+
+        const { error: rpcErrorLogged } = await supabase.rpc('criar_barbearia_com_assinatura', {
+          p_nome: formData.nomeBarbearia,
+          p_slug: slug,
+          p_telefone: formData.telefoneBarbearia || null,
+          p_plano_id: formData.planoId,
+          p_email_responsavel: formData.emailResponsavel.trim() || loggedInUser.email || '',
+          p_endereco: formData.enderecoBarbearia || null,
+        })
+
+        if (rpcErrorLogged) {
+          setError(rpcErrorLogged.message || 'Nao foi possivel finalizar o cadastro da barbearia')
+          return
+        }
+
+        const vinculoOk = await rpcGetMyBarbeariaSlug(supabase)
+
+        if (!vinculoOk) {
+          setError(
+            'O cadastro não gerou o vínculo com a barbearia. Verifique se a função criar_barbearia_com_assinatura está aplicada no Supabase e as políticas em scripts/023.',
+          )
+          return
+        }
+
+        await supabase.auth.refreshSession()
+        setSuccess('Barbearia cadastrada com sucesso! Redirecionando para o painel...')
+        setTimeout(() => {
+          router.push(`/b/${encodeURIComponent(slug)}/dashboard`)
+        }, 900)
+        return
+      }
+
+      if (formData.senha.length < 6) {
+        setError('A senha deve ter pelo menos 6 caracteres')
+        return
+      }
+
+      if (formData.senha !== formData.confirmarSenha) {
+        setError('As senhas nao coincidem')
         return
       }
 
@@ -131,6 +205,22 @@ export default function CadastroBarbeariaPage() {
         return
       }
 
+      // O RPC usa auth.uid(): sem sessão JWT o vínculo não é criado (comum com "confirmar e-mail" ativo).
+      let session = signUpData.session
+      if (!session) {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: formData.emailResponsavel.trim(),
+          password: formData.senha,
+        })
+        if (signInError || !signInData.session) {
+          setSuccess(
+            'Conta criada. Confirme o link no e-mail. Depois faça login e volte nesta página (Cadastrar barbearia), preencha nome da barbearia, slug e plano — não é preciso criar senha de novo; você já estará logado e o sistema só criará a barbearia.',
+          )
+          return
+        }
+        session = signInData.session
+      }
+
       const { error: rpcError } = await supabase.rpc('criar_barbearia_com_assinatura', {
         p_nome: formData.nomeBarbearia,
         p_slug: slug,
@@ -142,6 +232,15 @@ export default function CadastroBarbeariaPage() {
 
       if (rpcError) {
         setError(rpcError.message || 'Nao foi possivel finalizar o cadastro da barbearia')
+        return
+      }
+
+      const vinculoCheck = await rpcGetMyBarbeariaSlug(supabase)
+
+      if (!vinculoCheck) {
+        setError(
+          'O cadastro não gerou o vínculo com a barbearia (sessão ou políticas do banco). Tente sair e entrar de novo; se persistir, verifique no Supabase se a função criar_barbearia_com_assinatura foi aplicada.',
+        )
         return
       }
 
@@ -180,6 +279,11 @@ export default function CadastroBarbeariaPage() {
             <CardDescription>
               Preencha as informacoes abaixo para criar sua barbearia e contratar um plano.
             </CardDescription>
+            {hasSession ? (
+              <p className="text-sm text-muted-foreground">
+                Voce ja esta logado. Complete nome, slug e plano; nao e necessario informar senha novamente.
+              </p>
+            ) : null}
           </CardHeader>
           <CardContent>
             <form className="space-y-6" onSubmit={handleSubmit}>
@@ -248,7 +352,7 @@ export default function CadastroBarbeariaPage() {
                     type="email"
                     value={formData.emailResponsavel}
                     onChange={(e) => setFormData((prev) => ({ ...prev, emailResponsavel: e.target.value }))}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || hasSession}
                     required
                   />
                 </div>
@@ -261,9 +365,9 @@ export default function CadastroBarbeariaPage() {
                       type={showSenha ? 'text' : 'password'}
                       value={formData.senha}
                       onChange={(e) => setFormData((prev) => ({ ...prev, senha: e.target.value }))}
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || hasSession}
                       minLength={6}
-                      required
+                      required={!hasSession}
                       className="pr-10"
                     />
                     <button
@@ -285,9 +389,9 @@ export default function CadastroBarbeariaPage() {
                       type={showConfirmarSenha ? 'text' : 'password'}
                       value={formData.confirmarSenha}
                       onChange={(e) => setFormData((prev) => ({ ...prev, confirmarSenha: e.target.value }))}
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || hasSession}
                       minLength={6}
-                      required
+                      required={!hasSession}
                       className="pr-10"
                     />
                     <button
@@ -355,8 +459,9 @@ export default function CadastroBarbeariaPage() {
                 <Card className="border-dashed">
                   <CardContent className="py-3 text-sm text-muted-foreground">
                     Plano selecionado: <span className="font-medium text-foreground">{selectedPlan.nome}</span> (
-                    {formatCurrency(selectedPlan.preco_mensal)} / mes). O plano ficara pendente ate a confirmacao do
-                    pagamento.
+                    {formatCurrency(selectedPlan.preco_mensal)} / mes). Voce sera o administrador/proprietario da
+                    barbearia. Ate o pagamento ser confirmado em Assinaturas, o acesso fica limitado ao dashboard e as
+                    configuracoes; o restante do painel libera apos a aprovacao.
                   </CardContent>
                 </Card>
               )}
@@ -386,9 +491,8 @@ export default function CadastroBarbeariaPage() {
                     !formData.nomeBarbearia ||
                     !formData.slug ||
                     !formData.emailResponsavel ||
-                    !formData.senha ||
-                    !formData.confirmarSenha ||
-                    !formData.planoId
+                    !formData.planoId ||
+                    (!hasSession && (!formData.senha || !formData.confirmarSenha))
                   }
                 >
                   {isSubmitting ? <Spinner className="mr-2" /> : null}

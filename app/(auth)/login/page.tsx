@@ -14,6 +14,8 @@ import { Spinner } from '@/components/ui/spinner'
 import { createClient } from '@/lib/supabase/client'
 import { clearProfileCache } from '@/lib/profile-cache'
 import { fetchSessionProfile } from '@/lib/supabase/fetch-session-profile'
+import { resolveBarbeariaSlugForUser } from '@/lib/resolve-admin-barbearia-slug'
+import { rpcUserIsMemberOfBarbearia } from '@/lib/barbearia-rpc'
 
 function LoginPageContent() {
   const router = useRouter()
@@ -40,7 +42,7 @@ function LoginPageContent() {
           .from('barbearias')
           .select('id')
           .eq('slug', barbeariaSlug)
-          .single()
+          .maybeSingle()
 
         if (!barbearia) {
           setError('Barbearia não encontrada para esta URL')
@@ -58,22 +60,28 @@ function LoginPageContent() {
         return
       }
 
+      await supabase.auth.refreshSession()
+
       // Get user profile to determine role
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const barbeariaSlug = searchParams.get('barbearia')?.trim().toLowerCase()
 
         if (barbeariaSlug) {
-          const { data: vinculo } = await supabase
-            .from('barbearia_users')
-            .select(`
-              barbearia:barbearias!inner(slug)
-            `)
-            .eq('user_id', user.id)
-            .eq('barbearia.slug', barbeariaSlug)
-            .limit(1)
+          const { data: bar } = await supabase
+            .from('barbearias')
+            .select('id')
+            .eq('slug', barbeariaSlug)
+            .maybeSingle()
+          if (!bar?.id) {
+            setError('Barbearia não encontrada para esta URL')
+            clearProfileCache()
+            await supabase.auth.signOut()
+            return
+          }
+          const vinculo = await rpcUserIsMemberOfBarbearia(supabase, bar.id)
 
-          if (!vinculo || vinculo.length === 0) {
+          if (!vinculo) {
             setError('Seu usuário não pertence à barbearia da URL')
             clearProfileCache()
             await supabase.auth.signOut()
@@ -93,12 +101,42 @@ function LoginPageContent() {
         // Redirect based on role
         if (profile?.role === 'super_admin') {
           router.push('/dashboard')
+          return
         } else if (profile?.role === 'admin') {
-          router.push('/painel')
+          let resolvedSlug: string | null = null
+
+          if (barbeariaSlug) {
+            const { data: bDirect } = await supabase
+              .from('barbearias')
+              .select('slug')
+              .eq('slug', barbeariaSlug)
+              .maybeSingle()
+
+            if (bDirect?.slug) {
+              resolvedSlug = bDirect.slug
+            }
+          } else {
+            const resolved = await resolveBarbeariaSlugForUser(supabase, user.id)
+            resolvedSlug = resolved?.slug ?? null
+          }
+
+          if (!resolvedSlug) {
+            setError(
+              'Não encontramos vínculo com uma barbearia para esta conta. Se você acabou de se cadastrar, use o mesmo e-mail do cadastro ou refaça o cadastro em Cadastrar barbearia. Se o problema continuar, peça ao suporte para conferir a tabela barbearia_users no banco.',
+            )
+            clearProfileCache()
+            await supabase.auth.signOut()
+            return
+          }
+
+          router.push(`/b/${encodeURIComponent(resolvedSlug)}/dashboard`)
+          return
         } else if (profile?.role === 'barbeiro') {
           router.push('/agenda')
+          return
         } else {
           router.push('/inicio')
+          return
         }
       }
     } catch {

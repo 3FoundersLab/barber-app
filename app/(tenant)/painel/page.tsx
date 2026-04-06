@@ -17,5 +17,6 @@ export default async function AdminIndexPage() {
     redirect(path)
   }
 
-  redirect('/')
+  // Evita loop entre `/` e `/painel` quando não houver vínculo com a barbearia.
+  redirect('/cadastro/barbearia')
 }

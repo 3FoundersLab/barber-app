@@ -27,7 +27,8 @@ export default async function Home() {
   }
   if (role === 'admin') {
     const adminPath = await getAdminDashboardPathForUser(supabase, user.id)
-    redirect(adminPath ?? TENANT_ENTRY)
+    // Evita loop entre `/` e `/painel` caso o vínculo com a barbearia não exista.
+    redirect(adminPath ?? '/cadastro/barbearia')
   }
   if (role === 'barbeiro') {
     redirect(STAFF_PATHS.agenda)

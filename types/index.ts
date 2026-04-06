@@ -21,6 +21,8 @@ export interface Profile {
   updated_at: string
 }
 
+export type BarbeariaStatusCadastro = 'pagamento_pendente' | 'ativa'
+
 export interface Barbearia {
   id: string
   nome: string
@@ -29,6 +31,8 @@ export interface Barbearia {
   endereco?: string
   telefone?: string
   email?: string
+  /** Self-service até aprovação do super admin; omitido em bases antigas = ativa */
+  status_cadastro?: BarbeariaStatusCadastro
   /** false = desativada pelo super admin; omitido em bases antigas = ativa */
   ativo?: boolean
   created_at: string

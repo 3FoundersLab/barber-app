@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation'
 import { Calendar, ChevronRight, DollarSign, Scissors, TrendingUp, Users } from 'lucide-react'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
-import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
+import { Alert, AlertDescription, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AppointmentStatusBadge } from '@/components/shared/status-badge'
@@ -170,6 +170,16 @@ export default function AdminDashboardPage() {
       />
 
       <PageContent className="space-y-6 md:space-y-8">
+        {barbearia?.status_cadastro === 'pagamento_pendente' && (
+          <Alert variant="warning" className="text-left">
+            <AlertTitle>Pagamento pendente</AlertTitle>
+            <AlertDescription>
+              Seu acesso ao painel está limitado ao dashboard e às configurações até o administrador da plataforma
+              confirmar o pagamento em Assinaturas. Depois da aprovação, agenda, financeiro, serviços e equipe ficam
+              liberados.
+            </AlertDescription>
+          </Alert>
+        )}
         {error && (
           <Alert
             variant="danger"

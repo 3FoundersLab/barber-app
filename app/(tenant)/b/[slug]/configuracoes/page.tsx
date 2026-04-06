@@ -233,9 +233,11 @@ export default function AdminConfiguracoesPage() {
     )
   }
 
+  const pagamentoPendente =
+    barbearia?.status_cadastro === 'pagamento_pendente' || assinatura?.status === 'pendente'
+
   const showAguardandoPagamento =
-    assinatura?.status === 'pendente' ||
-    (profile?.role === 'admin' && !barbearia && !error)
+    pagamentoPendente || (profile?.role === 'admin' && !barbearia && !error)
 
   return (
     <PageContainer>
@@ -251,9 +253,8 @@ export default function AdminConfiguracoesPage() {
           <Alert variant="warning" className="text-left">
             <AlertTitle>Aguardando confirmação de pagamento</AlertTitle>
             <AlertDescription>
-              Seu plano fica pendente até o administrador da plataforma confirmar o pagamento. Enquanto isso, você pode
-              usar o painel normalmente; os dados da barbearia podem levar alguns instantes para aparecer — atualize a
-              página se necessário.
+              Sua barbearia está com status de pagamento pendente até o administrador da plataforma confirmar o
+              pagamento na área de assinaturas. Até lá, apenas esta página de configurações fica disponível no painel.
             </AlertDescription>
           </Alert>
         )}

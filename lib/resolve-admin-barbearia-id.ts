@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { rpcGetMyBarbeariaLink, rpcUserIsMemberOfBarbearia } from '@/lib/barbearia-rpc'
 
 /** Contexto da barbearia ativa no painel admin quando o usuário é super_admin (múltiplos vínculos). */
 export const SUPER_ADMIN_BARBEARIA_STORAGE_KEY = 'super_admin_barbearia_id'
@@ -27,17 +28,12 @@ export async function resolveAdminBarbeariaId(
       .eq('slug', slug)
       .maybeSingle()
     if (!barbearia?.id) return null
-    const { data: link } = await supabase
-      .from('barbearia_users')
-      .select('barbearia_id')
-      .eq('user_id', userId)
-      .eq('barbearia_id', barbearia.id)
-      .maybeSingle()
-    if (link?.barbearia_id) {
+    const isMember = await rpcUserIsMemberOfBarbearia(supabase, barbearia.id)
+    if (isMember) {
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(SUPER_ADMIN_BARBEARIA_STORAGE_KEY, barbearia.id)
       }
-      return link.barbearia_id
+      return barbearia.id
     }
     return null
   }
@@ -53,22 +49,11 @@ export async function resolveAdminBarbeariaId(
   if (role === 'super_admin' && typeof window !== 'undefined') {
     const preferred = window.localStorage.getItem(SUPER_ADMIN_BARBEARIA_STORAGE_KEY)?.trim()
     if (preferred) {
-      const { data: link } = await supabase
-        .from('barbearia_users')
-        .select('barbearia_id')
-        .eq('user_id', userId)
-        .eq('barbearia_id', preferred)
-        .maybeSingle()
-      if (link?.barbearia_id) return link.barbearia_id
+      const ok = await rpcUserIsMemberOfBarbearia(supabase, preferred)
+      if (ok) return preferred
     }
   }
 
-  const { data: rows, error } = await supabase
-    .from('barbearia_users')
-    .select('barbearia_id')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-
-  if (error || !rows?.length) return null
-  return rows[0].barbearia_id
+  const link = await rpcGetMyBarbeariaLink(supabase)
+  return link?.barbearia_id ?? null
 }
