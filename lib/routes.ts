@@ -11,9 +11,26 @@ export const PLATFORM_PATHS = {
   contaEditar: '/conta/editar',
 } as const
 
-/** Área da barbearia: slug no path, sem expor papel "admin". */
-export const TENANT_BASE = '/b'
+/** Entrada quando o admin ainda não tem slug na URL (`/painel` redireciona). */
 export const TENANT_ENTRY = '/painel'
+
+/** Segundo segmento em `/[slug]/...` da área admin da barbearia. */
+const TENANT_BARBEARIA_SEGMENTS = new Set([
+  'dashboard',
+  'configuracoes',
+  'agendamentos',
+  'equipe',
+  'financeiro',
+  'servicos',
+  'clientes',
+  'perfil',
+])
+
+/**
+ * Primeiro segmento que não pode ser interpretado como slug de barbearia quando o path
+ * tem formato de tenant (evita confundir com `/profissional/perfil`, `/cadastro/...`, etc.).
+ */
+const RESERVED_TENANT_FIRST_SEGMENTS = new Set(['api', '_next', 'cadastro', 'profissional'])
 
 /** Área do profissional (barbeiro). */
 export const STAFF_PATHS = {
@@ -50,11 +67,41 @@ function matchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`)
 }
 
+function isCadastroPublicPath(pathname: string): boolean {
+  return pathname === '/cadastro/barbearia' || pathname.startsWith('/cadastro/barbearia/')
+}
+
+/**
+ * URLs do painel admin por barbearia: `/{slug}/dashboard`, `/{slug}/configuracoes`, etc.
+ * (sem prefixo `/b`; redirecionamento legado em `legacyPathRedirect`.)
+ */
+export function isTenantBarbeariaScopedPath(pathname: string): boolean {
+  const parts = pathname.split('/').filter(Boolean)
+  if (parts.length < 2) return false
+  if (RESERVED_TENANT_FIRST_SEGMENTS.has(parts[0])) return false
+  return TENANT_BARBEARIA_SEGMENTS.has(parts[1])
+}
+
+export function parseTenantBarbeariaSlugFromPath(pathname: string): string | null {
+  if (!isTenantBarbeariaScopedPath(pathname)) return null
+  const parts = pathname.split('/').filter(Boolean)
+  return parts[0] ?? null
+}
+
+export function tenantBarbeariaBasePath(slug: string): string {
+  return `/${encodeURIComponent(slug)}`
+}
+
+export function tenantBarbeariaDashboardPath(slug: string): string {
+  return `/${encodeURIComponent(slug)}/dashboard`
+}
+
 /** Rotas que exigem autenticação + verificação de papel no middleware. */
 export function isRoleGuardedPath(pathname: string): boolean {
   if (matchesPrefix(pathname, '/api')) return false
+  if (pathname.startsWith('/cadastro') && !isCadastroPublicPath(pathname)) return true
   if (pathname === TENANT_ENTRY || matchesPrefix(pathname, `${TENANT_ENTRY}/`)) return true
-  if (matchesPrefix(pathname, `${TENANT_BASE}/`)) return true
+  if (isTenantBarbeariaScopedPath(pathname)) return true
   for (const p of PLATFORM_PREFIXES) {
     if (matchesPrefix(pathname, p)) return true
   }
@@ -77,7 +124,10 @@ export function isRoleGuardedPath(pathname: string): boolean {
 }
 
 export function pathAllowedForRole(pathname: string, role: string): boolean {
-  if (matchesPrefix(pathname, `${TENANT_BASE}/`) || pathname === TENANT_ENTRY) {
+  if (pathname.startsWith('/cadastro') && !isCadastroPublicPath(pathname)) {
+    return false
+  }
+  if (isTenantBarbeariaScopedPath(pathname) || pathname === TENANT_ENTRY) {
     return role === 'admin' || role === 'super_admin'
   }
   for (const p of PLATFORM_PREFIXES) {
@@ -112,10 +162,17 @@ export function safeHomeForRole(role: string): string {
 }
 
 /**
- * Redireciona URLs antigas com segmento de papel (/super, /admin, /barbeiro, /cliente).
+ * Redireciona URLs antigas com segmento de papel (/super, /admin, /barbeiro, /cliente)
+ * e o prefixo legado `/b/` das rotas tenant.
  * Retorna pathname de destino ou null.
  */
 export function legacyPathRedirect(pathname: string): string | null {
+  if (pathname.startsWith('/b/') || pathname === '/b') {
+    const rest = pathname.slice('/b'.length)
+    if (rest === '' || rest === '/') return TENANT_ENTRY
+    return rest.startsWith('/') ? rest : `/${rest}`
+  }
+
   if (pathname === '/super/perfil' || pathname === '/super/perfil/') {
     return PLATFORM_PATHS.contaEditar
   }
@@ -132,7 +189,8 @@ export function legacyPathRedirect(pathname: string): string | null {
     return TENANT_ENTRY
   }
   if (pathname.startsWith('/admin/')) {
-    return `${TENANT_BASE}${pathname.slice('/admin'.length)}`
+    const rest = pathname.slice('/admin'.length)
+    return rest.startsWith('/') ? rest : `/${rest}`
   }
 
   if (pathname.startsWith('/barbeiro/perfil')) {

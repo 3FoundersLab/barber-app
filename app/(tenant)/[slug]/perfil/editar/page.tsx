@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { tenantBarbeariaBasePath } from '@/lib/routes'
 
 export default async function AdminPerfilEditarRedirectPage({
   params,
@@ -6,5 +7,5 @@ export default async function AdminPerfilEditarRedirectPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  redirect(`/b/${slug}/configuracoes`)
+  redirect(`${tenantBarbeariaBasePath(slug)}/configuracoes`)
 }

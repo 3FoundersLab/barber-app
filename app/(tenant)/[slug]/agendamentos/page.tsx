@@ -16,12 +16,13 @@ import { DateNavigatorCalendar } from '@/components/shared/date-navigator-calend
 import { formatDate, DIAS_SEMANA_ABREV } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
+import { tenantBarbeariaBasePath } from '@/lib/routes'
 import type { Agendamento, Barbeiro } from '@/types'
 
 export default function AdminAgendamentosPage() {
   const params = useParams()
   const slug = typeof params.slug === 'string' ? params.slug : ''
-  const base = slug ? `/b/${slug}` : '/painel'
+  const base = slug ? tenantBarbeariaBasePath(slug) : '/painel'
 
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedBarbeiro, setSelectedBarbeiro] = useState<string>('all')

@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/pagination'
 import { createClient } from '@/lib/supabase/client'
 import { SUPER_ADMIN_BARBEARIA_STORAGE_KEY } from '@/lib/resolve-admin-barbearia-id'
+import { tenantBarbeariaDashboardPath } from '@/lib/routes'
 import type { Barbearia } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -226,7 +227,7 @@ export default function SuperBarbeariasPage() {
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(SUPER_ADMIN_BARBEARIA_STORAGE_KEY, barbeariaId)
       }
-      router.push(`/b/${encodeURIComponent(slug)}/dashboard`)
+      router.push(tenantBarbeariaDashboardPath(slug))
       return
     }
 
@@ -256,7 +257,7 @@ export default function SuperBarbeariasPage() {
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(SUPER_ADMIN_BARBEARIA_STORAGE_KEY, barbeariaId)
       }
-      router.push(`/b/${encodeURIComponent(slug)}/dashboard`)
+      router.push(tenantBarbeariaDashboardPath(slug))
       return
     }
 

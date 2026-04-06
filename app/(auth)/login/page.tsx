@@ -16,6 +16,7 @@ import { clearProfileCache } from '@/lib/profile-cache'
 import { fetchSessionProfile } from '@/lib/supabase/fetch-session-profile'
 import { resolveBarbeariaSlugForUser } from '@/lib/resolve-admin-barbearia-slug'
 import { rpcUserIsMemberOfBarbearia } from '@/lib/barbearia-rpc'
+import { tenantBarbeariaDashboardPath } from '@/lib/routes'
 
 function LoginPageContent() {
   const router = useRouter()
@@ -129,7 +130,7 @@ function LoginPageContent() {
             return
           }
 
-          router.push(`/b/${encodeURIComponent(resolvedSlug)}/dashboard`)
+          router.push(tenantBarbeariaDashboardPath(resolvedSlug))
           return
         } else if (profile?.role === 'barbeiro') {
           router.push('/agenda')

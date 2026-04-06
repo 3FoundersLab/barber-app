@@ -9,6 +9,7 @@ import { DesktopSidebar } from '@/components/shared/desktop-sidebar'
 import { AppPageHeadingProvider } from '@/components/shared/app-page-heading-context'
 import { createClient } from '@/lib/supabase/client'
 import { rpcUserIsMemberOfBarbearia } from '@/lib/barbearia-rpc'
+import { tenantBarbeariaBasePath, tenantBarbeariaDashboardPath } from '@/lib/routes'
 
 const FULL_ADMIN_TABS = (
   base: string,
@@ -32,7 +33,7 @@ export default function AdminSlugLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
   const router = useRouter()
   const slug = typeof params.slug === 'string' ? params.slug : ''
-  const base = slug ? `/b/${slug}` : '/painel'
+  const base = slug ? tenantBarbeariaBasePath(slug) : '/painel'
 
   const [pagamentoPendenteAdmin, setPagamentoPendenteAdmin] = useState(false)
 
@@ -86,12 +87,13 @@ export default function AdminSlugLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (!slug || !pagamentoPendenteAdmin) return
+    const prefix = tenantBarbeariaBasePath(slug)
     const ok =
-      pathname === `/b/${slug}/dashboard` ||
-      pathname === `/b/${slug}/configuracoes` ||
-      pathname.startsWith(`/b/${slug}/configuracoes/`)
+      pathname === `${prefix}/dashboard` ||
+      pathname === `${prefix}/configuracoes` ||
+      pathname.startsWith(`${prefix}/configuracoes/`)
     if (!ok) {
-      router.replace(`/b/${slug}/dashboard`)
+      router.replace(tenantBarbeariaDashboardPath(slug))
     }
   }, [slug, pathname, pagamentoPendenteAdmin, router])
 

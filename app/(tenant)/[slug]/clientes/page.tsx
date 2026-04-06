@@ -22,12 +22,13 @@ import { ClientCardListSkeleton } from '@/components/shared/loading-skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
+import { tenantBarbeariaBasePath } from '@/lib/routes'
 import type { Cliente } from '@/types'
 
 export default function AdminClientesPage() {
   const params = useParams()
   const slug = typeof params.slug === 'string' ? params.slug : ''
-  const base = slug ? `/b/${slug}` : '/painel'
+  const base = slug ? tenantBarbeariaBasePath(slug) : '/painel'
 
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [filteredClientes, setFilteredClientes] = useState<Cliente[]>([])

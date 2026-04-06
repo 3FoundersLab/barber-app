@@ -32,6 +32,7 @@ import { Separator } from '@/components/ui/separator'
 import { ProfileAvatarUpload } from '@/components/shared/profile-avatar-upload'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
+import { tenantBarbeariaBasePath } from '@/lib/routes'
 import { clearProfileCache, setProfileCache } from '@/lib/profile-cache'
 import { formatCurrency } from '@/lib/constants'
 import { linhasBeneficiosPlano } from '@/lib/plano-beneficios'
@@ -52,7 +53,7 @@ export default function AdminConfiguracoesPage() {
   const router = useRouter()
   const params = useParams()
   const slug = typeof params.slug === 'string' ? params.slug : ''
-  const base = slug ? `/b/${slug}` : '/painel'
+  const base = slug ? tenantBarbeariaBasePath(slug) : '/painel'
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [barbearia, setBarbearia] = useState<Barbearia | null>(null)

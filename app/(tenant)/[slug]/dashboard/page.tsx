@@ -18,6 +18,7 @@ import {
 import { formatCurrency, formatTime } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
+import { tenantBarbeariaBasePath } from '@/lib/routes'
 import type { Agendamento, Barbearia } from '@/types'
 
 interface Stats {
@@ -32,7 +33,7 @@ interface Stats {
 export default function AdminDashboardPage() {
   const params = useParams()
   const slug = typeof params.slug === 'string' ? params.slug : ''
-  const base = slug ? `/b/${slug}` : '/painel'
+  const base = slug ? tenantBarbeariaBasePath(slug) : '/painel'
 
   const [barbearia, setBarbearia] = useState<Barbearia | null>(null)
   const [stats, setStats] = useState<Stats | null>(null)

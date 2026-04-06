@@ -23,12 +23,13 @@ import { ServiceCardListSkeleton } from '@/components/shared/loading-skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
+import { tenantBarbeariaBasePath } from '@/lib/routes'
 import type { Servico } from '@/types'
 
 export default function AdminServicosPage() {
   const params = useParams()
   const slug = typeof params.slug === 'string' ? params.slug : ''
-  const base = slug ? `/b/${slug}` : '/painel'
+  const base = slug ? tenantBarbeariaBasePath(slug) : '/painel'
 
   const [servicos, setServicos] = useState<Servico[]>([])
   const [barbeariaId, setBarbeariaId] = useState<string | null>(null)

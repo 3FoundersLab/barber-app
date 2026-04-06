@@ -5,7 +5,7 @@ import { rpcGetMyBarbeariaLink, rpcUserIsMemberOfBarbearia } from '@/lib/barbear
 export const SUPER_ADMIN_BARBEARIA_STORAGE_KEY = 'super_admin_barbearia_id'
 
 export type ResolveAdminBarbeariaOptions = {
-  /** Slug da URL `/b/[slug]/...` — tem prioridade sobre o contexto em localStorage. */
+  /** Slug da URL `/[slug]/...` (painel admin da barbearia) — tem prioridade sobre o contexto em localStorage. */
   slug?: string
 }
 

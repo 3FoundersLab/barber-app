@@ -16,6 +16,7 @@ import { resolveBarbeariaSlugForUser } from '@/lib/resolve-admin-barbearia-slug'
 import { rpcGetMyBarbeariaSlug } from '@/lib/barbearia-rpc'
 import { formatCurrency } from '@/lib/constants'
 import { linhasBeneficiosPlano } from '@/lib/plano-beneficios'
+import { tenantBarbeariaDashboardPath } from '@/lib/routes'
 import type { Plano } from '@/types'
 
 function slugify(text: string) {
@@ -134,7 +135,7 @@ export default function CadastroBarbeariaPage() {
         if (jaTemVinculo) {
           const dest = await resolveBarbeariaSlugForUser(supabase, loggedInUser.id)
           if (dest?.slug) {
-            router.push(`/b/${encodeURIComponent(dest.slug)}/dashboard`)
+            router.push(tenantBarbeariaDashboardPath(dest.slug))
           } else {
             router.push('/painel')
           }
@@ -167,7 +168,7 @@ export default function CadastroBarbeariaPage() {
         await supabase.auth.refreshSession()
         setSuccess('Barbearia cadastrada com sucesso! Redirecionando para o painel...')
         setTimeout(() => {
-          router.push(`/b/${encodeURIComponent(slug)}/dashboard`)
+          router.push(tenantBarbeariaDashboardPath(slug))
         }, 900)
         return
       }
@@ -248,7 +249,7 @@ export default function CadastroBarbeariaPage() {
 
       setSuccess('Barbearia cadastrada com sucesso! Redirecionando para o painel...')
       setTimeout(() => {
-        router.push(`/b/${encodeURIComponent(slug)}/dashboard`)
+        router.push(tenantBarbeariaDashboardPath(slug))
       }, 900)
     } catch {
       setError('Erro inesperado ao cadastrar. Tente novamente.')

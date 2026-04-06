@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AppointmentListSkeleton } from '@/components/shared/loading-skeleton'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
+import { tenantBarbeariaBasePath } from '@/lib/routes'
 import type { Agendamento, AppointmentStatus, PaymentStatus } from '@/types'
 
 type AtendimentoFilter = AppointmentStatus | 'todos'
@@ -20,7 +21,7 @@ type PagamentoFilter = PaymentStatus | 'todos'
 export default function AdminFinanceiroPage() {
   const params = useParams()
   const slug = typeof params.slug === 'string' ? params.slug : ''
-  const base = slug ? `/b/${slug}` : '/painel'
+  const base = slug ? tenantBarbeariaBasePath(slug) : '/painel'
 
   const [barbeariaId, setBarbeariaId] = useState<string | null>(null)
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([])

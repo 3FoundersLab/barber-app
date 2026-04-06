@@ -31,12 +31,13 @@ import {
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
+import { tenantBarbeariaBasePath } from '@/lib/routes'
 import type { Barbeiro } from '@/types'
 
 export default function AdminEquipePage() {
   const params = useParams()
   const slug = typeof params.slug === 'string' ? params.slug : ''
-  const base = slug ? `/b/${slug}` : '/painel'
+  const base = slug ? tenantBarbeariaBasePath(slug) : '/painel'
 
   const [barbeiros, setBarbeiros] = useState<Barbeiro[]>([])
   const [barbeariaId, setBarbeariaId] = useState<string | null>(null)

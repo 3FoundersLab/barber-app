@@ -4,8 +4,10 @@ import { updateSessionWithUser } from '@/lib/supabase/middleware'
 import {
   isRoleGuardedPath,
   legacyPathRedirect,
+  parseTenantBarbeariaSlugFromPath,
   pathAllowedForRole,
   safeHomeForRole,
+  tenantBarbeariaDashboardPath,
 } from '@/lib/routes'
 import { rpcUserIsMemberOfBarbearia } from '@/lib/barbearia-rpc'
 
@@ -65,13 +67,12 @@ export async function proxy(request: NextRequest) {
 
   // Admin de barbearia com pagamento pendente: só dashboard + configurações até o super aprovar o pagamento.
   if (role === 'admin') {
-    const tenantMatch = pathname.match(/^\/b\/([^/]+)/)
-    if (tenantMatch) {
-      const slug = tenantMatch[1]
+    const slug = parseTenantBarbeariaSlugFromPath(pathname)
+    if (slug) {
       const allowedLimitedAdmin =
-        pathname === `/b/${slug}/dashboard` ||
-        pathname === `/b/${slug}/configuracoes` ||
-        pathname.startsWith(`/b/${slug}/configuracoes/`)
+        pathname === `/${slug}/dashboard` ||
+        pathname === `/${slug}/configuracoes` ||
+        pathname.startsWith(`/${slug}/configuracoes/`)
       if (!allowedLimitedAdmin) {
         const { data: barbearia, error: barErr } = await supabase
           .from('barbearias')
@@ -86,7 +87,7 @@ export async function proxy(request: NextRequest) {
           const isMember = await rpcUserIsMemberOfBarbearia(supabase, barbearia.id)
           if (isMember) {
             const url = request.nextUrl.clone()
-            url.pathname = `/b/${slug}/dashboard`
+            url.pathname = tenantBarbeariaDashboardPath(slug)
             url.searchParams.delete('next')
             const redirectRes = NextResponse.redirect(url)
             forwardCookies(response, redirectRes)
