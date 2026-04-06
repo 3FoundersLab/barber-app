@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import {
@@ -33,12 +33,14 @@ import {
   PaginationEllipsis,
   PaginationItem,
 } from '@/components/ui/pagination'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Spinner } from '@/components/ui/spinner'
 import { SuperGridEntityListSkeleton } from '@/components/shared/loading-skeleton'
 import { formatCurrency } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import { linhasBeneficiosPlano, parsePlanoBeneficios } from '@/lib/plano-beneficios'
 import type { Plano } from '@/types'
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const
@@ -71,11 +73,26 @@ function pageNumberItems(current: number, total: number): (number | 'ellipsis')[
   return out
 }
 
+type BeneficioFormRow = { key: string; texto: string; ativo: boolean }
+
+function newBeneficioRow(partial?: Partial<Pick<BeneficioFormRow, 'texto' | 'ativo'>>): BeneficioFormRow {
+  return {
+    key: globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    texto: partial?.texto ?? '',
+    ativo: partial?.ativo ?? true,
+  }
+}
+
+function planoToBeneficioRows(plano: Plano): BeneficioFormRow[] {
+  const parsed = parsePlanoBeneficios(plano.beneficios)
+  if (parsed.length === 0) return []
+  return parsed.map((b) => newBeneficioRow({ texto: b.texto, ativo: b.ativo }))
+}
+
 const emptyForm = {
   nome: '',
   preco_mensal: '',
-  limite_barbeiros: '',
-  limite_agendamentos: '',
+  beneficios: [] as BeneficioFormRow[],
   ativo: true,
 }
 
@@ -99,7 +116,10 @@ export default function SuperPlanosPage() {
     let rows = planos
     if (search.trim()) {
       const q = search.toLowerCase().trim()
-      rows = rows.filter((p) => p.nome.toLowerCase().includes(q))
+      rows = rows.filter((p) => {
+        if (p.nome.toLowerCase().includes(q)) return true
+        return parsePlanoBeneficios(p.beneficios).some((b) => b.texto.toLowerCase().includes(q))
+      })
     }
     return [...rows].sort((a, b) => {
       if (sortBy === 'nome_asc' || sortBy === 'nome_desc') {
@@ -168,8 +188,7 @@ export default function SuperPlanosPage() {
     setForm({
       nome: plano.nome,
       preco_mensal: String(plano.preco_mensal),
-      limite_barbeiros: plano.limite_barbeiros != null ? String(plano.limite_barbeiros) : '',
-      limite_agendamentos: plano.limite_agendamentos != null ? String(plano.limite_agendamentos) : '',
+      beneficios: planoToBeneficioRows(plano),
       ativo: plano.ativo,
     })
     setIsDialogOpen(true)
@@ -186,11 +205,14 @@ export default function SuperPlanosPage() {
     setError(null)
 
     const supabase = createClient()
+    const beneficios = form.beneficios
+      .map((b) => ({ texto: b.texto.trim(), ativo: b.ativo }))
+      .filter((b) => b.texto.length > 0)
+
     const payload = {
       nome: form.nome,
       preco_mensal: Number(form.preco_mensal),
-      limite_barbeiros: form.limite_barbeiros ? Number(form.limite_barbeiros) : null,
-      limite_agendamentos: form.limite_agendamentos ? Number(form.limite_agendamentos) : null,
+      beneficios,
       ativo: form.ativo,
     }
 
@@ -382,11 +404,22 @@ export default function SuperPlanosPage() {
                       {formatCurrency(plano.preco_mensal)}
                       <span className="font-normal text-muted-foreground/80"> / mês</span>
                     </p>
-                    <p className="pt-2 text-xs leading-relaxed text-muted-foreground/90">
-                      Barbeiros: {plano.limite_barbeiros ?? 'Ilimitado'}
-                      <span className="mx-1.5 text-border">·</span>
-                      Agendamentos: {plano.limite_agendamentos ?? 'Ilimitado'}
-                    </p>
+                    <ul className="pt-2 text-xs leading-relaxed text-muted-foreground/90">
+                      {linhasBeneficiosPlano(plano).length === 0 ? (
+                        <li className="list-none text-muted-foreground/70">Nenhum benefício ativo</li>
+                      ) : (
+                        linhasBeneficiosPlano(plano).map((linha, idx) => (
+                          <li key={`${plano.id}-${idx}`} className="flex items-start gap-2">
+                            <Check
+                              className="mt-0.5 size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                              strokeWidth={2.5}
+                              aria-hidden
+                            />
+                            <span>{linha}</span>
+                          </li>
+                        ))
+                      )}
+                    </ul>
                   </div>
 
                   <div className="mt-5 flex items-center justify-between gap-3 border-t border-border/50 pt-4">
@@ -501,12 +534,12 @@ export default function SuperPlanosPage() {
       </PageContent>
 
       <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="rounded-2xl sm:max-w-md">
+        <DialogContent className="flex max-h-[90vh] flex-col rounded-2xl sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingPlano ? 'Editar plano' : 'Novo plano'}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-3">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
             <div className="space-y-1">
               <Label htmlFor="nome">Nome</Label>
               <Input
@@ -527,26 +560,86 @@ export default function SuperPlanosPage() {
                 className="rounded-lg"
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="limite-barbeiros">Limite de barbeiros</Label>
-              <Input
-                id="limite-barbeiros"
-                type="number"
-                value={form.limite_barbeiros}
-                onChange={(e) => setForm((p) => ({ ...p, limite_barbeiros: e.target.value }))}
-                className="rounded-lg"
-              />
+
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <Label className="text-foreground">Benefícios</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-lg"
+                  onClick={() =>
+                    setForm((p) => ({ ...p, beneficios: [...p.beneficios, newBeneficioRow()] }))
+                  }
+                >
+                  <Plus className="mr-1 size-3.5" />
+                  Adicionar
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Escreva cada benefício (ex.: até 10 barbeiros). Marque a caixa para incluí-lo no plano com check.
+              </p>
+              {form.beneficios.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-border/70 px-3 py-4 text-center text-sm text-muted-foreground">
+                  Nenhum item. Use &quot;Adicionar&quot; para incluir benefícios.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {form.beneficios.map((row, index) => (
+                    <li
+                      key={row.key}
+                      className="flex items-start gap-2 rounded-lg border border-border/60 bg-muted/20 p-2"
+                    >
+                      <div className="pt-2">
+                        <Checkbox
+                          checked={row.ativo}
+                          onCheckedChange={(checked) =>
+                            setForm((p) => ({
+                              ...p,
+                              beneficios: p.beneficios.map((b, i) =>
+                                i === index ? { ...b, ativo: checked === true } : b,
+                              ),
+                            }))
+                          }
+                          aria-label={row.ativo ? 'Benefício ativo no plano' : 'Benefício inativo'}
+                        />
+                      </div>
+                      <Input
+                        value={row.texto}
+                        onChange={(e) =>
+                          setForm((p) => ({
+                            ...p,
+                            beneficios: p.beneficios.map((b, i) =>
+                              i === index ? { ...b, texto: e.target.value } : b,
+                            ),
+                          }))
+                        }
+                        placeholder="Ex.: Até 2 unidades"
+                        className="min-w-0 flex-1 rounded-lg"
+                        aria-label={`Texto do benefício ${index + 1}`}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={() =>
+                          setForm((p) => ({
+                            ...p,
+                            beneficios: p.beneficios.filter((_, i) => i !== index),
+                          }))
+                        }
+                        aria-label="Remover benefício"
+                      >
+                        <Trash2 className="size-3.5" strokeWidth={1.75} />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="limite-agendamentos">Limite de agendamentos</Label>
-              <Input
-                id="limite-agendamentos"
-                type="number"
-                value={form.limite_agendamentos}
-                onChange={(e) => setForm((p) => ({ ...p, limite_agendamentos: e.target.value }))}
-                className="rounded-lg"
-              />
-            </div>
+
             <div className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2.5">
               <Label htmlFor="ativo" className="cursor-pointer">
                 Plano ativo

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff, Scissors } from 'lucide-react'
+import { Check, Eye, EyeOff, Scissors } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,6 +13,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { CadastroPlanoGridSkeleton } from '@/components/shared/loading-skeleton'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/constants'
+import { linhasBeneficiosPlano } from '@/lib/plano-beneficios'
 import type { Plano } from '@/types'
 
 function slugify(text: string) {
@@ -321,12 +322,22 @@ export default function CadastroBarbeariaPage() {
                         >
                           <p className="font-semibold">{plano.nome}</p>
                           <p className="text-sm text-muted-foreground">{formatCurrency(plano.preco_mensal)} / mes</p>
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            Barbeiros: {plano.limite_barbeiros ?? 'Ilimitado'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Agendamentos: {plano.limite_agendamentos ?? 'Ilimitado'}
-                          </p>
+                          <ul className="mt-2 space-y-1 text-left text-xs text-muted-foreground">
+                            {linhasBeneficiosPlano(plano).length === 0 ? (
+                              <li className="list-none text-muted-foreground/80">Sem benefícios listados</li>
+                            ) : (
+                              linhasBeneficiosPlano(plano).map((linha, idx) => (
+                                <li key={`${plano.id}-${idx}`} className="flex items-start gap-1.5">
+                                  <Check
+                                    className="mt-0.5 size-3 shrink-0 text-emerald-600 dark:text-emerald-400"
+                                    strokeWidth={2.5}
+                                    aria-hidden
+                                  />
+                                  <span>{linha}</span>
+                                </li>
+                              ))
+                            )}
+                          </ul>
                         </button>
                       )
                     })}

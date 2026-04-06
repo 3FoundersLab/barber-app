@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import {
+  Check,
   CreditCard,
   LogOut,
   Mail,
@@ -33,6 +34,7 @@ import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { clearProfileCache, setProfileCache } from '@/lib/profile-cache'
 import { formatCurrency } from '@/lib/constants'
+import { linhasBeneficiosPlano } from '@/lib/plano-beneficios'
 import type { Assinatura, Barbearia, Plano, Profile } from '@/types'
 
 function labelAssinaturaStatus(status: string) {
@@ -420,7 +422,25 @@ export default function AdminConfiguracoesPage() {
                 </Badge>
               </div>
               {assinatura.plano != null && (
-                <p className="text-muted-foreground">{formatCurrency(assinatura.plano.preco_mensal)} / mês</p>
+                <>
+                  <p className="text-muted-foreground">{formatCurrency(assinatura.plano.preco_mensal)} / mês</p>
+                  <ul className="mt-2 space-y-1 text-muted-foreground">
+                    {linhasBeneficiosPlano(assinatura.plano).length === 0 ? (
+                      <li className="list-none text-xs">Nenhum benefício listado para este plano.</li>
+                    ) : (
+                      linhasBeneficiosPlano(assinatura.plano).map((linha, idx) => (
+                        <li key={`${assinatura.plano!.id}-${idx}`} className="flex items-start gap-2 text-xs">
+                          <Check
+                            className="mt-0.5 size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                            strokeWidth={2.5}
+                            aria-hidden
+                          />
+                          <span>{linha}</span>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </>
               )}
             </CardContent>
           </Card>

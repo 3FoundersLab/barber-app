@@ -119,12 +119,19 @@ export interface HorarioTrabalho {
 
 export type AssinaturaStatus = 'pendente' | 'ativa' | 'trial' | 'inadimplente' | 'cancelada'
 
+/** Item de benefício configurável no plano; `ativo` indica se entra na lista pública com check. */
+export interface PlanoBeneficio {
+  texto: string
+  ativo: boolean
+}
+
 export interface Plano {
   id: string
   nome: string
   preco_mensal: number
   limite_barbeiros?: number | null
   limite_agendamentos?: number | null
+  beneficios?: PlanoBeneficio[] | null
   ativo: boolean
   created_at: string
   updated_at: string
