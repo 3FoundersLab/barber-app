@@ -22,6 +22,7 @@ import { ClientCardListSkeleton } from '@/components/shared/loading-skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
+import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
 import { tenantBarbeariaBasePath } from '@/lib/routes'
 import type { Cliente } from '@/types'
 
@@ -106,8 +107,8 @@ export default function AdminClientesPage() {
     setEditingCliente(cliente)
     setFormData({
       nome: cliente.nome,
-      telefone: cliente.telefone || '',
-      email: cliente.email || '',
+      telefone: maskTelefoneBr(cliente.telefone || ''),
+      email: normalizeEmailInput(cliente.email || ''),
       notas: cliente.notas || '',
     })
     setIsDialogOpen(true)
@@ -225,8 +226,12 @@ export default function AdminClientesPage() {
               <Input
                 id="telefone"
                 value={formData.telefone}
-                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, telefone: maskTelefoneBr(e.target.value) })
+                }
                 placeholder="(00) 00000-0000"
+                inputMode="tel"
+                autoComplete="tel"
               />
             </div>
             
@@ -236,8 +241,12 @@ export default function AdminClientesPage() {
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: normalizeEmailInput(e.target.value) })
+                }
                 placeholder="email@exemplo.com"
+                inputMode="email"
+                autoComplete="email"
               />
             </div>
             

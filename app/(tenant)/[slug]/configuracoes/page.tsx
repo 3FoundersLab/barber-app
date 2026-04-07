@@ -7,7 +7,6 @@ import {
   CreditCard,
   LogOut,
   Mail,
-  MapPin,
   Phone,
   Save,
   Store,
@@ -34,7 +33,14 @@ import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { tenantBarbeariaBasePath } from '@/lib/routes'
 import { clearProfileCache, setProfileCache } from '@/lib/profile-cache'
+import {
+  deserializeBarbeariaEndereco,
+  emptyBarbeariaEnderecoParts,
+  serializeBarbeariaEndereco,
+} from '@/lib/barbearia-endereco'
+import { BarbeariaEnderecoFields } from '@/components/shared/barbearia-endereco-fields'
 import { formatCurrency } from '@/lib/constants'
+import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
 import { linhasBeneficiosPlano } from '@/lib/plano-beneficios'
 import type { Assinatura, Barbearia, Plano, Profile } from '@/types'
 
@@ -69,7 +75,7 @@ export default function AdminConfiguracoesPage() {
 
   const [formBarbearia, setFormBarbearia] = useState({
     nome: '',
-    endereco: '',
+    enderecoParts: emptyBarbeariaEnderecoParts(),
     telefone: '',
     email: '',
   })
@@ -107,7 +113,7 @@ export default function AdminConfiguracoesPage() {
       if (profileData) {
         setProfile(profileData)
         setNomePerfil(profileData.nome || '')
-        setTelefonePerfil(profileData.telefone || '')
+        setTelefonePerfil(maskTelefoneBr(profileData.telefone || ''))
         setAvatar(profileData.avatar || '')
       }
 
@@ -132,9 +138,9 @@ export default function AdminConfiguracoesPage() {
         setBarbearia(b)
         setFormBarbearia({
           nome: b.nome,
-          endereco: b.endereco || '',
-          telefone: b.telefone || '',
-          email: b.email || '',
+          enderecoParts: deserializeBarbeariaEndereco(b.endereco ?? null),
+          telefone: maskTelefoneBr(b.telefone || ''),
+          email: normalizeEmailInput(b.email || ''),
         })
 
         const { data: assinaturaData } = await supabase
@@ -165,7 +171,7 @@ export default function AdminConfiguracoesPage() {
       .from('barbearias')
       .update({
         nome: formBarbearia.nome,
-        endereco: formBarbearia.endereco || null,
+        endereco: serializeBarbeariaEndereco(formBarbearia.enderecoParts),
         telefone: formBarbearia.telefone || null,
         email: formBarbearia.email || null,
       })
@@ -305,8 +311,9 @@ export default function AdminConfiguracoesPage() {
               <Input
                 id="telefonePerfil"
                 value={telefonePerfil}
-                onChange={(e) => setTelefonePerfil(e.target.value)}
+                onChange={(e) => setTelefonePerfil(maskTelefoneBr(e.target.value))}
                 placeholder="(00) 00000-0000"
+                inputMode="tel"
                 autoComplete="tel"
               />
             </div>
@@ -345,27 +352,26 @@ export default function AdminConfiguracoesPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="nomeBarbearia">Nome da barbearia</Label>
+                  <Label htmlFor="nomeBarbearia" required>
+                    Nome da barbearia
+                  </Label>
                   <Input
                     id="nomeBarbearia"
                     value={formBarbearia.nome}
                     onChange={(e) => setFormBarbearia({ ...formBarbearia, nome: e.target.value })}
                     placeholder="Nome da barbearia"
+                    aria-required="true"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="endereco" className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5" />
-                    Endereço
-                  </Label>
-                  <Input
-                    id="endereco"
-                    value={formBarbearia.endereco}
-                    onChange={(e) => setFormBarbearia({ ...formBarbearia, endereco: e.target.value })}
-                    placeholder="Opcional — rua, número, bairro, cidade"
-                  />
-                </div>
+                <BarbeariaEnderecoFields
+                  idPrefix="cfg-barbearia"
+                  value={formBarbearia.enderecoParts}
+                  onChange={(enderecoParts) =>
+                    setFormBarbearia((prev) => ({ ...prev, enderecoParts }))
+                  }
+                  disabled={isSavingBarbearia}
+                />
 
                 <div className="space-y-2">
                   <Label htmlFor="telefoneBarbearia" className="flex items-center gap-1">
@@ -375,8 +381,15 @@ export default function AdminConfiguracoesPage() {
                   <Input
                     id="telefoneBarbearia"
                     value={formBarbearia.telefone}
-                    onChange={(e) => setFormBarbearia({ ...formBarbearia, telefone: e.target.value })}
+                    onChange={(e) =>
+                      setFormBarbearia({
+                        ...formBarbearia,
+                        telefone: maskTelefoneBr(e.target.value),
+                      })
+                    }
                     placeholder="(00) 00000-0000"
+                    inputMode="tel"
+                    autoComplete="tel"
                   />
                 </div>
 
@@ -389,8 +402,15 @@ export default function AdminConfiguracoesPage() {
                     id="emailBarbearia"
                     type="email"
                     value={formBarbearia.email}
-                    onChange={(e) => setFormBarbearia({ ...formBarbearia, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormBarbearia({
+                        ...formBarbearia,
+                        email: normalizeEmailInput(e.target.value),
+                      })
+                    }
                     placeholder="Opcional — contato@barbearia.com"
+                    inputMode="email"
+                    autoComplete="email"
                   />
                 </div>
 

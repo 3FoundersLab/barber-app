@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { ProfileFormCardSkeleton } from '@/components/shared/loading-skeleton'
+import { maskTelefoneBr } from '@/lib/format-contato'
 import { createClient } from '@/lib/supabase/client'
 import { setProfileCache } from '@/lib/profile-cache'
 import { ProfileAvatarUpload } from '@/components/shared/profile-avatar-upload'
@@ -64,7 +65,7 @@ export default function BarbeiroEditarPerfilPage() {
       if (profileData) setProfile(profileData)
 
       setNome(barbeiroData.nome || profileData?.nome || '')
-      setTelefone(barbeiroData.telefone || profileData?.telefone || '')
+      setTelefone(maskTelefoneBr(barbeiroData.telefone || profileData?.telefone || ''))
       setAvatar(barbeiroData.avatar || profileData?.avatar || '')
 
       setIsLoading(false)
@@ -207,8 +208,9 @@ export default function BarbeiroEditarPerfilPage() {
                   <Input
                     id="telefone"
                     value={telefone}
-                    onChange={(e) => setTelefone(e.target.value)}
+                    onChange={(e) => setTelefone(maskTelefoneBr(e.target.value))}
                     placeholder="(00) 00000-0000"
+                    inputMode="tel"
                     autoComplete="tel"
                   />
                 </div>

@@ -618,6 +618,30 @@ export function AdminConfiguracoesPageSkeleton() {
   )
 }
 
+/** Super admin: formulário nova/editar barbearia */
+export function SuperBarbeariaFormCardSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="space-y-2">
+        <Skeleton className="h-6 w-56" />
+        <Skeleton className="h-4 w-full max-w-lg" />
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ))}
+      </CardContent>
+      <div className="flex flex-col-reverse gap-2 border-t px-6 pt-6 sm:flex-row sm:justify-end">
+        <Skeleton className="h-10 w-full sm:w-24" />
+        <Skeleton className="h-10 w-full sm:w-36" />
+      </div>
+    </Card>
+  )
+}
+
 /** Perfil (cliente / barbeiro / super): card “Seus dados” */
 export function ProfileFormCardSkeleton() {
   return (

@@ -44,6 +44,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { normalizeEmailInput } from '@/lib/format-contato'
 import { createClient } from '@/lib/supabase/client'
 import { ROLE_LABELS } from '@/lib/constants'
 import type { Barbearia, Profile, UserRole } from '@/types'
@@ -365,7 +366,7 @@ export default function SuperUsuariosPage() {
     const barId = adminLink?.barbearia?.id ?? ''
     setEditProfile(p)
     setEditFormNome(p.nome)
-    setEditFormEmail(p.email)
+    setEditFormEmail(normalizeEmailInput(p.email || ''))
     setEditFormRole(p.role)
     setEditFormBarbeariaId(barId)
     setEditBaseline({
@@ -1050,7 +1051,9 @@ export default function SuperUsuariosPage() {
                 type="email"
                 autoComplete="off"
                 value={linkForm.email}
-                onChange={(e) => setLinkForm((s) => ({ ...s, email: e.target.value }))}
+                onChange={(e) =>
+                  setLinkForm((s) => ({ ...s, email: normalizeEmailInput(e.target.value) }))
+                }
                 placeholder="conta@exemplo.com"
               />
               <p className="text-xs text-muted-foreground">
@@ -1184,7 +1187,9 @@ export default function SuperUsuariosPage() {
                 type="email"
                 autoComplete="off"
                 value={form.email}
-                onChange={(e) => setForm((s) => ({ ...s, email: e.target.value }))}
+                onChange={(e) =>
+                  setForm((s) => ({ ...s, email: normalizeEmailInput(e.target.value) }))
+                }
               />
             </div>
             <div className="space-y-1">
@@ -1297,7 +1302,7 @@ export default function SuperUsuariosPage() {
                   id="edit-email"
                   type="email"
                   value={editFormEmail}
-                  onChange={(e) => setEditFormEmail(e.target.value)}
+                  onChange={(e) => setEditFormEmail(normalizeEmailInput(e.target.value))}
                   autoComplete="off"
                 />
               </div>

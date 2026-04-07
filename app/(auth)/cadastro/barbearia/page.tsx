@@ -22,7 +22,10 @@ import { resolveBarbeariaSlugForUser } from '@/lib/resolve-admin-barbearia-slug'
 import { rpcGetMyBarbeariaSlug } from '@/lib/barbearia-rpc'
 import { formatCurrency } from '@/lib/constants'
 import { linhasBeneficiosPlano } from '@/lib/plano-beneficios'
+import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
 import { tenantBarbeariaDashboardPath } from '@/lib/routes'
+import { emptyBarbeariaEnderecoParts, serializeBarbeariaEndereco } from '@/lib/barbearia-endereco'
+import { BarbeariaEnderecoFields } from '@/components/shared/barbearia-endereco-fields'
 import type { Plano } from '@/types'
 
 function slugify(text: string) {
@@ -49,6 +52,7 @@ export default function CadastroBarbeariaPage() {
     nomeBarbearia: '',
     slug: '',
     telefoneBarbearia: '',
+    enderecoParts: emptyBarbeariaEnderecoParts(),
     emailResponsavel: '',
     senha: '',
     confirmarSenha: '',
@@ -73,7 +77,7 @@ export default function CadastroBarbeariaPage() {
       if (user?.email) {
         setFormData((p) => ({
           ...p,
-          emailResponsavel: p.emailResponsavel || user.email || '',
+          emailResponsavel: p.emailResponsavel || normalizeEmailInput(user.email || ''),
         }))
       }
     })()
@@ -153,7 +157,7 @@ export default function CadastroBarbeariaPage() {
           p_telefone: formData.telefoneBarbearia || null,
           p_plano_id: formData.planoId,
           p_email_responsavel: formData.emailResponsavel.trim() || loggedInUser.email || '',
-          p_endereco: null,
+          p_endereco: serializeBarbeariaEndereco(formData.enderecoParts),
         })
 
         if (rpcErrorLogged) {
@@ -233,7 +237,7 @@ export default function CadastroBarbeariaPage() {
         p_telefone: formData.telefoneBarbearia || null,
         p_plano_id: formData.planoId,
         p_email_responsavel: formData.emailResponsavel,
-        p_endereco: null,
+        p_endereco: serializeBarbeariaEndereco(formData.enderecoParts),
       })
 
       if (rpcError) {
@@ -295,7 +299,9 @@ export default function CadastroBarbeariaPage() {
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="nomeBarbearia">Nome da barbearia</Label>
+                  <Label htmlFor="nomeBarbearia" required>
+                    Nome da barbearia
+                  </Label>
                   <Input
                     id="nomeBarbearia"
                     value={formData.nomeBarbearia}
@@ -312,7 +318,9 @@ export default function CadastroBarbeariaPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="slug">Slug (identificador)</Label>
+                  <Label htmlFor="slug" required>
+                    Slug (identificador)
+                  </Label>
                   <Input
                     id="slug"
                     placeholder="minha-barbearia"
@@ -331,27 +339,54 @@ export default function CadastroBarbeariaPage() {
                   <Input
                     id="telefoneBarbearia"
                     value={formData.telefoneBarbearia}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, telefoneBarbearia: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        telefoneBarbearia: maskTelefoneBr(e.target.value),
+                      }))
+                    }
                     disabled={isSubmitting}
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="(00) 00000-0000"
                   />
                 </div>
               </div>
 
+              <BarbeariaEnderecoFields
+                idPrefix="cadastro-barbearia"
+                value={formData.enderecoParts}
+                onChange={(enderecoParts) => setFormData((prev) => ({ ...prev, enderecoParts }))}
+                disabled={isSubmitting}
+              />
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="emailResponsavel">Email de acesso</Label>
+                  <Label htmlFor="emailResponsavel" required>
+                    Email de acesso
+                  </Label>
                   <Input
                     id="emailResponsavel"
                     type="email"
                     value={formData.emailResponsavel}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, emailResponsavel: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        emailResponsavel: normalizeEmailInput(e.target.value),
+                      }))
+                    }
                     disabled={isSubmitting || hasSession}
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="seu@email.com"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="senha">Senha</Label>
+                  <Label htmlFor="senha" required={!hasSession}>
+                    Senha
+                  </Label>
                   <div className="relative">
                     <Input
                       id="senha"
@@ -375,7 +410,9 @@ export default function CadastroBarbeariaPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmarSenha">Confirmar senha</Label>
+                  <Label htmlFor="confirmarSenha" required={!hasSession}>
+                    Confirmar senha
+                  </Label>
                   <div className="relative">
                     <Input
                       id="confirmarSenha"
@@ -400,7 +437,7 @@ export default function CadastroBarbeariaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Escolha o plano</Label>
+                <Label required>Escolha o plano</Label>
                 {isLoadingPlans ? (
                   <CadastroPlanoGridSkeleton />
                 ) : planos.length > 0 ? (

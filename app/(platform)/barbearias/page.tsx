@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, LogIn, Pencil, Plus, Search } from 'lucide-react'
@@ -10,14 +11,11 @@ import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Spinner } from '@/components/ui/spinner'
 import {
   SuperBarbeariasCadastroMensalChartSkeleton,
   SuperGridEntityListSkeleton,
 } from '@/components/shared/loading-skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -49,16 +47,6 @@ const SORT_OPTIONS = [
 ] as const
 type BarbeariasSort = (typeof SORT_OPTIONS)[number]['value']
 
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-}
-
 function pageNumberItems(current: number, total: number): (number | 'ellipsis')[] {
   if (total <= 7) {
     return Array.from({ length: total }, (_, i) => i + 1)
@@ -78,15 +66,6 @@ function pageNumberItems(current: number, total: number): (number | 'ellipsis')[
   return out
 }
 
-const emptyForm = {
-  nome: '',
-  slug: '',
-  telefone: '',
-  email: '',
-  endereco: '',
-  ativo: true,
-}
-
 export default function SuperBarbeariasPage() {
   const router = useRouter()
   const [barbearias, setBarbearias] = useState<Barbearia[]>([])
@@ -98,17 +77,7 @@ export default function SuperBarbeariasPage() {
   const [pageSize, setPageSize] = useState<BarbeariasPageSize>(10)
   const [sortBy, setSortBy] = useState<BarbeariasSort>('nome_asc')
   const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [isSavingEdit, setIsSavingEdit] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingBarbearia, setEditingBarbearia] = useState<Barbearia | null>(null)
-  const [form, setForm] = useState(emptyForm)
-  const [editForm, setEditForm] = useState(emptyForm)
-  /** Enquanto true, o slug acompanha o nome; ao editar o slug manualmente, passa a false. */
-  const [slugAutofill, setSlugAutofill] = useState(true)
-  /** Idem no modal de edição; inicia true só se o slug já for o derivado do nome (evita apagar slug customizado). */
-  const [editSlugAutofill, setEditSlugAutofill] = useState(true)
 
   useEffect(() => {
     loadBarbearias()
@@ -137,90 +106,6 @@ export default function SuperBarbeariasPage() {
     }
 
     setIsLoading(false)
-  }
-
-  async function handleCreate() {
-    if (!form.nome || !form.slug) return
-    setIsSaving(true)
-    setError(null)
-
-    const supabase = createClient()
-    const { error: insertError } = await supabase
-      .from('barbearias')
-      .insert({
-        nome: form.nome,
-        slug: form.slug,
-        telefone: form.telefone || null,
-        email: form.email || null,
-        endereco: form.endereco || null,
-      })
-
-    if (insertError) {
-      setError('Não foi possível criar a barbearia')
-      setIsSaving(false)
-      return
-    }
-
-    setIsSaving(false)
-    setIsDialogOpen(false)
-    setForm(emptyForm)
-    setSlugAutofill(true)
-    loadBarbearias()
-  }
-
-  function openEdit(b: Barbearia) {
-    setEditingBarbearia(b)
-    setEditSlugAutofill(slugify(b.nome) === b.slug)
-    setEditForm({
-      nome: b.nome,
-      slug: b.slug,
-      telefone: b.telefone ?? '',
-      email: b.email ?? '',
-      endereco: b.endereco ?? '',
-      ativo: b.ativo !== false,
-    })
-  }
-
-  async function handleSaveEdit() {
-    if (!editingBarbearia || !editForm.nome || !editForm.slug) return
-    setIsSavingEdit(true)
-    setError(null)
-
-    try {
-      const res = await fetch('/api/platform/barbearias', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: editingBarbearia.id,
-          nome: editForm.nome.trim(),
-          slug: editForm.slug,
-          telefone: editForm.telefone || null,
-          email: editForm.email || null,
-          endereco: editForm.endereco || null,
-          ativo: editForm.ativo,
-        }),
-      })
-      const json = (await res.json().catch(() => ({}))) as { error?: string }
-      if (!res.ok) {
-        setError(
-          typeof json.error === 'string'
-            ? json.error
-            : 'Não foi possível salvar as alterações. Verifique SUPABASE_SERVICE_ROLE_KEY no servidor ou execute scripts/015 e 017 no Supabase.',
-        )
-        setIsSavingEdit(false)
-        return
-      }
-    } catch {
-      setError('Não foi possível salvar as alterações.')
-      setIsSavingEdit(false)
-      return
-    }
-
-    setIsSavingEdit(false)
-    setEditingBarbearia(null)
-    setEditForm(emptyForm)
-    setEditSlugAutofill(true)
-    loadBarbearias()
   }
 
   async function handleImpersonate(barbeariaId: string, slug: string) {
@@ -330,13 +215,11 @@ export default function SuperBarbeariasPage() {
             </Button>
             <PageTitle className="min-w-0 truncate">Barbearias</PageTitle>
           </div>
-          <Button
-            type="button"
-            className="w-full shrink-0 sm:w-auto"
-            onClick={() => setIsDialogOpen(true)}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Nova barbearia
+          <Button type="button" className="w-full shrink-0 sm:w-auto" asChild>
+            <Link href="/barbearias/nova">
+              <Plus className="mr-2 h-4 w-4" />
+              Nova barbearia
+            </Link>
           </Button>
         </div>
 
@@ -483,10 +366,12 @@ export default function SuperBarbeariasPage() {
                           variant="outline"
                           size="sm"
                           className="h-8 gap-1.5 rounded-lg border-border/80 bg-background px-2.5 font-normal shadow-none hover:bg-muted hover:text-foreground dark:hover:bg-muted/80"
-                          onClick={() => openEdit(barbearia)}
+                          asChild
                         >
-                          <Pencil className="size-3.5" strokeWidth={1.75} />
-                          Editar
+                          <Link href={`/barbearias/${barbearia.id}/editar`}>
+                            <Pencil className="size-3.5" strokeWidth={1.75} />
+                            Editar
+                          </Link>
                         </Button>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -585,193 +470,6 @@ export default function SuperBarbeariasPage() {
           </div>
         ) : null}
       </PageContent>
-
-      <Dialog
-        open={isDialogOpen}
-        onOpenChange={(open) => {
-          setIsDialogOpen(open)
-          if (open) {
-            setSlugAutofill(true)
-            setForm(emptyForm)
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nova Barbearia</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="nome">Nome</Label>
-              <Input
-                id="nome"
-                value={form.nome}
-                onChange={(e) => {
-                  const nome = e.target.value
-                  setForm((prev) => ({
-                    ...prev,
-                    nome,
-                    ...(slugAutofill ? { slug: slugify(nome) } : {}),
-                  }))
-                }}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="slug">Slug</Label>
-              <Input
-                id="slug"
-                value={form.slug}
-                onChange={(e) => {
-                  setSlugAutofill(false)
-                  setForm((prev) => ({ ...prev, slug: slugify(e.target.value) }))
-                }}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="telefone">Telefone</Label>
-              <Input
-                id="telefone"
-                value={form.telefone}
-                onChange={(e) => setForm((prev) => ({ ...prev, telefone: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                value={form.email}
-                onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="endereco">Endereço</Label>
-              <Input
-                id="endereco"
-                value={form.endereco}
-                onChange={(e) => setForm((prev) => ({ ...prev, endereco: e.target.value }))}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleCreate} disabled={isSaving || !form.nome || !form.slug}>
-              {isSaving ? <Spinner className="mr-2" /> : null}
-              {isSaving ? 'Salvando...' : 'Criar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={!!editingBarbearia}
-        onOpenChange={(open) => {
-          if (!open) {
-            setEditingBarbearia(null)
-            setEditForm(emptyForm)
-            setEditSlugAutofill(true)
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar barbearia</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="edit-nome">Nome</Label>
-              <Input
-                id="edit-nome"
-                value={editForm.nome}
-                onChange={(e) => {
-                  const nome = e.target.value
-                  setEditForm((prev) => ({
-                    ...prev,
-                    nome,
-                    ...(editSlugAutofill ? { slug: slugify(nome) } : {}),
-                  }))
-                }}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="edit-slug">Slug</Label>
-              <Input
-                id="edit-slug"
-                value={editForm.slug}
-                onChange={(e) => {
-                  setEditSlugAutofill(false)
-                  setEditForm((prev) => ({ ...prev, slug: slugify(e.target.value) }))
-                }}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="edit-telefone">Telefone</Label>
-              <Input
-                id="edit-telefone"
-                value={editForm.telefone}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, telefone: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="edit-email">Email</Label>
-              <Input
-                id="edit-email"
-                value={editForm.email}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, email: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="edit-endereco">Endereço</Label>
-              <Input
-                id="edit-endereco"
-                value={editForm.endereco}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, endereco: e.target.value }))}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
-              <div className="space-y-0.5">
-                <Label htmlFor="edit-ativo" className="text-sm font-medium">
-                  Barbearia ativa
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Inativas permanecem no sistema, mas ficam marcadas como inativas.
-                </p>
-              </div>
-              <Switch
-                id="edit-ativo"
-                checked={editForm.ativo}
-                onCheckedChange={(checked) =>
-                  setEditForm((prev) => ({ ...prev, ativo: checked }))
-                }
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setEditingBarbearia(null)
-                setEditForm(emptyForm)
-                setEditSlugAutofill(true)
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => void handleSaveEdit()}
-              disabled={isSavingEdit || !editForm.nome || !editForm.slug}
-            >
-              {isSavingEdit ? <Spinner className="mr-2" /> : null}
-              {isSavingEdit ? 'Salvando...' : 'Salvar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </PageContainer>
   )
 }

@@ -31,6 +31,7 @@ import {
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
+import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
 import { tenantBarbeariaBasePath } from '@/lib/routes'
 import type { Barbeiro } from '@/types'
 
@@ -113,8 +114,8 @@ export default function AdminEquipePage() {
     setEditingBarbeiro(barbeiro)
     setFormData({
       nome: barbeiro.nome,
-      telefone: barbeiro.telefone || '',
-      email: barbeiro.email || '',
+      telefone: maskTelefoneBr(barbeiro.telefone || ''),
+      email: normalizeEmailInput(barbeiro.email || ''),
       ativo: barbeiro.ativo,
     })
     setIsDialogOpen(true)
@@ -287,8 +288,12 @@ export default function AdminEquipePage() {
               <Input
                 id="telefone"
                 value={formData.telefone}
-                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, telefone: maskTelefoneBr(e.target.value) })
+                }
                 placeholder="(00) 00000-0000"
+                inputMode="tel"
+                autoComplete="tel"
               />
             </div>
             
@@ -298,8 +303,12 @@ export default function AdminEquipePage() {
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: normalizeEmailInput(e.target.value) })
+                }
                 placeholder="email@exemplo.com"
+                inputMode="email"
+                autoComplete="email"
               />
             </div>
             

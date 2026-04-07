@@ -17,6 +17,7 @@ import {
 } from '@/components/shared/loading-skeleton'
 import { formatDate, formatTime, formatCurrency } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
+import { enderecoLinhaExibicao } from '@/lib/barbearia-endereco'
 import type { Agendamento, Barbearia, Servico } from '@/types'
 
 export default function ClienteHomePage() {
@@ -102,12 +103,15 @@ export default function ClienteHomePage() {
                 </div>
                 <div className="flex-1">
                   <h2 className="font-semibold">{barbearia.nome}</h2>
-                  {barbearia.endereco && (
-                    <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <MapPin className="h-3 w-3" />
-                      {barbearia.endereco}
-                    </p>
-                  )}
+                  {(() => {
+                    const linha = enderecoLinhaExibicao(barbearia.endereco)
+                    return linha ? (
+                      <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        {linha}
+                      </p>
+                    ) : null
+                  })()}
                 </div>
               </CardContent>
             </Card>

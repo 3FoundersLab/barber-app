@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
+import { normalizeEmailInput } from '@/lib/format-contato'
 import { createClient } from '@/lib/supabase/client'
 import { clearProfileCache } from '@/lib/profile-cache'
 import { fetchSessionProfile } from '@/lib/supabase/fetch-session-profile'
@@ -183,9 +184,13 @@ function LoginPageContent() {
                   type="email"
                   placeholder="seu@email.com"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: normalizeEmailInput(e.target.value) })
+                  }
                   required
                   disabled={isLoading}
+                  inputMode="email"
+                  autoComplete="email"
                 />
               </div>
               <div className="space-y-2">

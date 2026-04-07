@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { ProfileFormCardSkeleton } from '@/components/shared/loading-skeleton'
+import { maskTelefoneBr } from '@/lib/format-contato'
 import { createClient } from '@/lib/supabase/client'
 import { setProfileCache } from '@/lib/profile-cache'
 import { ProfileAvatarUpload } from '@/components/shared/profile-avatar-upload'
@@ -58,7 +59,7 @@ export default function SuperEditarPerfilPage() {
 
       setProfile(data)
       setNome(data.nome || '')
-      setTelefone(data.telefone || '')
+      setTelefone(maskTelefoneBr(data.telefone || ''))
       setAvatar(data.avatar || '')
       setIsLoading(false)
     }
@@ -178,8 +179,9 @@ export default function SuperEditarPerfilPage() {
                   <Input
                     id="telefone"
                     value={telefone}
-                    onChange={(e) => setTelefone(e.target.value)}
+                    onChange={(e) => setTelefone(maskTelefoneBr(e.target.value))}
                     placeholder="(00) 00000-0000"
+                    inputMode="tel"
                     autoComplete="tel"
                   />
                 </div>
