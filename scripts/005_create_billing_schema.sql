@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.assinaturas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   barbearia_id UUID NOT NULL REFERENCES public.barbearias(id) ON DELETE CASCADE,
   plano_id UUID NOT NULL REFERENCES public.planos(id) ON DELETE RESTRICT,
-  status TEXT NOT NULL DEFAULT 'trial',
+  status TEXT NOT NULL DEFAULT 'pendente',
   inicio_em DATE NOT NULL DEFAULT CURRENT_DATE,
   fim_em DATE,
   created_at TIMESTAMPTZ DEFAULT NOW(),

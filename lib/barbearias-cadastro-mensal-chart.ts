@@ -31,7 +31,7 @@ export function barbeariasIdsComPlano(
 ): Set<string> {
   const ids = new Set<string>()
   for (const a of assinaturas) {
-    if (a.status === 'ativa' || a.status === 'trial') {
+    if (a.status === 'ativa') {
       ids.add(a.barbearia_id)
     }
   }
@@ -40,7 +40,7 @@ export function barbeariasIdsComPlano(
 
 /**
  * Agrupa cadastros de barbearias por mês de `created_at`, no intervalo inclusivo [from, to].
- * “Com plano” = existe assinatura ativa ou trial para a barbearia (estado atual).
+ * “Com plano” = existe assinatura ativa para a barbearia (estado atual).
  */
 export function buildBarbeariasCadastroMensalRows(
   barbearias: readonly { id: string; created_at: string }[],

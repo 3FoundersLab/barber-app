@@ -43,12 +43,12 @@ export default function SuperDashboardPage() {
       const { count: ativasCount } = await supabase
         .from('assinaturas')
         .select('*', { count: 'exact', head: true })
-        .in('status', ['ativa', 'trial'])
+        .eq('status', 'ativa')
 
       const { data: assinaturasAtivas, error: assinaturasError } = await supabase
         .from('assinaturas')
         .select('status, plano:planos(preco_mensal)')
-        .in('status', ['ativa', 'trial'])
+        .eq('status', 'ativa')
 
       if (assinaturasError) {
         setError('Não foi possível carregar métricas de assinaturas')

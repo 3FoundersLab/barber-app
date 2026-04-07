@@ -11,6 +11,7 @@ import {
   ChevronsUpDown,
   Clock,
   MessageCircle,
+  Pencil,
   Plus,
   Search,
   X,
@@ -63,9 +64,16 @@ import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Assinatura, AssinaturaStatus, Barbearia, Plano } from '@/types'
 
-/** Status permitidos ao criar assinatura manualmente (sem trial). */
 const NOVA_ASSINATURA_STATUS_OPTIONS = ['pendente', 'ativa', 'inadimplente', 'cancelada'] as const
 type NovaAssinaturaFormStatus = (typeof NOVA_ASSINATURA_STATUS_OPTIONS)[number]
+
+/** Todos os status editáveis pelo super admin. */
+const EDIT_ASSINATURA_STATUS_OPTIONS: AssinaturaStatus[] = [
+  'pendente',
+  'ativa',
+  'inadimplente',
+  'cancelada',
+]
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const
 
@@ -92,7 +100,6 @@ function labelAssinaturaStatus(status: string) {
   const map: Record<string, string> = {
     pendente: 'Pagamento pendente',
     ativa: 'Ativa',
-    trial: 'Trial',
     inadimplente: 'Inadimplente',
     cancelada: 'Cancelada',
   }
@@ -110,6 +117,57 @@ function whatsappHref(telefone?: string | null) {
   const digits = telefone?.replace(/\D/g, '') ?? ''
   if (digits.length < 10) return null
   return `https://wa.me/${digits}`
+}
+
+const waLinkTableClass =
+  'inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-600/30 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200 dark:hover:bg-emerald-950/60'
+
+function ContatoBarbeariaBlock({
+  email,
+  telefone,
+  layout,
+}: {
+  email?: string | null
+  telefone?: string | null
+  layout: 'table' | 'card'
+}) {
+  const wa = whatsappHref(telefone)
+  if (layout === 'card') {
+    return (
+      <div className="inline-flex max-w-full min-w-0 items-center gap-1.5">
+        <p
+          className="min-w-0 max-w-[min(100%,240px)] truncate text-xs text-muted-foreground sm:max-w-[min(100%,320px)]"
+          title={email ?? undefined}
+        >
+          {email ?? '—'}
+        </p>
+        {wa ? (
+          <Button variant="outline" size="sm" className="h-8 shrink-0 px-3" asChild>
+            <a href={wa} target="_blank" rel="noopener noreferrer">
+              <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
+              WhatsApp
+            </a>
+          </Button>
+        ) : null}
+      </div>
+    )
+  }
+  return (
+    <div className="inline-flex max-w-full min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-1.5">
+      <p
+        className="min-w-0 max-w-[min(100%,14rem)] truncate text-xs text-muted-foreground sm:max-w-[min(100%,20rem)]"
+        title={email ?? undefined}
+      >
+        {email ?? '—'}
+      </p>
+      {wa ? (
+        <a href={wa} target="_blank" rel="noopener noreferrer" className={waLinkTableClass}>
+          <MessageCircle className="h-3.5 w-3.5" />
+          WhatsApp
+        </a>
+      ) : null}
+    </div>
+  )
 }
 
 const PLANO_BADGE_PALETTE = [
@@ -144,8 +202,6 @@ function statusBadgeClass(status: AssinaturaStatus) {
       return 'rounded-full border-transparent bg-amber-100 text-amber-950 dark:bg-amber-950/50 dark:text-amber-100'
     case 'ativa':
       return 'rounded-full border-transparent bg-emerald-100 text-emerald-950 dark:bg-emerald-950/50 dark:text-emerald-100'
-    case 'trial':
-      return 'rounded-full border-transparent bg-sky-100 text-sky-950 dark:bg-sky-950/50 dark:text-sky-100'
     case 'inadimplente':
       return 'rounded-full border-transparent bg-red-100 text-red-950 dark:bg-red-950/50 dark:text-red-100'
     case 'cancelada':
@@ -174,11 +230,28 @@ export default function SuperAssinaturasPage() {
     barbearia_id: string
     plano_id: string
     status: NovaAssinaturaFormStatus
+    inicio_em: string
+    fim_em: string
   }>({
     barbearia_id: '',
     plano_id: '',
     status: 'ativa',
+    inicio_em: new Date().toISOString().split('T')[0],
+    fim_em: '',
   })
+  const [editTarget, setEditTarget] = useState<Assinatura | null>(null)
+  const [editForm, setEditForm] = useState<{
+    plano_id: string
+    status: AssinaturaStatus
+    inicio_em: string
+    fim_em: string
+  }>({
+    plano_id: '',
+    status: 'ativa',
+    inicio_em: '',
+    fim_em: '',
+  })
+  const [editSaving, setEditSaving] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -220,7 +293,7 @@ export default function SuperAssinaturasPage() {
   }
 
   async function handleCreate() {
-    if (!form.barbearia_id || !form.plano_id) return
+    if (!form.barbearia_id || !form.plano_id || !form.inicio_em || !form.fim_em.trim()) return
     setIsSaving(true)
     setError(null)
 
@@ -229,7 +302,8 @@ export default function SuperAssinaturasPage() {
       barbearia_id: form.barbearia_id,
       plano_id: form.plano_id,
       status: form.status as AssinaturaStatus,
-      inicio_em: new Date().toISOString().split('T')[0],
+      inicio_em: form.inicio_em,
+      fim_em: form.fim_em.trim(),
     })
 
     if (insertError) {
@@ -240,7 +314,13 @@ export default function SuperAssinaturasPage() {
 
     setIsSaving(false)
     setIsDialogOpen(false)
-    setForm({ barbearia_id: '', plano_id: '', status: 'ativa' })
+    setForm({
+      barbearia_id: '',
+      plano_id: '',
+      status: 'ativa',
+      inicio_em: new Date().toISOString().split('T')[0],
+      fim_em: '',
+    })
     loadData()
   }
 
@@ -280,6 +360,40 @@ export default function SuperAssinaturasPage() {
     setRejectSubmitting(false)
   }
 
+  function openEditAssinatura(assinatura: Assinatura) {
+    setEditTarget(assinatura)
+    setEditForm({
+      plano_id: assinatura.plano_id,
+      status: assinatura.status,
+      inicio_em: assinatura.inicio_em?.split('T')[0] ?? '',
+      fim_em: assinatura.fim_em?.split('T')[0] ?? '',
+    })
+  }
+
+  async function handleSaveEdit() {
+    if (!editTarget || !editForm.plano_id || !editForm.inicio_em || !editForm.fim_em.trim()) return
+    setEditSaving(true)
+    setError(null)
+    const supabase = createClient()
+    const { error: updateError } = await supabase
+      .from('assinaturas')
+      .update({
+        plano_id: editForm.plano_id,
+        status: editForm.status,
+        inicio_em: editForm.inicio_em,
+        fim_em: editForm.fim_em.trim(),
+      })
+      .eq('id', editTarget.id)
+
+    if (updateError) {
+      setError('Não foi possível salvar a assinatura')
+    } else {
+      setEditTarget(null)
+      loadData()
+    }
+    setEditSaving(false)
+  }
+
   const countPendente = useMemo(
     () => assinaturas.filter((a) => a.status === 'pendente').length,
     [assinaturas],
@@ -293,6 +407,15 @@ export default function SuperAssinaturasPage() {
     () => barbearias.find((b) => b.id === form.barbearia_id),
     [barbearias, form.barbearia_id],
   )
+
+  const planosForEdit = useMemo(() => {
+    const ids = new Set(planos.map((p) => p.id))
+    const list = [...planos]
+    if (editTarget?.plano_id && !ids.has(editTarget.plano_id) && editTarget.plano) {
+      list.push(editTarget.plano)
+    }
+    return list.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+  }, [planos, editTarget])
 
   const sorted = useMemo(() => {
     return [...assinaturas].sort((a, b) => {
@@ -340,39 +463,59 @@ export default function SuperAssinaturasPage() {
   function rowActionsBusy(assinatura: Assinatura) {
     return (
       confirmingId === assinatura.id ||
-      (rejectSubmitting && rejectTarget?.id === assinatura.id)
+      (rejectSubmitting && rejectTarget?.id === assinatura.id) ||
+      (editSaving && editTarget?.id === assinatura.id)
     )
   }
 
   function renderRowActions(assinatura: Assinatura, layout: 'table' | 'card' = 'table') {
-    if (assinatura.status !== 'pendente') {
-      return <span className="text-muted-foreground">—</span>
-    }
     const busy = rowActionsBusy(assinatura)
     const wrap =
       layout === 'table'
         ? 'flex shrink-0 flex-wrap items-center justify-end gap-2'
         : 'flex w-full flex-wrap gap-2'
+
+    if (assinatura.status === 'pendente') {
+      return (
+        <div className={wrap}>
+          <Button
+            size="sm"
+            className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
+            disabled={busy}
+            onClick={() => handleConfirmarPagamento(assinatura.id)}
+          >
+            {confirmingId === assinatura.id ? <Spinner className="mr-2 h-4 w-4" /> : <Check className="mr-1.5 h-4 w-4" />}
+            Confirmar
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            disabled={busy}
+            onClick={() => setRejectTarget(assinatura)}
+          >
+            <X className="mr-1.5 h-4 w-4" />
+            Rejeitar
+          </Button>
+        </div>
+      )
+    }
+
     return (
       <div className={wrap}>
         <Button
-          size="sm"
-          className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
-          disabled={busy}
-          onClick={() => handleConfirmarPagamento(assinatura.id)}
-        >
-          {confirmingId === assinatura.id ? <Spinner className="mr-2 h-4 w-4" /> : <Check className="mr-1.5 h-4 w-4" />}
-          Confirmar
-        </Button>
-        <Button
+          type="button"
           size="sm"
           variant="outline"
-          className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
           disabled={busy}
-          onClick={() => setRejectTarget(assinatura)}
+          onClick={() => openEditAssinatura(assinatura)}
         >
-          <X className="mr-1.5 h-4 w-4" />
-          Rejeitar
+          {editSaving && editTarget?.id === assinatura.id ? (
+            <Spinner className="mr-1.5 h-4 w-4" />
+          ) : (
+            <Pencil className="mr-1.5 h-4 w-4" />
+          )}
+          Editar
         </Button>
       </div>
     )
@@ -499,59 +642,64 @@ export default function SuperAssinaturasPage() {
               <>
                 <div className="hidden overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm lg:block">
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[720px] text-sm">
+                    <table className="w-full min-w-[1000px] table-fixed border-separate border-spacing-0 text-sm">
+                      <colgroup>
+                        <col className="w-[18%]" />
+                        <col className="w-[22%]" />
+                        <col className="w-[11%]" />
+                        <col className="w-[12%]" />
+                        <col className="w-[9%]" />
+                        <col className="w-[9%]" />
+                        <col className="w-[19%]" />
+                      </colgroup>
                       <thead>
                         <tr className="border-b bg-muted/40">
-                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                             Barbearia
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          <th className="min-w-0 px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Contato
+                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                             Plano
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                             Status
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                             Início
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Expiração
+                          </th>
+                          <th className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
                             Ações
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         {paginated.map((assinatura) => {
-                          const wa = whatsappHref(assinatura.barbearia?.telefone)
                           return (
                             <tr key={assinatura.id} className="border-b border-border/60 last:border-0">
-                              <td className="px-4 py-3 align-top">
+                              <td className="px-3 py-3 align-top">
                                 <div className="min-w-0 space-y-1">
                                   <p className="font-semibold text-foreground">
                                     {assinatura.barbearia?.nome || 'Barbearia'}
                                   </p>
-                                  {assinatura.barbearia?.telefone ? (
-                                    <p className="text-xs text-muted-foreground">
-                                      {assinatura.barbearia.telefone}
-                                    </p>
-                                  ) : null}
-                                  {wa ? (
-                                    <a
-                                      href={wa}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 rounded-md border border-emerald-600/30 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200 dark:hover:bg-emerald-950/60"
-                                    >
-                                      <MessageCircle className="h-3.5 w-3.5" />
-                                      WhatsApp
-                                    </a>
-                                  ) : null}
                                   {renderCadastroHint(assinatura)}
                                 </div>
                               </td>
-                              <td className="px-4 py-3 align-top">
+                              <td className="min-w-0 px-3 py-3 align-top">
+                                <ContatoBarbeariaBlock
+                                  layout="table"
+                                  email={assinatura.barbearia?.email}
+                                  telefone={assinatura.barbearia?.telefone}
+                                />
+                              </td>
+                              <td className="px-3 py-3 align-top">
                                 <PlanoBadge plano={assinatura.plano} />
                               </td>
-                              <td className="px-4 py-3 align-top">
+                              <td className="px-3 py-3 align-top">
                                 <Badge
                                   variant="outline"
                                   className={cn('border-0', statusBadgeClass(assinatura.status))}
@@ -559,10 +707,13 @@ export default function SuperAssinaturasPage() {
                                   {labelAssinaturaStatus(assinatura.status)}
                                 </Badge>
                               </td>
-                              <td className="px-4 py-3 align-top text-muted-foreground tabular-nums">
+                              <td className="px-3 py-3 align-top text-muted-foreground tabular-nums">
                                 {formatDateBR(assinatura.inicio_em)}
                               </td>
-                              <td className="px-4 py-3 text-right align-top">
+                              <td className="px-3 py-3 align-top text-muted-foreground tabular-nums">
+                                {formatDateBR(assinatura.fim_em ?? '')}
+                              </td>
+                              <td className="px-3 py-3 text-right align-top">
                                 {renderRowActions(assinatura, 'table')}
                               </td>
                             </tr>
@@ -575,7 +726,6 @@ export default function SuperAssinaturasPage() {
 
                 <div className="space-y-3 lg:hidden">
                   {paginated.map((assinatura) => {
-                    const wa = whatsappHref(assinatura.barbearia?.telefone)
                     return (
                       <Card key={assinatura.id} className="overflow-hidden border-border/80 shadow-sm">
                         <CardContent className="space-y-3 p-4">
@@ -584,11 +734,6 @@ export default function SuperAssinaturasPage() {
                               <p className="font-semibold text-foreground">
                                 {assinatura.barbearia?.nome || 'Barbearia'}
                               </p>
-                              {assinatura.barbearia?.telefone ? (
-                                <p className="text-xs text-muted-foreground">
-                                  {assinatura.barbearia.telefone}
-                                </p>
-                              ) : null}
                             </div>
                             <Badge
                               variant="outline"
@@ -597,14 +742,11 @@ export default function SuperAssinaturasPage() {
                               {labelAssinaturaStatus(assinatura.status)}
                             </Badge>
                           </div>
-                          {wa ? (
-                            <Button variant="outline" size="sm" className="w-full sm:w-auto" asChild>
-                              <a href={wa} target="_blank" rel="noopener noreferrer">
-                                <MessageCircle className="mr-2 h-4 w-4" />
-                                WhatsApp
-                              </a>
-                            </Button>
-                          ) : null}
+                          <ContatoBarbeariaBlock
+                            layout="card"
+                            email={assinatura.barbearia?.email}
+                            telefone={assinatura.barbearia?.telefone}
+                          />
                           <dl className="grid gap-2 text-sm">
                             <div className="flex items-center justify-between gap-2">
                               <dt className="text-muted-foreground">Plano</dt>
@@ -616,6 +758,12 @@ export default function SuperAssinaturasPage() {
                               <dt className="text-muted-foreground">Início</dt>
                               <dd className="tabular-nums text-foreground">
                                 {formatDateBR(assinatura.inicio_em)}
+                              </dd>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <dt className="text-muted-foreground">Expiração</dt>
+                              <dd className="tabular-nums text-foreground">
+                                {formatDateBR(assinatura.fim_em ?? '')}
                               </dd>
                             </div>
                           </dl>
@@ -740,7 +888,13 @@ export default function SuperAssinaturasPage() {
         onOpenChange={(open) => {
           setIsDialogOpen(open)
           if (open) {
-            setForm({ barbearia_id: '', plano_id: '', status: 'ativa' })
+            setForm({
+              barbearia_id: '',
+              plano_id: '',
+              status: 'ativa',
+              inicio_em: new Date().toISOString().split('T')[0],
+              fim_em: '',
+            })
             setBarbeariaComboOpen(false)
           }
         }}
@@ -755,15 +909,17 @@ export default function SuperAssinaturasPage() {
                 <DialogTitle className="text-base sm:text-lg">Nova assinatura</DialogTitle>
               </div>
               <DialogDescription>
-                Vincule uma barbearia a um plano. A data de início será hoje; o status define se o painel já fica liberado
-                ou se permanece aguardando pagamento.
+                Vincule uma barbearia a um plano e informe o período da assinatura. O status define se o painel já fica
+                liberado ou se permanece aguardando pagamento.
               </DialogDescription>
             </DialogHeader>
           </div>
 
           <div className="space-y-5 px-6 py-5">
             <div className="space-y-2">
-              <Label htmlFor="nova-assinatura-barbearia">Barbearia</Label>
+              <Label htmlFor="nova-assinatura-barbearia">
+                Barbearia <span className="text-destructive">*</span>
+              </Label>
               <p className="text-xs text-muted-foreground">
                 Pesquise pelo nome da unidade ou pelo e-mail cadastrado da barbearia.
               </p>
@@ -834,7 +990,9 @@ export default function SuperAssinaturasPage() {
             <Separator />
 
             <div className="space-y-2">
-              <Label htmlFor="nova-assinatura-plano">Plano</Label>
+              <Label htmlFor="nova-assinatura-plano">
+                Plano <span className="text-destructive">*</span>
+              </Label>
               <p className="text-xs text-muted-foreground">Somente planos ativos no catálogo.</p>
               <Select
                 value={form.plano_id}
@@ -854,7 +1012,9 @@ export default function SuperAssinaturasPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="nova-assinatura-status">Status inicial</Label>
+              <Label htmlFor="nova-assinatura-status">
+                Status inicial <span className="text-destructive">*</span>
+              </Label>
               <p className="text-xs text-muted-foreground">
                 Use <span className="font-medium text-foreground">Pagamento pendente</span> para espelhar o fluxo do
                 cadastro público; use <span className="font-medium text-foreground">Ativa</span> se o pagamento já foi
@@ -878,15 +1038,178 @@ export default function SuperAssinaturasPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="nova-assinatura-inicio">
+                  Início <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="nova-assinatura-inicio"
+                  type="date"
+                  required
+                  value={form.inicio_em}
+                  onChange={(e) => setForm((p) => ({ ...p, inicio_em: e.target.value }))}
+                  className="h-10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nova-assinatura-fim">
+                  Expiração <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="nova-assinatura-fim"
+                  type="date"
+                  required
+                  value={form.fim_em}
+                  onChange={(e) => setForm((p) => ({ ...p, fim_em: e.target.value }))}
+                  className="h-10"
+                />
+              </div>
+            </div>
           </div>
 
           <DialogFooter className="border-t border-border/80 bg-muted/20 px-6 py-4 sm:justify-end">
             <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button type="button" onClick={handleCreate} disabled={isSaving || !form.barbearia_id || !form.plano_id}>
+            <Button
+              type="button"
+              onClick={handleCreate}
+              disabled={
+                isSaving ||
+                !form.barbearia_id ||
+                !form.plano_id ||
+                !form.inicio_em ||
+                !form.fim_em.trim()
+              }
+            >
               {isSaving ? <Spinner className="mr-2" /> : null}
               {isSaving ? 'Salvando...' : 'Criar assinatura'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!editTarget}
+        onOpenChange={(open) => {
+          if (!open && !editSaving) setEditTarget(null)
+        }}
+      >
+        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-lg" showCloseButton>
+          <div className="border-b border-border/80 bg-muted/30 px-6 py-4">
+            <DialogHeader className="gap-2 space-y-0 text-left">
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-background shadow-sm ring-1 ring-border/60">
+                  <Pencil className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <DialogTitle className="text-base sm:text-lg">Editar assinatura</DialogTitle>
+              </div>
+              <DialogDescription>
+                Altere plano, status e datas. A barbearia vinculada não pode ser alterada por aqui.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="space-y-5 px-6 py-5">
+            <div className="space-y-1 rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Barbearia</p>
+              <p className="text-sm font-semibold text-foreground">
+                {editTarget?.barbearia?.nome ?? '—'}
+              </p>
+              {editTarget?.barbearia?.email ? (
+                <p className="truncate text-xs text-muted-foreground">{editTarget.barbearia.email}</p>
+              ) : null}
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-assinatura-plano">
+                Plano <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={editForm.plano_id}
+                onValueChange={(v) => setEditForm((p) => ({ ...p, plano_id: v }))}
+              >
+                <SelectTrigger id="edit-assinatura-plano" className="h-10 w-full">
+                  <SelectValue placeholder="Selecione o plano..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {planosForEdit.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-assinatura-status">
+                Status <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={editForm.status}
+                onValueChange={(v) =>
+                  setEditForm((p) => ({ ...p, status: v as AssinaturaStatus }))
+                }
+              >
+                <SelectTrigger id="edit-assinatura-status" className="h-10 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EDIT_ASSINATURA_STATUS_OPTIONS.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {labelAssinaturaStatus(status)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-assinatura-inicio">
+                  Início <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="edit-assinatura-inicio"
+                  type="date"
+                  required
+                  value={editForm.inicio_em}
+                  onChange={(e) => setEditForm((p) => ({ ...p, inicio_em: e.target.value }))}
+                  className="h-10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-assinatura-fim">
+                  Expiração <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="edit-assinatura-fim"
+                  type="date"
+                  required
+                  value={editForm.fim_em}
+                  onChange={(e) => setEditForm((p) => ({ ...p, fim_em: e.target.value }))}
+                  className="h-10"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="border-t border-border/80 bg-muted/20 px-6 py-4 sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => setEditTarget(null)} disabled={editSaving}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleSaveEdit()}
+              disabled={editSaving || !editForm.plano_id || !editForm.inicio_em || !editForm.fim_em.trim()}
+            >
+              {editSaving ? <Spinner className="mr-2" /> : null}
+              {editSaving ? 'Salvando...' : 'Salvar alterações'}
             </Button>
           </DialogFooter>
         </DialogContent>

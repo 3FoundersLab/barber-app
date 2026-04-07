@@ -48,7 +48,6 @@ function labelAssinaturaStatus(status: string) {
   const map: Record<string, string> = {
     pendente: 'Pagamento pendente',
     ativa: 'Ativa',
-    trial: 'Trial',
     inadimplente: 'Inadimplente',
     cancelada: 'Cancelada',
   }

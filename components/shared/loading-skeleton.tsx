@@ -386,12 +386,29 @@ export function SuperUsuarioGridSkeleton({ count = 8, className }: ListSkeletonP
 export function SubscriptionRowSkeleton({ className }: { className?: string }) {
   return (
     <Card className={className}>
-      <CardContent className="flex items-center justify-between gap-3 p-4">
-        <div className="min-w-0 flex-1 space-y-2">
+      <CardContent className="space-y-3 p-4">
+        <div className="flex items-start justify-between gap-3">
           <Skeleton className="h-4 w-40 max-w-[60%]" />
-          <Skeleton className="h-3 w-48 max-w-[85%]" />
+          <Skeleton className="h-6 w-24 shrink-0 rounded-full" />
         </div>
-        <Skeleton className="h-3 w-20 shrink-0" />
+        <div className="flex flex-wrap items-center gap-2">
+          <Skeleton className="h-3 w-48 max-w-[70%]" />
+          <Skeleton className="h-8 w-28 shrink-0 rounded-md" />
+        </div>
+        <div className="grid gap-2 text-sm">
+          <div className="flex justify-between gap-2">
+            <Skeleton className="h-4 w-12" />
+            <Skeleton className="h-5 w-28 rounded-full" />
+          </div>
+          <div className="flex justify-between gap-2">
+            <Skeleton className="h-4 w-12" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+          <div className="flex justify-between gap-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        </div>
       </CardContent>
     </Card>
   )
@@ -401,22 +418,28 @@ export function SubscriptionRowSkeleton({ className }: { className?: string }) {
 export function SubscriptionTableRowSkeleton({ className }: { className?: string }) {
   return (
     <tr className={cn('border-b border-border', className)}>
-      <td className="px-4 py-3">
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-36" />
-          <Skeleton className="h-3 w-28" />
+      <td className="px-3 py-3">
+        <Skeleton className="h-4 w-36" />
+      </td>
+      <td className="min-w-0 px-3 py-3">
+        <div className="flex max-w-full flex-col gap-2 sm:flex-row sm:items-center sm:gap-1.5">
+          <Skeleton className="h-3 w-40" />
+          <Skeleton className="h-6 w-24 shrink-0 rounded-md" />
         </div>
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-3">
         <Skeleton className="h-4 w-24" />
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-3">
         <Skeleton className="h-6 w-20 rounded-full" />
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-3">
         <Skeleton className="h-4 w-24" />
       </td>
-      <td className="px-4 py-3 text-right">
+      <td className="px-3 py-3">
+        <Skeleton className="h-4 w-24" />
+      </td>
+      <td className="px-3 py-3 text-right">
         <Skeleton className="ml-auto h-8 w-28" />
       </td>
     </tr>
@@ -465,9 +488,12 @@ export function SuperAssinaturasPageSkeleton({ count = 5 }: ListSkeletonProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/40">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <th key={i} className="px-4 py-3 text-left">
-                  <Skeleton className="h-3 w-20" />
+              {Array.from({ length: 7 }).map((_, i) => (
+                <th
+                  key={i}
+                  className={cn('px-3 py-3', i === 6 ? 'text-right' : 'text-left')}
+                >
+                  <Skeleton className={cn('h-3 w-20', i === 6 && 'ml-auto')} />
                 </th>
               ))}
             </tr>

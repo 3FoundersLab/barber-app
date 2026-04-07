@@ -73,7 +73,7 @@ export function SuperBarbeariasCadastroMensalChart({
           Cadastros por mês
         </CardTitle>
         <CardDescription>
-          Total de barbearias cadastradas por mês, com e sem plano ativo ou trial.
+          Total de barbearias cadastradas por mês, com e sem plano ativo.
         </CardDescription>
         <div className="flex flex-col gap-3 pt-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
           <div className="grid w-full gap-1.5 sm:max-w-[11rem]">

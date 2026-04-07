@@ -121,7 +121,7 @@ export interface HorarioTrabalho {
   created_at: string
 }
 
-export type AssinaturaStatus = 'pendente' | 'ativa' | 'trial' | 'inadimplente' | 'cancelada'
+export type AssinaturaStatus = 'pendente' | 'ativa' | 'inadimplente' | 'cancelada'
 
 /** Item de benefício configurável no plano; `ativo` indica se entra na lista pública com check. */
 export interface PlanoBeneficio {
