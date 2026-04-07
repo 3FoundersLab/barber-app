@@ -259,8 +259,9 @@ export default function AdminConfiguracoesPage() {
           <Alert variant="warning" className="text-left">
             <AlertTitle>Aguardando confirmação de pagamento</AlertTitle>
             <AlertDescription>
-              Sua barbearia está com status de pagamento pendente até o administrador da plataforma confirmar o
-              pagamento na área de assinaturas. Até lá, apenas esta página de configurações fica disponível no painel.
+              Sua barbearia está com status de pagamento pendente (cadastro novo ou renovação após a data de expiração
+              do plano) até o administrador da plataforma confirmar o pagamento na área de assinaturas. Até lá, apenas
+              esta página de configurações fica disponível no painel.
             </AlertDescription>
           </Alert>
         )}

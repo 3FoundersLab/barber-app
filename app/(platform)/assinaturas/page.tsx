@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Building2,
+  CalendarOff,
   Check,
   CheckCircle2,
   ChevronLeft,
@@ -112,6 +113,36 @@ function formatDateBR(iso: string) {
   if (!y || !m || !d) return iso
   return `${d}/${m}/${y}`
 }
+
+function parseLocalDateKey(iso: string | null | undefined): Date | null {
+  const part = iso?.split('T')[0]
+  if (!part) return null
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(part)
+  if (!m) return null
+  const y = Number(m[1])
+  const mo = Number(m[2])
+  const day = Number(m[3])
+  const d = new Date(y, mo - 1, day)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function startOfTodayLocal(): Date {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+/** Filtro “Vencidos”: inadimplente ou pendente com expiração já passada (renovação / cobrança). */
+function isAssinaturaVencidosKpi(a: Assinatura): boolean {
+  if (a.status === 'inadimplente') return true
+  if (a.status !== 'pendente') return false
+  const fim = parseLocalDateKey(a.fim_em)
+  if (!fim) return false
+  return fim < startOfTodayLocal()
+}
+
+type KpiFilter = 'pendente' | 'ativa' | 'vencidos' | null
 
 function whatsappHref(telefone?: string | null) {
   const digits = telefone?.replace(/\D/g, '') ?? ''
@@ -224,6 +255,7 @@ export default function SuperAssinaturasPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [barbeariaComboOpen, setBarbeariaComboOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [kpiFilter, setKpiFilter] = useState<KpiFilter>(null)
   const [pageSize, setPageSize] = useState<number>(10)
   const [page, setPage] = useState(1)
   const [form, setForm] = useState<{
@@ -259,7 +291,7 @@ export default function SuperAssinaturasPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [searchQuery, pageSize])
+  }, [searchQuery, pageSize, kpiFilter])
 
   async function loadData() {
     const supabase = createClient()
@@ -402,6 +434,10 @@ export default function SuperAssinaturasPage() {
     () => assinaturas.filter((a) => a.status === 'ativa').length,
     [assinaturas],
   )
+  const countVencidos = useMemo(
+    () => assinaturas.filter((a) => isAssinaturaVencidosKpi(a)).length,
+    [assinaturas],
+  )
 
   const barbeariaSelecionada = useMemo(
     () => barbearias.find((b) => b.id === form.barbearia_id),
@@ -427,20 +463,29 @@ export default function SuperAssinaturasPage() {
   }, [assinaturas])
 
   const filtered = useMemo(() => {
+    let list = sorted
+    if (kpiFilter === 'pendente') {
+      list = list.filter((a) => a.status === 'pendente')
+    } else if (kpiFilter === 'ativa') {
+      list = list.filter((a) => a.status === 'ativa')
+    } else if (kpiFilter === 'vencidos') {
+      list = list.filter((a) => isAssinaturaVencidosKpi(a))
+    }
+
     const tokens = searchQuery
       .trim()
       .toLowerCase()
       .split(/\s+/)
       .filter(Boolean)
-    if (tokens.length === 0) return sorted
-    return sorted.filter((a) => {
+    if (tokens.length === 0) return list
+    return list.filter((a) => {
       const haystack = [a.barbearia?.nome, a.barbearia?.email]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
       return tokens.every((t) => haystack.includes(t))
     })
-  }, [sorted, searchQuery])
+  }, [sorted, searchQuery, kpiFilter])
 
   const totalPages =
     filtered.length === 0 ? 0 : Math.ceil(filtered.length / pageSize)
@@ -579,9 +624,20 @@ export default function SuperAssinaturasPage() {
           <SuperAssinaturasPageSkeleton count={5} />
         ) : assinaturas.length > 0 ? (
           <>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Card className="border-border/80 shadow-sm">
-                <CardContent className="flex items-center gap-4 p-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <button
+                type="button"
+                aria-pressed={kpiFilter === 'pendente'}
+                aria-label={`Filtrar por pagamento pendente, ${countPendente} assinaturas. Ativar ou desativar o filtro.`}
+                onClick={() => setKpiFilter((f) => (f === 'pendente' ? null : 'pendente'))}
+                className={cn(
+                  'rounded-xl border bg-card text-left shadow-sm transition outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  kpiFilter === 'pendente'
+                    ? 'border-amber-500 ring-2 ring-amber-500/25'
+                    : 'border-border/80 hover:bg-muted/35',
+                )}
+              >
+                <div className="flex items-center gap-4 p-4">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-400">
                     <Clock className="h-6 w-6" />
                   </div>
@@ -589,10 +645,21 @@ export default function SuperAssinaturasPage() {
                     <p className="text-sm text-muted-foreground">Pagamento pendente</p>
                     <p className="text-2xl font-semibold tabular-nums text-foreground">{countPendente}</p>
                   </div>
-                </CardContent>
-              </Card>
-              <Card className="border-border/80 shadow-sm">
-                <CardContent className="flex items-center gap-4 p-4">
+                </div>
+              </button>
+              <button
+                type="button"
+                aria-pressed={kpiFilter === 'ativa'}
+                aria-label={`Filtrar por assinaturas ativas, ${countAtivas} assinaturas. Ativar ou desativar o filtro.`}
+                onClick={() => setKpiFilter((f) => (f === 'ativa' ? null : 'ativa'))}
+                className={cn(
+                  'rounded-xl border bg-card text-left shadow-sm transition outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  kpiFilter === 'ativa'
+                    ? 'border-emerald-500 ring-2 ring-emerald-500/25'
+                    : 'border-border/80 hover:bg-muted/35',
+                )}
+              >
+                <div className="flex items-center gap-4 p-4">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400">
                     <CheckCircle2 className="h-6 w-6" />
                   </div>
@@ -600,8 +667,31 @@ export default function SuperAssinaturasPage() {
                     <p className="text-sm text-muted-foreground">Assinaturas ativas</p>
                     <p className="text-2xl font-semibold tabular-nums text-foreground">{countAtivas}</p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </button>
+              <button
+                type="button"
+                aria-pressed={kpiFilter === 'vencidos'}
+                aria-label={`Filtrar por vencidos, ${countVencidos} assinaturas (inadimplente ou pendente após expiração). Ativar ou desativar o filtro.`}
+                onClick={() => setKpiFilter((f) => (f === 'vencidos' ? null : 'vencidos'))}
+                className={cn(
+                  'rounded-xl border bg-card text-left shadow-sm transition outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  kpiFilter === 'vencidos'
+                    ? 'border-orange-500 ring-2 ring-orange-500/25'
+                    : 'border-border/80 hover:bg-muted/35',
+                )}
+              >
+                <div className="flex items-center gap-4 p-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300">
+                    <CalendarOff className="h-6 w-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm text-muted-foreground">Vencidos</p>
+                    <p className="text-2xl font-semibold tabular-nums text-foreground">{countVencidos}</p>
+                    <p className="text-xs text-muted-foreground">Inadimplente ou pendente pós expiração</p>
+                  </div>
+                </div>
+              </button>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -635,7 +725,13 @@ export default function SuperAssinaturasPage() {
             {filtered.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                  Nenhum resultado para a pesquisa
+                  {searchQuery.trim()
+                    ? kpiFilter
+                      ? 'Nenhum resultado para a pesquisa neste filtro.'
+                      : 'Nenhum resultado para a pesquisa.'
+                    : kpiFilter
+                      ? 'Nenhuma assinatura neste filtro.'
+                      : 'Nenhum resultado para a pesquisa.'}
                 </CardContent>
               </Card>
             ) : (

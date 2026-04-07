@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/assinaturas-expiracao",
+      "schedule": "0 12 * * *"
+    }
+  ]
+}
