@@ -141,6 +141,8 @@ export interface Plano {
   updated_at: string
 }
 
+export type AssinaturaPeriodicidade = 'mensal' | 'trimestral' | 'semestral' | 'anual'
+
 export interface Assinatura {
   id: string
   barbearia_id: string
@@ -148,6 +150,8 @@ export interface Assinatura {
   status: AssinaturaStatus
   inicio_em: string
   fim_em?: string | null
+  /** Ciclo de cobrança; bases antigas podem omitir (tratar como mensal). */
+  periodicidade?: AssinaturaPeriodicidade | string | null
   created_at: string
   updated_at: string
   barbearia?: Barbearia

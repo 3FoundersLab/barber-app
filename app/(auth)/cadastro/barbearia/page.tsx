@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, Eye, EyeOff, Scissors } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Eye, EyeOff, Scissors } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,11 +22,30 @@ import { resolveBarbeariaSlugForUser } from '@/lib/resolve-admin-barbearia-slug'
 import { rpcGetMyBarbeariaSlug } from '@/lib/barbearia-rpc'
 import { formatCurrency } from '@/lib/constants'
 import { linhasBeneficiosPlano } from '@/lib/plano-beneficios'
-import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
+import { maskTelefoneBr, normalizeEmailInput, telefoneDigits } from '@/lib/format-contato'
 import { tenantBarbeariaDashboardPath } from '@/lib/routes'
-import { emptyBarbeariaEnderecoParts, serializeBarbeariaEndereco } from '@/lib/barbearia-endereco'
+import {
+  emptyBarbeariaEnderecoParts,
+  serializeBarbeariaEndereco,
+  type BarbeariaEnderecoParts,
+} from '@/lib/barbearia-endereco'
 import { BarbeariaEnderecoFields } from '@/components/shared/barbearia-endereco-fields'
+import { PlanoPeriodicidadeToggle } from '@/components/shared/plano-periodicidade-toggle'
+import { cepDigits } from '@/lib/viacep'
+import {
+  labelPeriodicidade,
+  mesesPorPeriodicidade,
+  precoTotalNoPeriodo,
+  sufixoPrecoPeriodicidade,
+  type PlanoPeriodicidade,
+} from '@/lib/plano-periodicidade'
 import type { Plano } from '@/types'
+
+const STEPS = [
+  { id: 1 as const, label: 'Dados principais', short: 'Dados' },
+  { id: 2 as const, label: 'Endereço', short: 'Endereço' },
+  { id: 3 as const, label: 'Plano', short: 'Plano' },
+]
 
 function slugify(text: string) {
   return text
@@ -38,8 +57,77 @@ function slugify(text: string) {
     .replace(/\s+/g, '-')
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function validateStep1(
+  formData: {
+    nomeBarbearia: string
+    slug: string
+    telefoneBarbearia: string
+    emailResponsavel: string
+    senha: string
+    confirmarSenha: string
+  },
+  hasSession: boolean,
+): Record<string, string> {
+  const e: Record<string, string> = {}
+  if (!formData.nomeBarbearia.trim()) {
+    e.nomeBarbearia = 'Informe o nome da barbearia.'
+  }
+  const slug = slugify(formData.slug || formData.nomeBarbearia)
+  if (!slug) {
+    e.slug = 'Defina um identificador (slug) válido.'
+  } else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+    e.slug = 'Use apenas letras minúsculas, números e hífens.'
+  }
+  const tel = telefoneDigits(formData.telefoneBarbearia)
+  if (tel.length < 10 || tel.length > 11) {
+    e.telefoneBarbearia = 'Informe um telefone válido com DDD (10 ou 11 dígitos).'
+  }
+  const em = formData.emailResponsavel.trim()
+  if (!em) {
+    e.emailResponsavel = 'Informe o e-mail de acesso.'
+  } else if (!EMAIL_RE.test(em)) {
+    e.emailResponsavel = 'Informe um e-mail válido.'
+  }
+  if (!hasSession) {
+    if (formData.senha.length < 6) {
+      e.senha = 'A senha deve ter pelo menos 6 caracteres.'
+    }
+    if (formData.senha !== formData.confirmarSenha) {
+      e.confirmarSenha = 'As senhas não coincidem.'
+    }
+  }
+  return e
+}
+
+function validateStep2(parts: BarbeariaEnderecoParts): Partial<Record<keyof BarbeariaEnderecoParts, string>> {
+  const e: Partial<Record<keyof BarbeariaEnderecoParts, string>> = {}
+  if (cepDigits(parts.cep).length !== 8) {
+    e.cep = 'Informe um CEP válido (8 dígitos).'
+  }
+  if (!parts.logradouro.trim()) {
+    e.logradouro = 'Informe a rua / logradouro.'
+  }
+  if (!parts.numero.trim()) {
+    e.numero = 'Informe o número.'
+  }
+  if (!parts.bairro.trim()) {
+    e.bairro = 'Informe o bairro.'
+  }
+  if (!parts.cidade.trim()) {
+    e.cidade = 'Informe a cidade.'
+  }
+  const uf = parts.uf.trim().toUpperCase()
+  if (uf.length !== 2) {
+    e.uf = 'Informe a UF com 2 letras.'
+  }
+  return e
+}
+
 export default function CadastroBarbeariaPage() {
   const router = useRouter()
+  const [currentStep, setCurrentStep] = useState(1)
   const [planos, setPlanos] = useState<Plano[]>([])
   const [isLoadingPlans, setIsLoadingPlans] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -48,6 +136,8 @@ export default function CadastroBarbeariaPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [slugAutofill, setSlugAutofill] = useState(true)
+  const [step1Errors, setStep1Errors] = useState<Record<string, string>>({})
+  const [step2Errors, setStep2Errors] = useState<Partial<Record<keyof BarbeariaEnderecoParts, string>>>({})
   const [formData, setFormData] = useState({
     nomeBarbearia: '',
     slug: '',
@@ -57,8 +147,8 @@ export default function CadastroBarbeariaPage() {
     senha: '',
     confirmarSenha: '',
     planoId: '',
+    planoPeriodicidade: 'mensal' as PlanoPeriodicidade,
   })
-  /** Já autenticado: só completa barbearia (ex.: confirmou e-mail antes). */
   const [hasSession, setHasSession] = useState(false)
 
   useEffect(() => {
@@ -107,13 +197,52 @@ export default function CadastroBarbeariaPage() {
     setIsLoadingPlans(false)
   }
 
+  function goNext() {
+    setError(null)
+    if (currentStep === 1) {
+      const err = validateStep1(formData, hasSession)
+      setStep1Errors(err)
+      if (Object.keys(err).length > 0) return
+      setCurrentStep(2)
+      return
+    }
+    if (currentStep === 2) {
+      const err = validateStep2(formData.enderecoParts)
+      setStep2Errors(err)
+      if (Object.keys(err).length > 0) return
+      setCurrentStep(3)
+    }
+  }
+
+  function goBack() {
+    setError(null)
+    if (currentStep > 1) {
+      setCurrentStep((s) => s - 1)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setSuccess(null)
 
+    if (currentStep !== 3) return
+
     if (!formData.planoId) {
       setError('Selecione um plano para continuar')
+      return
+    }
+
+    const err1 = validateStep1(formData, hasSession)
+    const err2 = validateStep2(formData.enderecoParts)
+    if (Object.keys(err1).length > 0) {
+      setStep1Errors(err1)
+      setCurrentStep(1)
+      return
+    }
+    if (Object.keys(err2).length > 0) {
+      setStep2Errors(err2)
+      setCurrentStep(2)
       return
     }
 
@@ -130,6 +259,8 @@ export default function CadastroBarbeariaPage() {
 
       if (existingBarbearia) {
         setError('Esse identificador de barbearia ja esta em uso')
+        setCurrentStep(1)
+        setStep1Errors((prev) => ({ ...prev, slug: 'Este identificador já está em uso.' }))
         return
       }
 
@@ -137,7 +268,6 @@ export default function CadastroBarbeariaPage() {
         data: { user: loggedInUser },
       } = await supabase.auth.getUser()
 
-      /** Já autenticado (ex.: confirmou o e-mail e fez login): só chama o RPC, sem novo signUp. */
       if (loggedInUser) {
         const jaTemVinculo = await rpcGetMyBarbeariaSlug(supabase)
 
@@ -158,6 +288,7 @@ export default function CadastroBarbeariaPage() {
           p_plano_id: formData.planoId,
           p_email_responsavel: formData.emailResponsavel.trim() || loggedInUser.email || '',
           p_endereco: serializeBarbeariaEndereco(formData.enderecoParts),
+          p_periodicidade: formData.planoPeriodicidade,
         })
 
         if (rpcErrorLogged) {
@@ -184,11 +315,13 @@ export default function CadastroBarbeariaPage() {
 
       if (formData.senha.length < 6) {
         setError('A senha deve ter pelo menos 6 caracteres')
+        setCurrentStep(1)
         return
       }
 
       if (formData.senha !== formData.confirmarSenha) {
         setError('As senhas nao coincidem')
+        setCurrentStep(1)
         return
       }
 
@@ -215,7 +348,6 @@ export default function CadastroBarbeariaPage() {
         return
       }
 
-      // O RPC usa auth.uid(): sem sessão JWT o vínculo não é criado (comum com "confirmar e-mail" ativo).
       let session = signUpData.session
       if (!session) {
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -238,6 +370,7 @@ export default function CadastroBarbeariaPage() {
         p_plano_id: formData.planoId,
         p_email_responsavel: formData.emailResponsavel,
         p_endereco: serializeBarbeariaEndereco(formData.enderecoParts),
+        p_periodicidade: formData.planoPeriodicidade,
       })
 
       if (rpcError) {
@@ -269,8 +402,10 @@ export default function CadastroBarbeariaPage() {
 
   const selectedPlan = useMemo(
     () => planos.find((plano) => plano.id === formData.planoId),
-    [planos, formData.planoId]
+    [planos, formData.planoId],
   )
+
+  const inputErr = (key: string) => step1Errors[key]
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -283,249 +418,424 @@ export default function CadastroBarbeariaPage() {
           <p className="text-sm text-muted-foreground">Crie sua conta e escolha um plano para comecar</p>
         </div>
 
+        <nav aria-label="Progresso do cadastro" className="rounded-xl border bg-card/50 p-4 shadow-sm">
+          <ol className="flex w-full items-center">
+            {STEPS.map((step, index) => {
+              const done = currentStep > step.id
+              const active = currentStep === step.id
+              const isLast = index === STEPS.length - 1
+              return (
+                <li
+                  key={step.id}
+                  className={cn('flex min-w-0 items-center', !isLast && 'flex-1')}
+                >
+                  <div className="flex min-w-0 flex-col items-center gap-1 sm:flex-row sm:gap-2.5">
+                    <div
+                      className={cn(
+                        'flex size-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold transition-all duration-200',
+                        done &&
+                          'border-emerald-600 bg-emerald-600 text-white dark:border-emerald-500 dark:bg-emerald-600',
+                        active &&
+                          !done &&
+                          'border-emerald-500 bg-emerald-500/15 text-emerald-800 shadow-md ring-2 ring-emerald-500/30 dark:text-emerald-200',
+                        !active &&
+                          !done &&
+                          'border-muted-foreground/30 bg-muted/40 text-muted-foreground',
+                      )}
+                      aria-current={active ? 'step' : undefined}
+                    >
+                      {done ? <Check className="size-4 stroke-[3]" aria-hidden /> : step.id}
+                    </div>
+                    <span
+                      className={cn(
+                        'max-w-[5.5rem] text-center text-[10px] font-medium leading-tight sm:max-w-none sm:text-left sm:text-sm',
+                        active ? 'text-foreground' : 'text-muted-foreground',
+                      )}
+                    >
+                      <span className="sm:hidden">{step.short}</span>
+                      <span className="hidden sm:inline">{step.label}</span>
+                    </span>
+                  </div>
+                  {!isLast ? (
+                    <div
+                      className={cn(
+                        'mx-1.5 h-0.5 min-w-[0.75rem] flex-1 rounded-full transition-colors duration-300 sm:mx-3',
+                        currentStep > step.id ? 'bg-emerald-500' : 'bg-border',
+                      )}
+                      aria-hidden
+                    />
+                  ) : null}
+                </li>
+              )
+            })}
+          </ol>
+        </nav>
+
         <Card>
           <CardHeader>
-            <CardTitle>Dados da barbearia e acesso</CardTitle>
+            <CardTitle>
+              {currentStep === 1 && 'Dados principais'}
+              {currentStep === 2 && 'Endereço da barbearia'}
+              {currentStep === 3 && 'Escolha do plano'}
+            </CardTitle>
             <CardDescription>
-              Preencha as informacoes abaixo para criar sua barbearia e contratar um plano.
+              {currentStep === 1 &&
+                'Nome, identificador na URL, contato e dados de acesso da conta responsável.'}
+              {currentStep === 2 &&
+                'CEP com preenchimento automático. Complemento é opcional; os demais campos são obrigatórios.'}
+              {currentStep === 3 && 'Selecione o plano e revise o resumo antes de finalizar.'}
             </CardDescription>
             {hasSession ? (
               <p className="text-sm text-muted-foreground">
-                Voce ja esta logado. Complete nome, slug e plano; nao e necessario informar senha novamente.
+                Voce ja esta logado. Complete os passos; nao e necessario informar senha novamente.
               </p>
             ) : null}
           </CardHeader>
           <CardContent>
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="nomeBarbearia" required>
-                    Nome da barbearia
-                  </Label>
-                  <Input
-                    id="nomeBarbearia"
-                    value={formData.nomeBarbearia}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        nomeBarbearia: e.target.value,
-                        ...(slugAutofill ? { slug: slugify(e.target.value) } : {}),
-                      }))
-                    }
-                    disabled={isSubmitting}
-                    required
-                  />
-                </div>
+            <form className="space-y-6" onSubmit={handleSubmit} noValidate>
+              <div
+                key={currentStep}
+                className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
+              >
+                {currentStep === 1 && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="nomeBarbearia" required>
+                        Nome da barbearia
+                      </Label>
+                      <Input
+                        id="nomeBarbearia"
+                        value={formData.nomeBarbearia}
+                        onChange={(e) => {
+                          setStep1Errors((prev) => {
+                            const n = { ...prev }
+                            delete n.nomeBarbearia
+                            return n
+                          })
+                          setFormData((prev) => ({
+                            ...prev,
+                            nomeBarbearia: e.target.value,
+                            ...(slugAutofill ? { slug: slugify(e.target.value) } : {}),
+                          }))
+                        }}
+                        disabled={isSubmitting}
+                        aria-invalid={!!inputErr('nomeBarbearia')}
+                        className={cn(inputErr('nomeBarbearia') && 'border-destructive')}
+                      />
+                      {inputErr('nomeBarbearia') ? (
+                        <p className="text-xs text-destructive">{inputErr('nomeBarbearia')}</p>
+                      ) : null}
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="slug" required>
-                    Slug (identificador)
-                  </Label>
-                  <Input
-                    id="slug"
-                    placeholder="minha-barbearia"
-                    value={formData.slug}
-                    onChange={(e) => {
-                      setSlugAutofill(false)
-                      setFormData((prev) => ({ ...prev, slug: slugify(e.target.value) }))
+                    <div className="space-y-2">
+                      <Label htmlFor="slug" required>
+                        Slug (identificador)
+                      </Label>
+                      <Input
+                        id="slug"
+                        placeholder="minha-barbearia"
+                        value={formData.slug}
+                        onChange={(e) => {
+                          setSlugAutofill(false)
+                          setStep1Errors((prev) => {
+                            const n = { ...prev }
+                            delete n.slug
+                            return n
+                          })
+                          setFormData((prev) => ({ ...prev, slug: slugify(e.target.value) }))
+                        }}
+                        disabled={isSubmitting}
+                        aria-invalid={!!inputErr('slug')}
+                        className={cn(inputErr('slug') && 'border-destructive')}
+                      />
+                      {inputErr('slug') ? (
+                        <p className="text-xs text-destructive">{inputErr('slug')}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="telefoneBarbearia" required>
+                        Telefone
+                      </Label>
+                      <Input
+                        id="telefoneBarbearia"
+                        value={formData.telefoneBarbearia}
+                        onChange={(e) => {
+                          setStep1Errors((prev) => {
+                            const n = { ...prev }
+                            delete n.telefoneBarbearia
+                            return n
+                          })
+                          setFormData((prev) => ({
+                            ...prev,
+                            telefoneBarbearia: maskTelefoneBr(e.target.value),
+                          }))
+                        }}
+                        disabled={isSubmitting}
+                        inputMode="tel"
+                        autoComplete="tel"
+                        placeholder="(00) 00000-0000"
+                        aria-invalid={!!inputErr('telefoneBarbearia')}
+                        className={cn(inputErr('telefoneBarbearia') && 'border-destructive')}
+                      />
+                      {inputErr('telefoneBarbearia') ? (
+                        <p className="text-xs text-destructive">{inputErr('telefoneBarbearia')}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="emailResponsavel" required>
+                        E-mail de acesso
+                      </Label>
+                      <Input
+                        id="emailResponsavel"
+                        type="email"
+                        value={formData.emailResponsavel}
+                        onChange={(e) => {
+                          setStep1Errors((prev) => {
+                            const n = { ...prev }
+                            delete n.emailResponsavel
+                            return n
+                          })
+                          setFormData((prev) => ({
+                            ...prev,
+                            emailResponsavel: normalizeEmailInput(e.target.value),
+                          }))
+                        }}
+                        disabled={isSubmitting || hasSession}
+                        inputMode="email"
+                        autoComplete="email"
+                        placeholder="seu@email.com"
+                        aria-invalid={!!inputErr('emailResponsavel')}
+                        className={cn(inputErr('emailResponsavel') && 'border-destructive')}
+                      />
+                      {inputErr('emailResponsavel') ? (
+                        <p className="text-xs text-destructive">{inputErr('emailResponsavel')}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="senha" required={!hasSession}>
+                        Senha
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="senha"
+                          type={showSenha ? 'text' : 'password'}
+                          value={formData.senha}
+                          onChange={(e) => {
+                            setStep1Errors((prev) => {
+                              const n = { ...prev }
+                              delete n.senha
+                              return n
+                            })
+                            setFormData((prev) => ({ ...prev, senha: e.target.value }))
+                          }}
+                          disabled={isSubmitting || hasSession}
+                          minLength={6}
+                          className={cn('pr-10', inputErr('senha') && 'border-destructive')}
+                          aria-invalid={!!inputErr('senha')}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowSenha((prev) => !prev)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                          aria-label={showSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                        >
+                          {showSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      {inputErr('senha') ? (
+                        <p className="text-xs text-destructive">{inputErr('senha')}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmarSenha" required={!hasSession}>
+                        Confirmar senha
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="confirmarSenha"
+                          type={showConfirmarSenha ? 'text' : 'password'}
+                          value={formData.confirmarSenha}
+                          onChange={(e) => {
+                            setStep1Errors((prev) => {
+                              const n = { ...prev }
+                              delete n.confirmarSenha
+                              return n
+                            })
+                            setFormData((prev) => ({ ...prev, confirmarSenha: e.target.value }))
+                          }}
+                          disabled={isSubmitting || hasSession}
+                          minLength={6}
+                          className={cn('pr-10', inputErr('confirmarSenha') && 'border-destructive')}
+                          aria-invalid={!!inputErr('confirmarSenha')}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmarSenha((prev) => !prev)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                          aria-label={showConfirmarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                        >
+                          {showConfirmarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      {inputErr('confirmarSenha') ? (
+                        <p className="text-xs text-destructive">{inputErr('confirmarSenha')}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+
+                {currentStep === 2 && (
+                  <BarbeariaEnderecoFields
+                    idPrefix="cadastro-barbearia"
+                    value={formData.enderecoParts}
+                    onChange={(enderecoParts) => {
+                      setStep2Errors({})
+                      setFormData((prev) => ({ ...prev, enderecoParts }))
                     }}
                     disabled={isSubmitting}
-                    required
+                    showHeading={false}
+                    fieldErrors={step2Errors}
                   />
-                </div>
+                )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="telefoneBarbearia">Telefone</Label>
-                  <Input
-                    id="telefoneBarbearia"
-                    value={formData.telefoneBarbearia}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        telefoneBarbearia: maskTelefoneBr(e.target.value),
-                      }))
-                    }
-                    disabled={isSubmitting}
-                    inputMode="tel"
-                    autoComplete="tel"
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-              </div>
+                {currentStep === 3 && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Período de cobrança</Label>
+                      <p className="text-xs text-muted-foreground">
+                        O valor exibido em cada plano é o total do período (preço mensal do catálogo × meses).
+                      </p>
+                      <PlanoPeriodicidadeToggle
+                        idPrefix="cadastro-periodicidade"
+                        value={formData.planoPeriodicidade}
+                        onChange={(planoPeriodicidade) =>
+                          setFormData((prev) => ({ ...prev, planoPeriodicidade }))
+                        }
+                        disabled={isSubmitting || isLoadingPlans}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label required>Planos disponíveis</Label>
+                      {isLoadingPlans ? (
+                        <CadastroPlanoGridSkeleton />
+                      ) : planos.length > 0 ? (
+                        <div className="grid gap-3 md:grid-cols-3">
+                          {planos.map((plano) => {
+                            const isSelected = formData.planoId === plano.id
+                            const totalPeriodo = precoTotalNoPeriodo(
+                              plano.preco_mensal,
+                              formData.planoPeriodicidade,
+                            )
+                            const meses = mesesPorPeriodicidade(formData.planoPeriodicidade)
+                            return (
+                              <button
+                                key={plano.id}
+                                type="button"
+                                role="radio"
+                                aria-checked={isSelected}
+                                onClick={() => setFormData((prev) => ({ ...prev, planoId: plano.id }))}
+                                className={cn(
+                                  'relative rounded-xl border-2 p-4 pt-5 text-left transition-all duration-200',
+                                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                                  isSelected
+                                    ? 'border-emerald-500 bg-emerald-50 shadow-md shadow-emerald-600/15 ring-2 ring-emerald-500/25 dark:border-emerald-400 dark:bg-emerald-950/50 dark:shadow-emerald-900/30 dark:ring-emerald-400/20'
+                                    : 'border-border bg-card hover:border-emerald-500/40 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20',
+                                )}
+                                disabled={isSubmitting}
+                              >
+                                <span
+                                  className={cn(
+                                    'absolute right-3 top-3 flex size-8 items-center justify-center rounded-full border-2 transition-colors',
+                                    isSelected
+                                      ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm dark:border-emerald-400 dark:bg-emerald-500'
+                                      : 'border-muted-foreground/30 bg-muted/30',
+                                  )}
+                                  aria-hidden
+                                >
+                                  {isSelected ? <Check className="size-4 stroke-[3]" /> : null}
+                                </span>
+                                <p className="pr-10 font-semibold text-foreground">{plano.nome}</p>
+                                <p
+                                  className={cn(
+                                    'pr-10 text-sm font-medium tabular-nums',
+                                    isSelected
+                                      ? 'text-emerald-900/80 dark:text-emerald-100/80'
+                                      : 'text-muted-foreground',
+                                  )}
+                                >
+                                  {formatCurrency(totalPeriodo)}
+                                  {sufixoPrecoPeriodicidade(formData.planoPeriodicidade)}
+                                </p>
+                                {formData.planoPeriodicidade !== 'mensal' ? (
+                                  <p className="pr-10 text-[11px] text-muted-foreground">
+                                    {meses}× {formatCurrency(plano.preco_mensal)}/mês
+                                  </p>
+                                ) : null}
+                                <ul className="mt-2 space-y-1 text-left text-xs text-muted-foreground">
+                                  {linhasBeneficiosPlano(plano).length === 0 ? (
+                                    <li className="list-none text-muted-foreground/80">Sem benefícios listados</li>
+                                  ) : (
+                                    linhasBeneficiosPlano(plano).map((linha, idx) => (
+                                      <li key={`${plano.id}-${idx}`} className="flex items-start gap-1.5">
+                                        <Check
+                                          className="mt-0.5 size-3 shrink-0 text-emerald-600 dark:text-emerald-400"
+                                          strokeWidth={2.5}
+                                          aria-hidden
+                                        />
+                                        <span>{linha}</span>
+                                      </li>
+                                    ))
+                                  )}
+                                </ul>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <Card className="border-dashed">
+                          <CardContent className="py-4 text-sm text-muted-foreground">
+                            Nenhum plano disponivel no momento.
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
 
-              <BarbeariaEnderecoFields
-                idPrefix="cadastro-barbearia"
-                value={formData.enderecoParts}
-                onChange={(enderecoParts) => setFormData((prev) => ({ ...prev, enderecoParts }))}
-                disabled={isSubmitting}
-              />
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="emailResponsavel" required>
-                    Email de acesso
-                  </Label>
-                  <Input
-                    id="emailResponsavel"
-                    type="email"
-                    value={formData.emailResponsavel}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        emailResponsavel: normalizeEmailInput(e.target.value),
-                      }))
-                    }
-                    disabled={isSubmitting || hasSession}
-                    inputMode="email"
-                    autoComplete="email"
-                    placeholder="seu@email.com"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="senha" required={!hasSession}>
-                    Senha
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="senha"
-                      type={showSenha ? 'text' : 'password'}
-                      value={formData.senha}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, senha: e.target.value }))}
-                      disabled={isSubmitting || hasSession}
-                      minLength={6}
-                      required={!hasSession}
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowSenha((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                      aria-label={showSenha ? 'Ocultar senha' : 'Mostrar senha'}
-                    >
-                      {showSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmarSenha" required={!hasSession}>
-                    Confirmar senha
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="confirmarSenha"
-                      type={showConfirmarSenha ? 'text' : 'password'}
-                      value={formData.confirmarSenha}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, confirmarSenha: e.target.value }))}
-                      disabled={isSubmitting || hasSession}
-                      minLength={6}
-                      required={!hasSession}
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmarSenha((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                      aria-label={showConfirmarSenha ? 'Ocultar senha' : 'Mostrar senha'}
-                    >
-                      {showConfirmarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label required>Escolha o plano</Label>
-                {isLoadingPlans ? (
-                  <CadastroPlanoGridSkeleton />
-                ) : planos.length > 0 ? (
-                  <div className="grid gap-3 md:grid-cols-3">
-                    {planos.map((plano) => {
-                      const isSelected = formData.planoId === plano.id
-                      return (
-                        <button
-                          key={plano.id}
-                          type="button"
-                          role="radio"
-                          aria-checked={isSelected}
-                          onClick={() => setFormData((prev) => ({ ...prev, planoId: plano.id }))}
-                          className={cn(
-                            'relative rounded-xl border-2 p-4 pt-5 text-left transition-all duration-200',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                            isSelected
-                              ? 'border-emerald-500 bg-emerald-50 shadow-md shadow-emerald-600/15 ring-2 ring-emerald-500/25 dark:border-emerald-400 dark:bg-emerald-950/50 dark:shadow-emerald-900/30 dark:ring-emerald-400/20'
-                              : 'border-border bg-card hover:border-emerald-500/40 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20',
-                          )}
-                          disabled={isSubmitting}
-                        >
-                          <span
-                            className={cn(
-                              'absolute right-3 top-3 flex size-8 items-center justify-center rounded-full border-2 transition-colors',
-                              isSelected
-                                ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm dark:border-emerald-400 dark:bg-emerald-500'
-                                : 'border-muted-foreground/30 bg-muted/30',
-                            )}
-                            aria-hidden
-                          >
-                            {isSelected ? <Check className="size-4 stroke-[3]" /> : null}
-                          </span>
-                          <p className="pr-10 font-semibold text-foreground">{plano.nome}</p>
-                          <p
-                            className={cn(
-                              'pr-10 text-sm',
-                              isSelected ? 'text-emerald-900/80 dark:text-emerald-100/80' : 'text-muted-foreground',
-                            )}
-                          >
-                            {formatCurrency(plano.preco_mensal)} / mes
+                    {selectedPlan && (
+                      <Alert variant="success" className="text-left" role="status" aria-live="polite">
+                        <AlertTitle>Resumo do plano selecionado</AlertTitle>
+                        <AlertDescription>
+                          <p>
+                            <span className="font-semibold">{selectedPlan.nome}</span>
+                            {' '}
+                            · {labelPeriodicidade(formData.planoPeriodicidade).toLowerCase()}
                           </p>
-                          <ul className="mt-2 space-y-1 text-left text-xs text-muted-foreground">
-                            {linhasBeneficiosPlano(plano).length === 0 ? (
-                              <li className="list-none text-muted-foreground/80">Sem benefícios listados</li>
-                            ) : (
-                              linhasBeneficiosPlano(plano).map((linha, idx) => (
-                                <li key={`${plano.id}-${idx}`} className="flex items-start gap-1.5">
-                                  <Check
-                                    className="mt-0.5 size-3 shrink-0 text-emerald-600 dark:text-emerald-400"
-                                    strokeWidth={2.5}
-                                    aria-hidden
-                                  />
-                                  <span>{linha}</span>
-                                </li>
-                              ))
+                          <p className="mt-1 font-medium tabular-nums">
+                            {formatCurrency(
+                              precoTotalNoPeriodo(selectedPlan.preco_mensal, formData.planoPeriodicidade),
                             )}
-                          </ul>
-                        </button>
-                      )
-                    })}
+                            {sufixoPrecoPeriodicidade(formData.planoPeriodicidade)}
+                            {formData.planoPeriodicidade !== 'mensal' ? (
+                              <span className="block text-xs font-normal text-muted-foreground">
+                                Base {formatCurrency(selectedPlan.preco_mensal)}/mês ×{' '}
+                                {mesesPorPeriodicidade(formData.planoPeriodicidade)} meses
+                              </span>
+                            ) : null}
+                          </p>
+                          <p className="mt-2">
+                            Voce sera o administrador/proprietario da barbearia. Ate o pagamento ser confirmado em
+                            Assinaturas, o acesso fica limitado ao dashboard e as configuracoes; o restante do painel
+                            libera apos a aprovacao.
+                          </p>
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
-                ) : (
-                  <Card className="border-dashed">
-                    <CardContent className="py-4 text-sm text-muted-foreground">
-                      Nenhum plano disponivel no momento.
-                    </CardContent>
-                  </Card>
                 )}
               </div>
-
-              {selectedPlan && (
-                <Alert variant="success" className="text-left" role="status" aria-live="polite">
-                  <AlertTitle>Plano selecionado</AlertTitle>
-                  <AlertDescription>
-                    <p>
-                      <span className="font-semibold">{selectedPlan.nome}</span>
-                      {' '}
-                      · {formatCurrency(selectedPlan.preco_mensal)} / mes
-                    </p>
-                    <p className="mt-2">
-                      Voce sera o administrador/proprietario da barbearia. Ate o pagamento ser confirmado em
-                      Assinaturas, o acesso fica limitado ao dashboard e as configuracoes; o restante do painel libera
-                      apos a aprovacao.
-                    </p>
-                  </AlertDescription>
-                </Alert>
-              )}
 
               {error && (
                 <Alert
@@ -537,28 +847,47 @@ export default function CadastroBarbeariaPage() {
                   <AlertTitle className="text-sm">{error}</AlertTitle>
                 </Alert>
               )}
-              {success && <p className="text-sm text-success">{success}</p>}
+              {success ? (
+                <Alert variant="success" className="text-left" role="status" aria-live="polite">
+                  <AlertTitle>Cadastro concluído</AlertTitle>
+                  <AlertDescription>{success}</AlertDescription>
+                </Alert>
+              ) : null}
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <Link href="/login" className="text-sm text-muted-foreground hover:underline">
-                  Ja tem conta? Entrar
-                </Link>
+              <div className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Link href="/login" className="text-sm text-muted-foreground hover:underline">
+                    Ja tem conta? Entrar
+                  </Link>
+                </div>
 
-                <Button
-                  type="submit"
-                  disabled={
-                    isSubmitting ||
-                    isLoadingPlans ||
-                    !formData.nomeBarbearia ||
-                    !formData.slug ||
-                    !formData.emailResponsavel ||
-                    !formData.planoId ||
-                    (!hasSession && (!formData.senha || !formData.confirmarSenha))
-                  }
-                >
-                  {isSubmitting ? <Spinner className="mr-2" /> : null}
-                  {isSubmitting ? 'Finalizando cadastro...' : 'Cadastrar e contratar plano'}
-                </Button>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {currentStep > 1 ? (
+                    <Button type="button" variant="outline" onClick={goBack} disabled={isSubmitting}>
+                      <ChevronLeft className="mr-1 size-4" aria-hidden />
+                      Voltar
+                    </Button>
+                  ) : null}
+                  {currentStep < 3 ? (
+                    <Button type="button" onClick={goNext} disabled={isSubmitting}>
+                      Próximo
+                      <ChevronRight className="ml-1 size-4" aria-hidden />
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      disabled={
+                        isSubmitting ||
+                        isLoadingPlans ||
+                        !formData.planoId ||
+                        planos.length === 0
+                      }
+                    >
+                      {isSubmitting ? <Spinner className="mr-2" /> : null}
+                      {isSubmitting ? 'Finalizando cadastro...' : 'Finalizar cadastro'}
+                    </Button>
+                  )}
+                </div>
               </div>
             </form>
           </CardContent>

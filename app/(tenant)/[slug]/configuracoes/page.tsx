@@ -42,6 +42,13 @@ import { BarbeariaEnderecoFields } from '@/components/shared/barbearia-endereco-
 import { formatCurrency } from '@/lib/constants'
 import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
 import { linhasBeneficiosPlano } from '@/lib/plano-beneficios'
+import {
+  labelPeriodicidade,
+  mesesPorPeriodicidade,
+  parsePlanoPeriodicidade,
+  precoTotalNoPeriodo,
+  sufixoPrecoPeriodicidade,
+} from '@/lib/plano-periodicidade'
 import type { Assinatura, Barbearia, Plano, Profile } from '@/types'
 
 function labelAssinaturaStatus(status: string) {
@@ -443,9 +450,22 @@ export default function AdminConfiguracoesPage() {
                   {labelAssinaturaStatus(assinatura.status)}
                 </Badge>
               </div>
-              {assinatura.plano != null && (
+              {assinatura.plano != null && (() => {
+                const per = parsePlanoPeriodicidade(assinatura.periodicidade)
+                return (
                 <>
-                  <p className="text-muted-foreground">{formatCurrency(assinatura.plano.preco_mensal)} / mês</p>
+                  <p className="text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      {formatCurrency(precoTotalNoPeriodo(assinatura.plano.preco_mensal, per))}
+                      {sufixoPrecoPeriodicidade(per)}
+                    </span>
+                    <span className="mt-0.5 block text-xs">
+                      Ciclo: {labelPeriodicidade(per)}
+                      {per !== 'mensal'
+                        ? ` · base ${formatCurrency(assinatura.plano.preco_mensal)}/mês × ${mesesPorPeriodicidade(per)}`
+                        : null}
+                    </span>
+                  </p>
                   <ul className="mt-2 space-y-1 text-muted-foreground">
                     {linhasBeneficiosPlano(assinatura.plano).length === 0 ? (
                       <li className="list-none text-xs">Nenhum benefício listado para este plano.</li>
@@ -463,7 +483,8 @@ export default function AdminConfiguracoesPage() {
                     )}
                   </ul>
                 </>
-              )}
+                )
+              })()}
             </CardContent>
           </Card>
         )}

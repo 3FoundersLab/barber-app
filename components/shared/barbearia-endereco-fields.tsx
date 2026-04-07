@@ -16,6 +16,8 @@ type Props = {
   className?: string
   /** Mostra o título da seção (evite confundir com o campo Logradouro). */
   showHeading?: boolean
+  /** Mensagens de validação por campo (borda e texto abaixo do input). */
+  fieldErrors?: Partial<Record<keyof BarbeariaEnderecoParts, string>>
 }
 
 export function BarbeariaEnderecoFields({
@@ -25,6 +27,7 @@ export function BarbeariaEnderecoFields({
   idPrefix = 'endereco',
   className,
   showHeading = true,
+  fieldErrors,
 }: Props) {
   const [cepBusy, setCepBusy] = useState(false)
   const [cepMsg, setCepMsg] = useState<string | null>(null)
@@ -91,6 +94,9 @@ export function BarbeariaEnderecoFields({
 
   const fieldClass = 'w-full min-w-0 space-y-1.5'
 
+  const errBorder = (key: keyof BarbeariaEnderecoParts) =>
+    fieldErrors?.[key] ? 'border-destructive focus-visible:ring-destructive/40' : ''
+
   return (
     <div className={cn('w-full min-w-0 space-y-4', className)}>
       {showHeading ? (
@@ -110,12 +116,13 @@ export function BarbeariaEnderecoFields({
             placeholder="00000-000"
             value={value.cep}
             disabled={disabled}
+            aria-invalid={!!fieldErrors?.cep}
             onChange={(e) => {
               setCepMsg(null)
               lastAppliedCep.current = null
               set({ cep: formatCepMask(e.target.value) })
             }}
-            className={cn('w-full', cepBusy && 'pr-9')}
+            className={cn('w-full', cepBusy && 'pr-9', errBorder('cep'))}
           />
           {cepBusy ? (
             <Loader2
@@ -124,7 +131,8 @@ export function BarbeariaEnderecoFields({
             />
           ) : null}
         </div>
-        {cepMsg ? <p className="text-xs text-destructive">{cepMsg}</p> : null}
+        {fieldErrors?.cep ? <p className="text-xs text-destructive">{fieldErrors.cep}</p> : null}
+        {cepMsg && !fieldErrors?.cep ? <p className="text-xs text-destructive">{cepMsg}</p> : null}
         <p className="text-xs text-muted-foreground">
           Ao completar o CEP, rua, bairro e cidade são preenchidos automaticamente.
         </p>
@@ -132,15 +140,20 @@ export function BarbeariaEnderecoFields({
 
       <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_5.5rem] sm:items-end">
         <div className="min-w-0 space-y-1.5">
-          <Label htmlFor={`${idPrefix}-logradouro`}>Logradouro</Label>
+          <Label htmlFor={`${idPrefix}-logradouro`}>Rua</Label>
           <Input
             id={`${idPrefix}-logradouro`}
             autoComplete="street-address"
             placeholder="Rua, avenida…"
             value={value.logradouro}
             disabled={disabled}
+            aria-invalid={!!fieldErrors?.logradouro}
             onChange={(e) => set({ logradouro: e.target.value })}
+            className={errBorder('logradouro')}
           />
+          {fieldErrors?.logradouro ? (
+            <p className="text-xs text-destructive">{fieldErrors.logradouro}</p>
+          ) : null}
         </div>
         <div className="min-w-0 space-y-1.5">
           <Label htmlFor={`${idPrefix}-numero`}>Número</Label>
@@ -150,9 +163,11 @@ export function BarbeariaEnderecoFields({
             placeholder="Nº"
             value={value.numero}
             disabled={disabled}
-            className="w-full"
+            aria-invalid={!!fieldErrors?.numero}
+            className={cn('w-full', errBorder('numero'))}
             onChange={(e) => set({ numero: e.target.value })}
           />
+          {fieldErrors?.numero ? <p className="text-xs text-destructive">{fieldErrors.numero}</p> : null}
         </div>
       </div>
 
@@ -163,8 +178,13 @@ export function BarbeariaEnderecoFields({
           placeholder="Apto, sala, bloco…"
           value={value.complemento}
           disabled={disabled}
+          aria-invalid={!!fieldErrors?.complemento}
           onChange={(e) => set({ complemento: e.target.value })}
+          className={errBorder('complemento')}
         />
+        {fieldErrors?.complemento ? (
+          <p className="text-xs text-destructive">{fieldErrors.complemento}</p>
+        ) : null}
       </div>
 
       <div className="w-full min-w-0 space-y-2">
@@ -177,8 +197,11 @@ export function BarbeariaEnderecoFields({
               placeholder="Bairro"
               value={value.bairro}
               disabled={disabled}
+              aria-invalid={!!fieldErrors?.bairro}
               onChange={(e) => set({ bairro: e.target.value })}
+              className={errBorder('bairro')}
             />
+            {fieldErrors?.bairro ? <p className="text-xs text-destructive">{fieldErrors.bairro}</p> : null}
           </div>
           <div className="min-w-0 space-y-1.5 sm:col-span-5">
             <Label htmlFor={`${idPrefix}-cidade`}>Cidade</Label>
@@ -188,8 +211,11 @@ export function BarbeariaEnderecoFields({
               placeholder="Cidade"
               value={value.cidade}
               disabled={disabled}
+              aria-invalid={!!fieldErrors?.cidade}
               onChange={(e) => set({ cidade: e.target.value })}
+              className={errBorder('cidade')}
             />
+            {fieldErrors?.cidade ? <p className="text-xs text-destructive">{fieldErrors.cidade}</p> : null}
           </div>
           <div className="min-w-0 space-y-1.5 sm:col-span-2">
             <Label htmlFor={`${idPrefix}-uf`}>UF</Label>
@@ -200,9 +226,11 @@ export function BarbeariaEnderecoFields({
               maxLength={2}
               value={value.uf}
               disabled={disabled}
-              className="w-full uppercase"
+              aria-invalid={!!fieldErrors?.uf}
+              className={cn('w-full uppercase', errBorder('uf'))}
               onChange={(e) => set({ uf: e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2) })}
             />
+            {fieldErrors?.uf ? <p className="text-xs text-destructive">{fieldErrors.uf}</p> : null}
           </div>
         </div>
       </div>

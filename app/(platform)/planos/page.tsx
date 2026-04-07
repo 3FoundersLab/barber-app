@@ -37,10 +37,17 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Spinner } from '@/components/ui/spinner'
 import { SuperGridEntityListSkeleton } from '@/components/shared/loading-skeleton'
+import { PlanoPeriodicidadeToggle } from '@/components/shared/plano-periodicidade-toggle'
 import { formatCurrency } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { linhasBeneficiosPlano, parsePlanoBeneficios } from '@/lib/plano-beneficios'
+import {
+  mesesPorPeriodicidade,
+  precoTotalNoPeriodo,
+  sufixoPrecoPeriodicidade,
+  type PlanoPeriodicidade,
+} from '@/lib/plano-periodicidade'
 import type { Plano } from '@/types'
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const
@@ -111,6 +118,7 @@ export default function SuperPlanosPage() {
   const [editingPlano, setEditingPlano] = useState<Plano | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Plano | null>(null)
   const [form, setForm] = useState(emptyForm)
+  const [intervaloPreco, setIntervaloPreco] = useState<PlanoPeriodicidade>('mensal')
 
   const filtered = useMemo(() => {
     let rows = planos
@@ -371,6 +379,22 @@ export default function SuperPlanosPage() {
           </Alert>
         )}
 
+        {!isLoading && planos.length > 0 ? (
+          <div className="space-y-2 rounded-xl border border-border/80 bg-muted/20 p-4">
+            <Label className="text-foreground">Visualizar preço por período</Label>
+            <p className="text-xs text-muted-foreground">
+              O cadastro do plano continua com o valor mensal de referência; abaixo os valores são calculados para o
+              período escolhido.
+            </p>
+            <PlanoPeriodicidadeToggle
+              idPrefix="super-planos-intervalo"
+              value={intervaloPreco}
+              onChange={setIntervaloPreco}
+              disabled={isSaving || isDeleting}
+            />
+          </div>
+        ) : null}
+
         {isLoading ? (
           <SuperGridEntityListSkeleton
             count={6}
@@ -401,9 +425,17 @@ export default function SuperPlanosPage() {
                   <div className="min-w-0 flex-1 space-y-1">
                     <h2 className="text-lg font-semibold tracking-tight text-foreground">{plano.nome}</h2>
                     <p className="text-sm font-medium tabular-nums text-muted-foreground">
-                      {formatCurrency(plano.preco_mensal)}
-                      <span className="font-normal text-muted-foreground/80"> / mês</span>
+                      {formatCurrency(precoTotalNoPeriodo(plano.preco_mensal, intervaloPreco))}
+                      <span className="font-normal text-muted-foreground/80">
+                        {' '}
+                        {sufixoPrecoPeriodicidade(intervaloPreco)}
+                      </span>
                     </p>
+                    {intervaloPreco !== 'mensal' ? (
+                      <p className="text-xs text-muted-foreground/90">
+                        Ref. {formatCurrency(plano.preco_mensal)}/mês × {mesesPorPeriodicidade(intervaloPreco)}
+                      </p>
+                    ) : null}
                     <ul className="pt-2 text-xs leading-relaxed text-muted-foreground/90">
                       {linhasBeneficiosPlano(plano).length === 0 ? (
                         <li className="list-none text-muted-foreground/70">Nenhum benefício ativo</li>

@@ -61,8 +61,14 @@ import {
 } from '@/components/ui/pagination'
 import { Spinner } from '@/components/ui/spinner'
 import { SuperAssinaturasPageSkeleton } from '@/components/shared/loading-skeleton'
+import { PlanoPeriodicidadeToggle } from '@/components/shared/plano-periodicidade-toggle'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import {
+  labelPeriodicidade,
+  parsePlanoPeriodicidade,
+  type PlanoPeriodicidade,
+} from '@/lib/plano-periodicidade'
 import type { Assinatura, AssinaturaStatus, Barbearia, Plano } from '@/types'
 
 const NOVA_ASSINATURA_STATUS_OPTIONS = ['pendente', 'ativa', 'inadimplente', 'cancelada'] as const
@@ -262,12 +268,14 @@ export default function SuperAssinaturasPage() {
     barbearia_id: string
     plano_id: string
     status: NovaAssinaturaFormStatus
+    periodicidade: PlanoPeriodicidade
     inicio_em: string
     fim_em: string
   }>({
     barbearia_id: '',
     plano_id: '',
     status: 'ativa',
+    periodicidade: 'mensal',
     inicio_em: new Date().toISOString().split('T')[0],
     fim_em: '',
   })
@@ -275,11 +283,13 @@ export default function SuperAssinaturasPage() {
   const [editForm, setEditForm] = useState<{
     plano_id: string
     status: AssinaturaStatus
+    periodicidade: PlanoPeriodicidade
     inicio_em: string
     fim_em: string
   }>({
     plano_id: '',
     status: 'ativa',
+    periodicidade: 'mensal',
     inicio_em: '',
     fim_em: '',
   })
@@ -334,6 +344,7 @@ export default function SuperAssinaturasPage() {
       barbearia_id: form.barbearia_id,
       plano_id: form.plano_id,
       status: form.status as AssinaturaStatus,
+      periodicidade: form.periodicidade,
       inicio_em: form.inicio_em,
       fim_em: form.fim_em.trim(),
     })
@@ -350,6 +361,7 @@ export default function SuperAssinaturasPage() {
       barbearia_id: '',
       plano_id: '',
       status: 'ativa',
+      periodicidade: 'mensal',
       inicio_em: new Date().toISOString().split('T')[0],
       fim_em: '',
     })
@@ -397,6 +409,7 @@ export default function SuperAssinaturasPage() {
     setEditForm({
       plano_id: assinatura.plano_id,
       status: assinatura.status,
+      periodicidade: parsePlanoPeriodicidade(assinatura.periodicidade),
       inicio_em: assinatura.inicio_em?.split('T')[0] ?? '',
       fim_em: assinatura.fim_em?.split('T')[0] ?? '',
     })
@@ -412,6 +425,7 @@ export default function SuperAssinaturasPage() {
       .update({
         plano_id: editForm.plano_id,
         status: editForm.status,
+        periodicidade: editForm.periodicidade,
         inicio_em: editForm.inicio_em,
         fim_em: editForm.fim_em.trim(),
       })
@@ -793,7 +807,12 @@ export default function SuperAssinaturasPage() {
                                 />
                               </td>
                               <td className="px-3 py-3 align-top">
-                                <PlanoBadge plano={assinatura.plano} />
+                                <div className="space-y-1">
+                                  <PlanoBadge plano={assinatura.plano} />
+                                  <p className="text-xs text-muted-foreground">
+                                    {labelPeriodicidade(parsePlanoPeriodicidade(assinatura.periodicidade))}
+                                  </p>
+                                </div>
                               </td>
                               <td className="px-3 py-3 align-top">
                                 <Badge
@@ -848,6 +867,12 @@ export default function SuperAssinaturasPage() {
                               <dt className="text-muted-foreground">Plano</dt>
                               <dd className="flex justify-end">
                                 <PlanoBadge plano={assinatura.plano} />
+                              </dd>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <dt className="text-muted-foreground">Periodicidade</dt>
+                              <dd className="text-right text-foreground">
+                                {labelPeriodicidade(parsePlanoPeriodicidade(assinatura.periodicidade))}
                               </dd>
                             </div>
                             <div className="flex justify-between gap-2">
@@ -988,6 +1013,7 @@ export default function SuperAssinaturasPage() {
               barbearia_id: '',
               plano_id: '',
               status: 'ativa',
+              periodicidade: 'mensal',
               inicio_em: new Date().toISOString().split('T')[0],
               fim_em: '',
             })
@@ -1135,6 +1161,20 @@ export default function SuperAssinaturasPage() {
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <Label>Periodicidade de cobrança</Label>
+              <p className="text-xs text-muted-foreground">
+                Registro do ciclo contratado; as datas de início e expiração continuam livres abaixo.
+              </p>
+              <PlanoPeriodicidadeToggle
+                idPrefix="nova-assinatura-periodicidade"
+                value={form.periodicidade}
+                onChange={(periodicidade) => setForm((p) => ({ ...p, periodicidade }))}
+                disabled={isSaving}
+                size="compact"
+              />
+            </div>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="nova-assinatura-inicio">
@@ -1263,6 +1303,17 @@ export default function SuperAssinaturasPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Periodicidade de cobrança</Label>
+              <PlanoPeriodicidadeToggle
+                idPrefix="edit-assinatura-periodicidade"
+                value={editForm.periodicidade}
+                onChange={(periodicidade) => setEditForm((p) => ({ ...p, periodicidade }))}
+                disabled={editSaving}
+                size="compact"
+              />
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
