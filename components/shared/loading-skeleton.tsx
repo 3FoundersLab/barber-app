@@ -286,6 +286,61 @@ export function SuperGridEntityListSkeleton({
   )
 }
 
+/** Gráfico “Cadastros por mês” na página Barbearias (super) */
+export function SuperBarbeariasCadastroMensalChartSkeleton({ className }: { className?: string }) {
+  return (
+    <Card className={cn('overflow-hidden', className)} aria-busy="true" aria-label="Carregando gráfico">
+      <CardHeader className="space-y-1 pb-2">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-3.5 w-full max-w-lg" />
+        <Skeleton className="h-3.5 w-full max-w-md" />
+        <div className="flex flex-col gap-3 pt-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
+          <div className="grid w-full gap-1.5 sm:max-w-[11rem]">
+            <Skeleton className="h-3 w-6" />
+            <Skeleton className="h-9 w-full rounded-md" />
+          </div>
+          <div className="grid w-full gap-1.5 sm:max-w-[11rem]">
+            <Skeleton className="h-3 w-8" />
+            <Skeleton className="h-9 w-full rounded-md" />
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="flex min-h-[240px] w-full items-end justify-between gap-1.5 px-1 pt-4 sm:min-h-[260px]">
+          {Array.from({ length: 12 }).map((_, i) => {
+            const top = 22 + (i % 5) * 10
+            const bottom = 28 + (i % 4) * 12
+            return (
+              <div
+                key={i}
+                className="flex min-w-0 flex-1 flex-col items-stretch justify-end gap-px"
+              >
+                <Skeleton className="w-full rounded-t-[4px]" style={{ height: top }} />
+                <Skeleton className="w-full rounded-b-[4px]" style={{ height: bottom }} />
+              </div>
+            )
+          })}
+        </div>
+        <div
+          className={cn(
+            'border-border/50 mt-3 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 border-t border-dashed pt-3',
+            'sm:justify-start',
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-2.5 min-w-10 rounded-md" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-2.5 min-w-10 rounded-md" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 /** Usuários super admin: card com ações e bloco Barbearias */
 export function SuperUsuarioCardSkeleton({ className }: { className?: string }) {
   return (

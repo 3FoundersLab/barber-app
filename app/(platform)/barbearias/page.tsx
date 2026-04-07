@@ -12,7 +12,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
-import { SuperGridEntityListSkeleton } from '@/components/shared/loading-skeleton'
+import {
+  SuperBarbeariasCadastroMensalChartSkeleton,
+  SuperGridEntityListSkeleton,
+} from '@/components/shared/loading-skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -31,7 +34,8 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { SUPER_ADMIN_BARBEARIA_STORAGE_KEY } from '@/lib/resolve-admin-barbearia-id'
 import { tenantBarbeariaDashboardPath } from '@/lib/routes'
-import type { Barbearia } from '@/types'
+import type { Assinatura, Barbearia } from '@/types'
+import { SuperBarbeariasCadastroMensalChart } from '@/components/super/super-barbearias-cadastro-mensal-chart'
 import { cn } from '@/lib/utils'
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const
@@ -86,6 +90,9 @@ const emptyForm = {
 export default function SuperBarbeariasPage() {
   const router = useRouter()
   const [barbearias, setBarbearias] = useState<Barbearia[]>([])
+  const [assinaturasResumo, setAssinaturasResumo] = useState<
+    Pick<Assinatura, 'barbearia_id' | 'status'>[]
+  >([])
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<BarbeariasPageSize>(10)
@@ -115,16 +122,18 @@ export default function SuperBarbeariasPage() {
     const supabase = createClient()
     setError(null)
 
-    const { data, error: queryError } = await supabase
-      .from('barbearias')
-      .select('*')
-      .order('nome', { ascending: true })
+    const [barRes, assRes] = await Promise.all([
+      supabase.from('barbearias').select('*').order('nome', { ascending: true }),
+      supabase.from('assinaturas').select('barbearia_id, status'),
+    ])
 
-    if (queryError) {
+    if (barRes.error || assRes.error) {
       setError('Não foi possível carregar as barbearias')
       setBarbearias([])
+      setAssinaturasResumo([])
     } else {
-      setBarbearias(data || [])
+      setBarbearias(barRes.data || [])
+      setAssinaturasResumo((assRes.data || []) as Pick<Assinatura, 'barbearia_id' | 'status'>[])
     }
 
     setIsLoading(false)
@@ -330,6 +339,15 @@ export default function SuperBarbeariasPage() {
             Nova barbearia
           </Button>
         </div>
+
+        {isLoading ? (
+          <SuperBarbeariasCadastroMensalChartSkeleton />
+        ) : (
+          <SuperBarbeariasCadastroMensalChart
+            barbearias={barbearias}
+            assinaturas={assinaturasResumo}
+          />
+        )}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <div className="relative min-w-0 flex-1">
