@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getAdminDashboardPathForUser } from '@/lib/admin-browse-path'
 import { fetchSessionProfile } from '@/lib/supabase/fetch-session-profile'
 import { CLIENT_PATHS, PLATFORM_PATHS, STAFF_PATHS, TENANT_ENTRY } from '@/lib/routes'
+import { LandingMarketing } from '@/components/landing/landing-marketing'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -12,7 +13,7 @@ export default async function Home() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/login')
+    return <LandingMarketing />
   }
 
   const profile = await fetchSessionProfile(supabase, user.id)
