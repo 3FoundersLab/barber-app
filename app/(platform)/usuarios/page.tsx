@@ -450,15 +450,31 @@ export default function SuperUsuariosPage() {
   }
 
   async function handleAtivoToggle(profileId: string, ativo: boolean) {
-    const supabase = createClient()
     setError(null)
     setTogglingAtivoId(profileId)
-    const { error: upErr } = await supabase.from('profiles').update({ ativo }).eq('id', profileId)
-    setTogglingAtivoId(null)
-    if (upErr) {
+    try {
+      const res = await fetch('/api/platform/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ user_id: profileId, ativo }),
+      })
+      const json = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) {
+        setError(
+          typeof json.error === 'string'
+            ? json.error
+            : 'Não foi possível atualizar o status do usuário.',
+        )
+        setTogglingAtivoId(null)
+        return
+      }
+    } catch {
       setError('Não foi possível atualizar o status do usuário.')
+      setTogglingAtivoId(null)
       return
     }
+    setTogglingAtivoId(null)
     setProfiles((prev) => prev.map((p) => (p.id === profileId ? { ...p, ativo } : p)))
   }
 

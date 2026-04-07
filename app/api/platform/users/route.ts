@@ -161,6 +161,42 @@ export async function PATCH(request: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: 'user_id é obrigatório.' }, { status: 400 })
   }
+
+  const ativoOnly =
+    typeof body.ativo === 'boolean' &&
+    body.nome == null &&
+    body.email == null &&
+    body.role == null &&
+    body.barbearia_id == null &&
+    body.barbearia_ids == null
+
+  if (ativoOnly) {
+    if (body.ativo === false && userId === auth.user.id) {
+      return NextResponse.json(
+        { error: 'Não é possível desativar a própria conta por aqui.' },
+        { status: 400 },
+      )
+    }
+
+    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+
+    const { error: profileError } = await admin
+      .from('profiles')
+      .update({ ativo: body.ativo })
+      .eq('id', userId)
+
+    if (profileError) {
+      return NextResponse.json(
+        { error: profileError.message ?? 'Não foi possível atualizar o status do usuário.' },
+        { status: 500 },
+      )
+    }
+
+    return NextResponse.json({ ok: true })
+  }
+
   if (!nome || !email) {
     return NextResponse.json({ error: 'Informe nome e email.' }, { status: 400 })
   }
