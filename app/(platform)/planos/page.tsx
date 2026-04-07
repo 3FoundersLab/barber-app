@@ -333,7 +333,7 @@ export default function SuperPlanosPage() {
                 htmlFor="planos-page-size"
                 className="text-sm text-muted-foreground whitespace-nowrap"
               >
-                Itens por página
+                Itens
               </Label>
               <Select
                 value={String(pageSize)}

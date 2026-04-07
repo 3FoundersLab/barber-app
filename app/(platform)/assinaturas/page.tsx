@@ -413,7 +413,7 @@ export default function SuperAssinaturasPage() {
                 value={String(pageSize)}
                 onValueChange={(v) => setPageSize(Number(v))}
               >
-                <SelectTrigger className="w-full sm:w-[140px]" aria-label="Itens por página">
+                <SelectTrigger className="w-full sm:w-[140px]" aria-label="Itens">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

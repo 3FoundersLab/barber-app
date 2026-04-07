@@ -373,7 +373,7 @@ export default function SuperBarbeariasPage() {
                 htmlFor="barbearias-page-size"
                 className="text-sm text-muted-foreground whitespace-nowrap"
               >
-                Itens por página
+                Itens
               </Label>
               <Select
                 value={String(pageSize)}

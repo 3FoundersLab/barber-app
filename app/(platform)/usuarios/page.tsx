@@ -638,7 +638,7 @@ export default function SuperUsuariosPage() {
                 htmlFor="usuarios-page-size"
                 className="text-sm text-muted-foreground whitespace-nowrap"
               >
-                Itens por página
+                Itens
               </Label>
               <Select
                 value={String(pageSize)}
