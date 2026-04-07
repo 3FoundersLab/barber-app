@@ -12,6 +12,7 @@ import {
   Link2,
   UserCheck,
   UserX,
+  Shield,
 } from 'lucide-react'
 import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
@@ -795,46 +796,72 @@ export default function SuperUsuariosPage() {
                       )}
                     </div>
 
-                    <div className="mt-auto border-t pt-2">
-                      <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                        Barbearias
-                      </p>
-                      {links.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">Nenhum vínculo.</p>
-                      ) : (
-                        <ul className="max-h-28 space-y-1 overflow-y-auto pr-0.5">
-                          {links.map((l) => (
-                            <li
-                              key={l.id}
-                              className="flex items-center justify-between gap-1 rounded border bg-muted/30 px-2 py-1 text-xs"
-                            >
-                              <div className="min-w-0 leading-tight">
-                                <span className="line-clamp-1 font-medium">
-                                  {l.barbearia?.nome ?? 'Barbearia'}
-                                </span>
-                                <span className="text-muted-foreground"> · {ROLE_LABELS[l.role]}</span>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
-                                onClick={() =>
-                                  setConfirmRevokeLink({
-                                    linkId: l.id,
-                                    usuarioNome: p.nome,
-                                    barbeariaNome: l.barbearia?.nome ?? 'Barbearia',
-                                  })
-                                }
-                                title="Revogar acesso"
+                    {p.role !== 'super_admin' ? (
+                      <div className="mt-auto border-t pt-2">
+                        <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                          Barbearias
+                        </p>
+                        {links.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">Nenhum vínculo.</p>
+                        ) : (
+                          <ul className="max-h-28 space-y-1 overflow-y-auto pr-0.5">
+                            {links.map((l) => (
+                              <li
+                                key={l.id}
+                                className="flex items-center justify-between gap-1 rounded border bg-muted/30 px-2 py-1 text-xs"
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
+                                <div className="min-w-0 leading-tight">
+                                  <span className="line-clamp-1 font-medium">
+                                    {l.barbearia?.nome ?? 'Barbearia'}
+                                  </span>
+                                  <span className="text-muted-foreground"> · {ROLE_LABELS[l.role]}</span>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
+                                  onClick={() =>
+                                    setConfirmRevokeLink({
+                                      linkId: l.id,
+                                      usuarioNome: p.nome,
+                                      barbeariaNome: l.barbearia?.nome ?? 'Barbearia',
+                                    })
+                                  }
+                                  title="Revogar acesso"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-auto border-t pt-2">
+                        <div
+                          className={cn(
+                            'flex gap-2 rounded-md border px-2.5 py-2',
+                            'border-amber-500/40 bg-amber-500/12 text-amber-950',
+                            'dark:border-amber-500/35 dark:bg-amber-500/15 dark:text-amber-50',
+                          )}
+                        >
+                          <Shield
+                            className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400"
+                            aria-hidden
+                          />
+                          <div className="min-w-0 space-y-0.5">
+                            <p className="text-xs font-semibold leading-tight">
+                              Acesso a todas as barbearias
+                            </p>
+                            <p className="text-[11px] leading-snug text-amber-900/90 dark:text-amber-100/85">
+                              Super Admin não utiliza vínculos por barbearia: o acesso é global à
+                              plataforma.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )
