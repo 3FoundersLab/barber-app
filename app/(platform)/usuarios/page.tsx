@@ -49,6 +49,7 @@ import { createClient } from '@/lib/supabase/client'
 import { ROLE_LABELS } from '@/lib/constants'
 import type { Barbearia, Profile, UserRole } from '@/types'
 import { cn } from '@/lib/utils'
+import { BarbeariasMultiSelect } from '@/components/shared/barbearias-multi-select'
 import {
   Pagination,
   PaginationContent,
@@ -109,6 +110,12 @@ function buildLinksMap(rows: BarbeariaLink[]): Record<string, BarbeariaLink[]> {
   return map
 }
 
+function sameIdSet(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false
+  const sa = new Set(a)
+  return b.every((id) => sa.has(id))
+}
+
 type BarbeariaLink = {
   id: string
   user_id: string
@@ -137,12 +144,14 @@ export default function SuperUsuariosPage() {
   const [editFormNome, setEditFormNome] = useState('')
   const [editFormEmail, setEditFormEmail] = useState('')
   const [editFormRole, setEditFormRole] = useState<UserRole>('admin')
-  const [editFormBarbeariaId, setEditFormBarbeariaId] = useState('')
+  const [editFormBarbeariaIds, setEditFormBarbeariaIds] = useState<string[]>([])
+  const [editBarbeariaSearchReset, setEditBarbeariaSearchReset] = useState(0)
+  const [createBarbeariaSearchReset, setCreateBarbeariaSearchReset] = useState(0)
   const [editBaseline, setEditBaseline] = useState<{
     nome: string
     email: string
     role: UserRole
-    barbearia_id: string
+    barbearia_ids: string[]
   } | null>(null)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
   const [confirmRevokeLink, setConfirmRevokeLink] = useState<{
@@ -157,7 +166,7 @@ export default function SuperUsuariosPage() {
     email: '',
     password: '',
     role: 'admin' as UserRole,
-    barbearia_id: '',
+    barbearia_ids: [] as string[],
   })
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const [linkSaving, setLinkSaving] = useState(false)
@@ -266,7 +275,7 @@ export default function SuperUsuariosPage() {
 
   async function handleCreate() {
     if (!form.nome || !form.email || form.password.length < 6) return
-    if (form.role === 'admin' && !form.barbearia_id) return
+    if (form.role === 'admin' && form.barbearia_ids.length === 0) return
 
     setIsSaving(true)
     setError(null)
@@ -280,7 +289,7 @@ export default function SuperUsuariosPage() {
           email: form.email,
           password: form.password,
           role: form.role,
-          barbearia_id: form.role === 'admin' ? form.barbearia_id : undefined,
+          barbearia_ids: form.role === 'admin' ? form.barbearia_ids : undefined,
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -297,7 +306,7 @@ export default function SuperUsuariosPage() {
 
     setIsSaving(false)
     setIsDialogOpen(false)
-    setForm({ nome: '', email: '', password: '', role: 'admin', barbearia_id: '' })
+    setForm({ nome: '', email: '', password: '', role: 'admin', barbearia_ids: [] })
     setIsLoading(true)
     await loadAll()
   }
@@ -361,19 +370,22 @@ export default function SuperUsuariosPage() {
   }
 
   function openEditProfile(p: Profile) {
+    setEditBarbeariaSearchReset((t) => t + 1)
     const links = linksByUser[p.id] || []
-    const adminLink = links.find((l) => l.role === 'admin')
-    const barId = adminLink?.barbearia?.id ?? ''
+    const adminBarIds = links
+      .filter((l) => l.role === 'admin')
+      .map((l) => l.barbearia?.id)
+      .filter((id): id is string => Boolean(id))
     setEditProfile(p)
     setEditFormNome(p.nome)
     setEditFormEmail(normalizeEmailInput(p.email || ''))
     setEditFormRole(p.role)
-    setEditFormBarbeariaId(barId)
+    setEditFormBarbeariaIds([...adminBarIds])
     setEditBaseline({
       nome: p.nome,
       email: p.email,
       role: p.role,
-      barbearia_id: barId,
+      barbearia_ids: [...adminBarIds],
     })
   }
 
@@ -381,13 +393,14 @@ export default function SuperUsuariosPage() {
     if (!editBaseline) return false
     const nome = editFormNome.trim()
     const email = editFormEmail.trim().toLowerCase()
-    const effBar = editFormRole === 'admin' ? editFormBarbeariaId : ''
-    const baseBar = editBaseline.role === 'admin' ? editBaseline.barbearia_id : ''
+    const effBar =
+      editFormRole === 'admin' ? editFormBarbeariaIds : ([] as string[])
+    const baseBar = editBaseline.role === 'admin' ? editBaseline.barbearia_ids : []
     return (
       nome !== editBaseline.nome.trim() ||
       email !== editBaseline.email.trim().toLowerCase() ||
       editFormRole !== editBaseline.role ||
-      effBar !== baseBar
+      !sameIdSet(effBar, baseBar)
     )
   }
 
@@ -396,7 +409,7 @@ export default function SuperUsuariosPage() {
     const nome = editFormNome.trim()
     const email = editFormEmail.trim().toLowerCase()
     if (!nome || !email) return
-    if (editFormRole === 'admin' && !editFormBarbeariaId) return
+    if (editFormRole === 'admin' && editFormBarbeariaIds.length === 0) return
     if (!editFormIsDirty()) {
       setEditProfile(null)
       setEditBaseline(null)
@@ -414,7 +427,7 @@ export default function SuperUsuariosPage() {
           nome,
           email,
           role: editFormRole,
-          barbearia_id: editFormRole === 'admin' ? editFormBarbeariaId : undefined,
+          barbearia_ids: editFormRole === 'admin' ? editFormBarbeariaIds : undefined,
         }),
       })
       const json = (await res.json().catch(() => ({}))) as { error?: string }
@@ -1165,7 +1178,13 @@ export default function SuperUsuariosPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog
+        open={isDialogOpen}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open)
+          if (open) setCreateBarbeariaSearchReset((t) => t + 1)
+        }}
+      >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Novo usuário</DialogTitle>
@@ -1209,7 +1228,11 @@ export default function SuperUsuariosPage() {
                 value={form.role}
                 onValueChange={(v) => {
                   const r = v as UserRole
-                  setForm((s) => ({ ...s, role: r, barbearia_id: r === 'admin' ? s.barbearia_id : '' }))
+                  setForm((s) => ({
+                    ...s,
+                    role: r,
+                    barbearia_ids: r === 'admin' ? s.barbearia_ids : [],
+                  }))
                 }}
               >
                 <SelectTrigger className="w-full">
@@ -1225,24 +1248,14 @@ export default function SuperUsuariosPage() {
               </Select>
             </div>
             {form.role === 'admin' && (
-              <div className="space-y-1">
-                <Label>Barbearia</Label>
-                <Select
-                  value={form.barbearia_id || undefined}
-                  onValueChange={(v) => setForm((s) => ({ ...s, barbearia_id: v }))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {barbearias.map((b) => (
-                      <SelectItem key={b.id} value={b.id}>
-                        {b.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <BarbeariasMultiSelect
+                id="nu-barbearias"
+                label="Barbearias"
+                options={barbearias.map((b) => ({ id: b.id, nome: b.nome }))}
+                value={form.barbearia_ids}
+                onChange={(ids) => setForm((s) => ({ ...s, barbearia_ids: ids }))}
+                resetSearchToken={createBarbeariaSearchReset}
+              />
             )}
             <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
               É necessário configurar <code className="text-foreground">SUPABASE_SERVICE_ROLE_KEY</code>{' '}
@@ -1261,7 +1274,7 @@ export default function SuperUsuariosPage() {
                 !form.nome ||
                 !form.email ||
                 form.password.length < 6 ||
-                (form.role === 'admin' && !form.barbearia_id)
+                (form.role === 'admin' && form.barbearia_ids.length === 0)
               }
             >
               {isSaving ? <Spinner className="mr-2" /> : null}
@@ -1313,7 +1326,7 @@ export default function SuperUsuariosPage() {
                   onValueChange={(v) => {
                     const r = v as UserRole
                     setEditFormRole(r)
-                    if (r !== 'admin') setEditFormBarbeariaId('')
+                    if (r !== 'admin') setEditFormBarbeariaIds([])
                   }}
                 >
                   <SelectTrigger id="edit-role" className="w-full">
@@ -1330,32 +1343,16 @@ export default function SuperUsuariosPage() {
               </div>
               {editFormRole === 'admin' && (
                 <div className="space-y-1">
-                  <Label htmlFor="edit-barbearia">Barbearia</Label>
-                  <Select
-                    value={editFormBarbeariaId || undefined}
-                    onValueChange={(v) => setEditFormBarbeariaId(v)}
-                  >
-                    <SelectTrigger id="edit-barbearia" className="w-full">
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {barbearias.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>
-                          {b.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Ao salvar, vínculos anteriores de administrador com barbearias são substituídos por
-                    este.
-                  </p>
+                  <BarbeariasMultiSelect
+                    id="edit-barbearias"
+                    label="Barbearias"
+                    options={barbearias.map((b) => ({ id: b.id, nome: b.nome }))}
+                    value={editFormBarbeariaIds}
+                    onChange={setEditFormBarbeariaIds}
+                    resetSearchToken={editBarbeariaSearchReset}
+                  />
                 </div>
               )}
-              <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
-                Alterar email e vínculos exige{' '}
-                <code className="text-foreground">SUPABASE_SERVICE_ROLE_KEY</code> no servidor.
-              </p>
             </div>
           ) : null}
 
@@ -1377,7 +1374,7 @@ export default function SuperUsuariosPage() {
                 currentUserId === editProfile.id ||
                 !editFormNome.trim() ||
                 !editFormEmail.trim() ||
-                (editFormRole === 'admin' && !editFormBarbeariaId) ||
+                (editFormRole === 'admin' && editFormBarbeariaIds.length === 0) ||
                 !editFormIsDirty()
               }
             >

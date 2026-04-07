@@ -6,6 +6,19 @@ import type { UserRole } from '@/types'
 /** Papéis que o painel super pode criar/editar nesta rota */
 const SUPER_PANEL_ROLES: UserRole[] = ['super_admin', 'admin']
 
+function parseBarbeariaIds(body: Record<string, unknown>): string[] {
+  if (Array.isArray(body.barbearia_ids)) {
+    const raw = body.barbearia_ids
+      .map((x) => String(x ?? '').trim())
+      .filter((x) => x.length > 0)
+    return [...new Set(raw)]
+  }
+  const single = body.barbearia_id != null && String(body.barbearia_id).trim() !== ''
+    ? String(body.barbearia_id).trim()
+    : ''
+  return single ? [single] : []
+}
+
 async function requireSuperAdmin() {
   const supabase = await createServerSupabase()
   const {
@@ -47,7 +60,7 @@ export async function POST(request: NextRequest) {
   const email = String(body.email ?? '').trim().toLowerCase()
   const password = String(body.password ?? '')
   const role = body.role as UserRole
-  const barbearia_id = body.barbearia_id ? String(body.barbearia_id) : null
+  const barbeariaIds = parseBarbeariaIds(body)
 
   if (!nome || !email || password.length < 6) {
     return NextResponse.json(
@@ -58,9 +71,9 @@ export async function POST(request: NextRequest) {
   if (!SUPER_PANEL_ROLES.includes(role)) {
     return NextResponse.json({ error: 'Papel inválido.' }, { status: 400 })
   }
-  if (role === 'admin' && !barbearia_id) {
+  if (role === 'admin' && barbeariaIds.length === 0) {
     return NextResponse.json(
-      { error: 'Administrador precisa de uma barbearia vinculada.' },
+      { error: 'Administrador precisa de pelo menos uma barbearia vinculada.' },
       { status: 400 },
     )
   }
@@ -98,16 +111,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Não foi possível sincronizar o perfil.' }, { status: 500 })
   }
 
-  if (role === 'admin' && barbearia_id) {
-    const { error: linkError } = await admin.from('barbearia_users').insert({
+  if (role === 'admin' && barbeariaIds.length > 0) {
+    const rows = barbeariaIds.map((barbearia_id) => ({
       barbearia_id,
       user_id: userId,
-      role: 'admin',
-    })
+      role: 'admin' as const,
+    }))
+    const { error: linkError } = await admin.from('barbearia_users').insert(rows)
     if (linkError) {
       await admin.auth.admin.deleteUser(userId)
       return NextResponse.json(
-        { error: 'Não foi possível vincular o usuário à barbearia.' },
+        { error: 'Não foi possível vincular o usuário às barbearias.' },
         { status: 400 },
       )
     }
@@ -142,7 +156,7 @@ export async function PATCH(request: NextRequest) {
   const nome = String(body.nome ?? '').trim()
   const email = String(body.email ?? '').trim().toLowerCase()
   const role = body.role as UserRole
-  const barbearia_id = body.barbearia_id ? String(body.barbearia_id) : null
+  const barbeariaIds = parseBarbeariaIds(body)
 
   if (!userId) {
     return NextResponse.json({ error: 'user_id é obrigatório.' }, { status: 400 })
@@ -153,9 +167,9 @@ export async function PATCH(request: NextRequest) {
   if (!SUPER_PANEL_ROLES.includes(role)) {
     return NextResponse.json({ error: 'Papel inválido.' }, { status: 400 })
   }
-  if (role === 'admin' && !barbearia_id) {
+  if (role === 'admin' && barbeariaIds.length === 0) {
     return NextResponse.json(
-      { error: 'Administrador precisa de uma barbearia vinculada.' },
+      { error: 'Administrador precisa de pelo menos uma barbearia vinculada.' },
       { status: 400 },
     )
   }
@@ -213,15 +227,16 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  if (role === 'admin' && barbearia_id) {
-    const { error: linkError } = await admin.from('barbearia_users').insert({
+  if (role === 'admin' && barbeariaIds.length > 0) {
+    const rows = barbeariaIds.map((barbearia_id) => ({
       barbearia_id,
       user_id: userId,
-      role: 'admin',
-    })
+      role: 'admin' as const,
+    }))
+    const { error: linkError } = await admin.from('barbearia_users').insert(rows)
     if (linkError) {
       return NextResponse.json(
-        { error: linkError.message ?? 'Não foi possível vincular à barbearia.' },
+        { error: linkError.message ?? 'Não foi possível vincular às barbearias.' },
         { status: 400 },
       )
     }
