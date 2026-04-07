@@ -1,8 +1,21 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Building2, Check, CheckCircle2, ChevronsUpDown, Clock, MessageCircle, Plus, Search, X } from 'lucide-react'
-import { PageContainer, PageContent } from '@/components/shared/page-container'
+import { useRouter } from 'next/navigation'
+import {
+  Building2,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+  Clock,
+  MessageCircle,
+  Plus,
+  Search,
+  X,
+} from 'lucide-react'
+import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import {
   AlertDialog,
@@ -38,6 +51,12 @@ import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+} from '@/components/ui/pagination'
 import { Spinner } from '@/components/ui/spinner'
 import { SuperAssinaturasPageSkeleton } from '@/components/shared/loading-skeleton'
 import { cn } from '@/lib/utils'
@@ -49,6 +68,25 @@ const NOVA_ASSINATURA_STATUS_OPTIONS = ['pendente', 'ativa', 'inadimplente', 'ca
 type NovaAssinaturaFormStatus = (typeof NOVA_ASSINATURA_STATUS_OPTIONS)[number]
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const
+
+function pageNumberItems(current: number, total: number): (number | 'ellipsis')[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1)
+  }
+  const set = new Set<number>([1, total])
+  for (let i = current - 1; i <= current + 1; i++) {
+    if (i >= 1 && i <= total) set.add(i)
+  }
+  const sorted = [...set].sort((a, b) => a - b)
+  const out: (number | 'ellipsis')[] = []
+  let prev = 0
+  for (const p of sorted) {
+    if (p - prev > 1) out.push('ellipsis')
+    out.push(p)
+    prev = p
+  }
+  return out
+}
 
 function labelAssinaturaStatus(status: string) {
   const map: Record<string, string> = {
@@ -117,6 +155,7 @@ function statusBadgeClass(status: AssinaturaStatus) {
 }
 
 export default function SuperAssinaturasPage() {
+  const router = useRouter()
   const [assinaturas, setAssinaturas] = useState<Assinatura[]>([])
   const [barbearias, setBarbearias] = useState<Barbearia[]>([])
   const [planos, setPlanos] = useState<Plano[]>([])
@@ -280,13 +319,23 @@ export default function SuperAssinaturasPage() {
     })
   }, [sorted, searchQuery])
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const effectivePage = Math.min(page, totalPages)
-  const paginated = filtered.slice((effectivePage - 1) * pageSize, effectivePage * pageSize)
+  const totalPages =
+    filtered.length === 0 ? 0 : Math.ceil(filtered.length / pageSize)
+  const currentPage = totalPages === 0 ? 1 : Math.min(page, totalPages)
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filtered.slice(start, start + pageSize)
+  }, [filtered, currentPage, pageSize])
+
+  const pageItems = useMemo(
+    () => (totalPages > 0 ? pageNumberItems(currentPage, totalPages) : []),
+    [currentPage, totalPages],
+  )
 
   useEffect(() => {
-    if (page > totalPages) setPage(totalPages)
-  }, [page, totalPages])
+    if (totalPages > 0 && page > totalPages) setPage(totalPages)
+  }, [totalPages, page])
 
   function rowActionsBusy(assinatura: Assinatura) {
     return (
@@ -340,24 +389,38 @@ export default function SuperAssinaturasPage() {
 
   return (
     <PageContainer>
-      <AppPageHeader
-        title="Assinaturas"
-        profileHref="/conta/editar"
-        avatarFallback="S"
-      />
+      <AppPageHeader greetingOnly profileHref="/conta/editar" avatarFallback="S" />
 
-      <PageContent className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            Barbearias cadastradas em <span className="font-medium text-foreground">/cadastro/barbearia</span> aparecem
-            com assinatura em <span className="font-medium text-foreground">pagamento pendente</span>. Confirme o
-            pagamento na lista para liberar o painel completo da barbearia.
-          </p>
-          <Button className="shrink-0 self-start" onClick={() => setIsDialogOpen(true)}>
+      <PageContent className="space-y-4 pb-20 md:pb-6">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+          <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-9 shrink-0"
+              onClick={() => router.back()}
+              aria-label="Voltar"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <PageTitle className="min-w-0 truncate">Assinaturas</PageTitle>
+          </div>
+          <Button
+            type="button"
+            className="w-full shrink-0 sm:w-auto"
+            onClick={() => setIsDialogOpen(true)}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Nova assinatura
           </Button>
         </div>
+
+        <p className="text-sm text-muted-foreground">
+          Barbearias cadastradas em <span className="font-medium text-foreground">/cadastro/barbearia</span> aparecem
+          com assinatura em <span className="font-medium text-foreground">pagamento pendente</span>. Confirme o
+          pagamento na lista para liberar o painel completo da barbearia.
+        </p>
 
         {error && (
           <Alert
@@ -564,32 +627,68 @@ export default function SuperAssinaturasPage() {
                   })}
                 </div>
 
-                {totalPages > 1 ? (
-                  <div className="flex flex-col gap-2 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-xs text-muted-foreground">
-                      {(effectivePage - 1) * pageSize + 1}–
-                      {Math.min(effectivePage * pageSize, filtered.length)} de {filtered.length}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={effectivePage <= 1}
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      >
-                        Anterior
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={effectivePage >= totalPages}
-                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      >
-                        Próxima
-                      </Button>
-                    </div>
+                {filtered.length > 0 && totalPages > 0 ? (
+                  <div className="border-t pt-4">
+                    <Pagination className="mx-0 flex w-full max-w-full flex-col items-center gap-2">
+                      <PaginationContent className="flex h-9 flex-row flex-wrap items-center justify-center gap-1">
+                        <PaginationItem>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-9 gap-1 px-2.5"
+                            disabled={currentPage <= 1}
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            aria-label="Página anterior"
+                          >
+                            <ChevronLeft className="h-4 w-4 shrink-0" />
+                            <span className="hidden sm:inline">Anterior</span>
+                          </Button>
+                        </PaginationItem>
+                        {pageItems.map((item, idx) =>
+                          item === 'ellipsis' ? (
+                            <PaginationItem key={`e-${idx}`} className="flex h-9 items-center">
+                              <PaginationEllipsis className="size-9" />
+                            </PaginationItem>
+                          ) : (
+                            <PaginationItem key={item} className="flex h-9 items-center">
+                              <Button
+                                type="button"
+                                variant={item === currentPage ? 'default' : 'ghost'}
+                                size="icon"
+                                className={cn(
+                                  'h-9 min-w-9',
+                                  item === currentPage && 'pointer-events-none font-semibold',
+                                )}
+                                onClick={() => setPage(item)}
+                                aria-label={`Página ${item}`}
+                                aria-current={item === currentPage ? 'page' : undefined}
+                              >
+                                {item}
+                              </Button>
+                            </PaginationItem>
+                          ),
+                        )}
+                        <PaginationItem>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-9 gap-1 px-2.5"
+                            disabled={currentPage >= totalPages}
+                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                            aria-label="Próxima página"
+                          >
+                            <span className="hidden sm:inline">Próxima</span>
+                            <ChevronRight className="h-4 w-4 shrink-0" />
+                          </Button>
+                        </PaginationItem>
+                      </PaginationContent>
+                      <p className="text-center text-xs text-muted-foreground">
+                        Página {currentPage} de {totalPages} · {filtered.length}{' '}
+                        {filtered.length === 1 ? 'assinatura' : 'assinaturas'}
+                      </p>
+                    </Pagination>
                   </div>
                 ) : null}
               </>
