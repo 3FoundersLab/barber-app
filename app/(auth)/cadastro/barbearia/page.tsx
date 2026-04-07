@@ -4,8 +4,14 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Eye, EyeOff, Scissors } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  ALERT_DEFAULT_AUTO_CLOSE_MS,
+} from '@/components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -43,7 +49,6 @@ export default function CadastroBarbeariaPage() {
     nomeBarbearia: '',
     slug: '',
     telefoneBarbearia: '',
-    enderecoBarbearia: '',
     emailResponsavel: '',
     senha: '',
     confirmarSenha: '',
@@ -148,7 +153,7 @@ export default function CadastroBarbeariaPage() {
           p_telefone: formData.telefoneBarbearia || null,
           p_plano_id: formData.planoId,
           p_email_responsavel: formData.emailResponsavel.trim() || loggedInUser.email || '',
-          p_endereco: formData.enderecoBarbearia || null,
+          p_endereco: null,
         })
 
         if (rpcErrorLogged) {
@@ -228,7 +233,7 @@ export default function CadastroBarbeariaPage() {
         p_telefone: formData.telefoneBarbearia || null,
         p_plano_id: formData.planoId,
         p_email_responsavel: formData.emailResponsavel,
-        p_endereco: formData.enderecoBarbearia || null,
+        p_endereco: null,
       })
 
       if (rpcError) {
@@ -330,19 +335,6 @@ export default function CadastroBarbeariaPage() {
                     disabled={isSubmitting}
                   />
                 </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="enderecoBarbearia">Endereço</Label>
-                  <Input
-                    id="enderecoBarbearia"
-                    placeholder="Rua, numero, bairro, cidade"
-                    value={formData.enderecoBarbearia}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, enderecoBarbearia: e.target.value }))
-                    }
-                    disabled={isSubmitting}
-                  />
-                </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -419,14 +411,38 @@ export default function CadastroBarbeariaPage() {
                         <button
                           key={plano.id}
                           type="button"
+                          role="radio"
+                          aria-checked={isSelected}
                           onClick={() => setFormData((prev) => ({ ...prev, planoId: plano.id }))}
-                          className={`rounded-xl border p-4 text-left transition ${
-                            isSelected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/60'
-                          }`}
+                          className={cn(
+                            'relative rounded-xl border-2 p-4 pt-5 text-left transition-all duration-200',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                            isSelected
+                              ? 'border-emerald-500 bg-emerald-50 shadow-md shadow-emerald-600/15 ring-2 ring-emerald-500/25 dark:border-emerald-400 dark:bg-emerald-950/50 dark:shadow-emerald-900/30 dark:ring-emerald-400/20'
+                              : 'border-border bg-card hover:border-emerald-500/40 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20',
+                          )}
                           disabled={isSubmitting}
                         >
-                          <p className="font-semibold">{plano.nome}</p>
-                          <p className="text-sm text-muted-foreground">{formatCurrency(plano.preco_mensal)} / mes</p>
+                          <span
+                            className={cn(
+                              'absolute right-3 top-3 flex size-8 items-center justify-center rounded-full border-2 transition-colors',
+                              isSelected
+                                ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm dark:border-emerald-400 dark:bg-emerald-500'
+                                : 'border-muted-foreground/30 bg-muted/30',
+                            )}
+                            aria-hidden
+                          >
+                            {isSelected ? <Check className="size-4 stroke-[3]" /> : null}
+                          </span>
+                          <p className="pr-10 font-semibold text-foreground">{plano.nome}</p>
+                          <p
+                            className={cn(
+                              'pr-10 text-sm',
+                              isSelected ? 'text-emerald-900/80 dark:text-emerald-100/80' : 'text-muted-foreground',
+                            )}
+                          >
+                            {formatCurrency(plano.preco_mensal)} / mes
+                          </p>
                           <ul className="mt-2 space-y-1 text-left text-xs text-muted-foreground">
                             {linhasBeneficiosPlano(plano).length === 0 ? (
                               <li className="list-none text-muted-foreground/80">Sem benefícios listados</li>
@@ -457,14 +473,21 @@ export default function CadastroBarbeariaPage() {
               </div>
 
               {selectedPlan && (
-                <Card className="border-dashed">
-                  <CardContent className="py-3 text-sm text-muted-foreground">
-                    Plano selecionado: <span className="font-medium text-foreground">{selectedPlan.nome}</span> (
-                    {formatCurrency(selectedPlan.preco_mensal)} / mes). Voce sera o administrador/proprietario da
-                    barbearia. Ate o pagamento ser confirmado em Assinaturas, o acesso fica limitado ao dashboard e as
-                    configuracoes; o restante do painel libera apos a aprovacao.
-                  </CardContent>
-                </Card>
+                <Alert variant="success" className="text-left" role="status" aria-live="polite">
+                  <AlertTitle>Plano selecionado</AlertTitle>
+                  <AlertDescription>
+                    <p>
+                      <span className="font-semibold">{selectedPlan.nome}</span>
+                      {' '}
+                      · {formatCurrency(selectedPlan.preco_mensal)} / mes
+                    </p>
+                    <p className="mt-2">
+                      Voce sera o administrador/proprietario da barbearia. Ate o pagamento ser confirmado em
+                      Assinaturas, o acesso fica limitado ao dashboard e as configuracoes; o restante do painel libera
+                      apos a aprovacao.
+                    </p>
+                  </AlertDescription>
+                </Alert>
               )}
 
               {error && (
