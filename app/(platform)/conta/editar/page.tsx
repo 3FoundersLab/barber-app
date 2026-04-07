@@ -76,27 +76,33 @@ export default function SuperEditarPerfilPage() {
 
     setIsSaving(true)
     setError(null)
-    const supabase = createClient()
 
-    const payload = {
-      nome: trimmedNome,
-      telefone: telefone.trim() || null,
-      avatar: avatar.trim() || null,
+    const res = await fetch('/api/platform/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: trimmedNome,
+        telefone: telefone.trim() || null,
+        avatar: avatar.trim() || null,
+      }),
+    })
+
+    const json = (await res.json().catch(() => ({}))) as {
+      error?: string
+      profile?: Profile
     }
 
-    const { data: updated, error: updateError } = await supabase
-      .from('profiles')
-      .update(payload)
-      .eq('id', profile.id)
-      .select('*')
-      .single()
-
-    if (updateError || !updated) {
-      setError('Não foi possível salvar o perfil')
+    if (!res.ok || !json.profile) {
+      setError(
+        typeof json.error === 'string'
+          ? json.error
+          : 'Não foi possível salvar o perfil. Verifique SUPABASE_SERVICE_ROLE_KEY no servidor.',
+      )
       setIsSaving(false)
       return
     }
 
+    const updated = json.profile
     setProfile(updated)
     setProfileCache(profile.id, updated)
     setIsSaving(false)
