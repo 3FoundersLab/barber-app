@@ -250,31 +250,79 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  const { error: delAdminLinksErr } = await admin
-    .from('barbearia_users')
-    .delete()
-    .eq('user_id', userId)
-    .eq('role', 'admin')
+  if (role === 'super_admin') {
+    const { error: delAdminLinksErr } = await admin
+      .from('barbearia_users')
+      .delete()
+      .eq('user_id', userId)
+      .eq('role', 'admin')
 
-  if (delAdminLinksErr) {
-    return NextResponse.json(
-      { error: delAdminLinksErr.message ?? 'Não foi possível atualizar vínculos de administrador.' },
-      { status: 500 },
-    )
-  }
-
-  if (role === 'admin' && barbeariaIds.length > 0) {
-    const rows = barbeariaIds.map((barbearia_id) => ({
-      barbearia_id,
-      user_id: userId,
-      role: 'admin' as const,
-    }))
-    const { error: linkError } = await admin.from('barbearia_users').insert(rows)
-    if (linkError) {
+    if (delAdminLinksErr) {
       return NextResponse.json(
-        { error: linkError.message ?? 'Não foi possível vincular às barbearias.' },
-        { status: 400 },
+        { error: delAdminLinksErr.message ?? 'Não foi possível atualizar vínculos de administrador.' },
+        { status: 500 },
       )
+    }
+  } else if (role === 'admin') {
+    const desired = new Set(barbeariaIds)
+
+    const { data: existingRows, error: selErr } = await admin
+      .from('barbearia_users')
+      .select('id, barbearia_id, role')
+      .eq('user_id', userId)
+
+    if (selErr) {
+      return NextResponse.json(
+        { error: selErr.message ?? 'Não foi possível ler vínculos com barbearias.' },
+        { status: 500 },
+      )
+    }
+
+    const rows = existingRows ?? []
+    const byBarbeariaId = new Map(rows.map((r) => [r.barbearia_id, r]))
+
+    const adminRowIdsToRemove = rows
+      .filter((r) => r.role === 'admin' && !desired.has(r.barbearia_id))
+      .map((r) => r.id)
+
+    if (adminRowIdsToRemove.length > 0) {
+      const { error: delErr } = await admin.from('barbearia_users').delete().in('id', adminRowIdsToRemove)
+      if (delErr) {
+        return NextResponse.json(
+          { error: delErr.message ?? 'Não foi possível atualizar vínculos de administrador.' },
+          { status: 500 },
+        )
+      }
+    }
+
+    for (const barbearia_id of barbeariaIds) {
+      const existing = byBarbeariaId.get(barbearia_id)
+      if (existing) {
+        if (existing.role !== 'admin') {
+          const { error: upErr } = await admin
+            .from('barbearia_users')
+            .update({ role: 'admin' })
+            .eq('id', existing.id)
+          if (upErr) {
+            return NextResponse.json(
+              { error: upErr.message ?? 'Não foi possível definir administrador na barbearia.' },
+              { status: 400 },
+            )
+          }
+        }
+      } else {
+        const { error: insErr } = await admin.from('barbearia_users').insert({
+          barbearia_id,
+          user_id: userId,
+          role: 'admin' as const,
+        })
+        if (insErr) {
+          return NextResponse.json(
+            { error: insErr.message ?? 'Não foi possível vincular às barbearias.' },
+            { status: 400 },
+          )
+        }
+      }
     }
   }
 
