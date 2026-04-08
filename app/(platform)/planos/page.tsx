@@ -83,7 +83,7 @@ export default function SuperPlanosPage() {
         return parsePlanoBeneficios(p.beneficios).some((b) => b.texto.toLowerCase().includes(q))
       })
     }
-    return [...rows].sort((a, b) => (a.preco_mensal ?? 0) - (b.preco_mensal ?? 0))
+    return [...rows].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
   }, [planos, search])
 
   useEffect(() => {
@@ -97,7 +97,7 @@ export default function SuperPlanosPage() {
     const { data, error: queryError } = await supabase
       .from('planos')
       .select('*')
-      .order('preco_mensal')
+      .order('nome', { ascending: true })
 
     if (queryError) {
       setError('Não foi possível carregar os planos')

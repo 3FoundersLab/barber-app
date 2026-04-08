@@ -185,7 +185,7 @@ export default function CadastroBarbeariaPage() {
       .from('planos')
       .select('*')
       .eq('ativo', true)
-      .order('preco_mensal', { ascending: true })
+      .order('nome', { ascending: true })
 
     if (queryError) {
       setError('Nao foi possivel carregar os planos')

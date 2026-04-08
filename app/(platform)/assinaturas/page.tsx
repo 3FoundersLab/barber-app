@@ -210,13 +210,36 @@ const PLANO_BADGE_PALETTE = [
   'rounded-full border-transparent bg-rose-100 text-rose-950 dark:bg-rose-950/50 dark:text-rose-100',
   'rounded-full border-transparent bg-cyan-100 text-cyan-950 dark:bg-cyan-950/50 dark:text-cyan-100',
   'rounded-full border-transparent bg-amber-100 text-amber-950 dark:bg-amber-950/50 dark:text-amber-100',
+  'rounded-full border-transparent bg-emerald-100 text-emerald-950 dark:bg-emerald-950/50 dark:text-emerald-100',
 ] as const
 
-function planoBadgeClass(planoId: string | undefined) {
-  if (!planoId) return 'rounded-full border-transparent bg-muted text-muted-foreground'
+const PLANO_BADGE_MUTED = 'rounded-full border-transparent bg-muted text-muted-foreground'
+
+function normalizePlanoNomeKey(nome: string) {
+  return nome
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .trim()
+}
+
+function hashString(s: string) {
   let h = 0
-  for (let i = 0; i < planoId.length; i++) h = (h + planoId.charCodeAt(i) * (i + 1)) % 997
-  return PLANO_BADGE_PALETTE[h % PLANO_BADGE_PALETTE.length]
+  for (let i = 0; i < s.length; i++) h = (h + s.charCodeAt(i) * (i + 1)) % 997
+  return h
+}
+
+/** Cores estáveis por tipo de plano (evita colisão do hash de UUID). Fallback: hash do nome. */
+function planoBadgeClass(plano: Pick<Plano, 'nome'> | null | undefined) {
+  if (!plano?.nome?.trim()) return PLANO_BADGE_MUTED
+  const k = normalizePlanoNomeKey(plano.nome)
+  if (k.includes('enterprise')) return PLANO_BADGE_PALETTE[4]
+  if (k.includes('premium')) return PLANO_BADGE_PALETTE[2]
+  if (k.includes('profissional') || k.includes('professional')) return PLANO_BADGE_PALETTE[1]
+  if (k.includes('standard')) return PLANO_BADGE_PALETTE[3]
+  if (k.includes('plus')) return PLANO_BADGE_PALETTE[5]
+  if (k.includes('basico') || k.includes('basic')) return PLANO_BADGE_PALETTE[0]
+  return PLANO_BADGE_PALETTE[hashString(plano.nome) % PLANO_BADGE_PALETTE.length]
 }
 
 function PlanoBadge({ plano }: { plano?: Plano | null }) {
@@ -224,7 +247,7 @@ function PlanoBadge({ plano }: { plano?: Plano | null }) {
     return <span className="text-muted-foreground">—</span>
   }
   return (
-    <Badge variant="outline" className={cn('border-0 font-medium', planoBadgeClass(plano.id))}>
+    <Badge variant="outline" className={cn('border-0 font-medium', planoBadgeClass(plano))}>
       {plano.nome}
     </Badge>
   )
