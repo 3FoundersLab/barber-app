@@ -1,31 +1,13 @@
 'use client'
 
-import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
 import type { ReactNode } from 'react'
-import { ChevronRight, Headphones, Instagram, Linkedin, Mail, ShieldCheck } from 'lucide-react'
+import { Headphones, Instagram, Linkedin, Mail, ShieldCheck } from 'lucide-react'
 import { LandingAmbientMotes } from '@/components/landing/landing-ambient-motes'
 import { AppBrandLogo } from '@/components/shared/app-brand-logo'
-import { LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
-import { landingContainer } from '@/components/landing/landing-classes'
+import { LANDING_SECTIONS } from '@/components/landing/constants'
 import { LANDING_EASE, LANDING_VIEWPORT, staggerContainer, staggerItem } from '@/lib/landing-motion'
 import { cn } from '@/lib/utils'
-
-const footerNavPrimary = [
-  { label: 'Início', href: `#${LANDING_SECTIONS.top}` },
-  { label: 'Problema', href: `#${LANDING_SECTIONS.problema}` },
-  { label: 'Solução', href: `#${LANDING_SECTIONS.solucao}` },
-  { label: 'Benefícios', href: `#${LANDING_SECTIONS.beneficios}` },
-  { label: 'Funcionalidades', href: `#${LANDING_SECTIONS.funcionalidades}` },
-]
-
-const footerNavSecondary = [
-  { label: 'Prova social', href: `#${LANDING_SECTIONS.provaSocial}` },
-  { label: 'Como funciona', href: `#${LANDING_SECTIONS.comoFunciona}` },
-  { label: 'Planos', href: `#${LANDING_SECTIONS.planos}` },
-  { label: 'Entrar', href: LANDING_LINKS.login },
-  { label: 'Cadastro', href: LANDING_LINKS.cadastro },
-]
 
 const social = [
   { label: 'Instagram', href: 'https://instagram.com', icon: Instagram },
@@ -33,34 +15,23 @@ const social = [
   { label: 'E-mail', href: 'mailto:contato@barberapp.com.br', icon: Mail },
 ] as const
 
-function FooterSectionTitle({ children }: { children: ReactNode }) {
-  return (
-    <div className="mb-6 flex items-center gap-2.5">
-      <span className="h-px w-6 shrink-0 bg-gradient-to-r from-cyan-400/50 to-transparent" aria-hidden />
-      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">{children}</p>
-    </div>
-  )
-}
+const footerContainer =
+  'relative z-10 mx-auto w-full max-w-7xl px-5 sm:px-8 lg:px-14 xl:px-16 2xl:px-20'
 
-function FooterLink({ href, children }: { href: string; children: ReactNode }) {
+function FooterSectionTitle({ children, align = 'start' }: { children: ReactNode; align?: 'start' | 'end' }) {
+  if (align === 'end') {
+    return (
+      <div className="mb-2 flex min-h-[0.875rem] items-center justify-start gap-2 lg:justify-end">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{children}</p>
+        <span className="h-px w-4 shrink-0 bg-gradient-to-l from-cyan-400/50 to-transparent" aria-hidden />
+      </div>
+    )
+  }
   return (
-    <Link
-      href={href}
-      className="group flex items-center gap-2 py-0.5 text-sm text-zinc-400 transition-colors duration-300 hover:text-zinc-100"
-    >
-      <ChevronRight
-        className="size-3.5 shrink-0 text-cyan-500/0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-0.5 group-hover:text-cyan-400/90"
-        strokeWidth={2}
-        aria-hidden
-      />
-      <span className="relative inline-block">
-        {children}
-        <span
-          className="absolute -bottom-px left-0 h-px w-full origin-left scale-x-0 bg-gradient-to-r from-cyan-400/80 to-cyan-400/20 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-x-100"
-          aria-hidden
-        />
-      </span>
-    </Link>
+    <div className="mb-2 flex min-h-[0.875rem] items-center gap-2">
+      <span className="h-px w-4 shrink-0 bg-gradient-to-r from-cyan-400/50 to-transparent" aria-hidden />
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{children}</p>
+    </div>
   )
 }
 
@@ -110,156 +81,143 @@ export function LandingFooter() {
         transition={{ duration: 9.5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
       />
 
-      <div className={`${landingContainer} relative z-10`}>
+      <div className={footerContainer}>
         <h2 id="landing-footer-heading" className="sr-only">
           Rodapé BarberApp
         </h2>
 
         <motion.div
-          className="grid gap-16 pt-20 pb-12 md:gap-y-16 md:pt-24 md:pb-14 lg:grid-cols-12 lg:gap-x-12 lg:gap-y-16 xl:gap-x-16"
+          className="grid gap-8 pt-12 pb-6 sm:gap-y-9 sm:pt-14 sm:pb-7 md:pt-16 md:pb-7 lg:grid-cols-2 lg:items-start lg:gap-x-12 lg:gap-y-0 lg:pt-[3.75rem] lg:pb-8 xl:gap-x-16"
           variants={staggerContainer}
           initial={reduceMotion ? 'visible' : 'hidden'}
           whileInView={reduceMotion ? undefined : 'visible'}
           viewport={LANDING_VIEWPORT}
         >
-          <motion.div variants={staggerItem} className="lg:col-span-5 xl:col-span-5">
+          <motion.div variants={staggerItem} className="flex min-w-0 flex-col lg:max-w-[min(100%,26rem)]">
             <motion.div
-              className="relative inline-block"
+              className="inline-block"
               whileHover={reduceMotion ? undefined : { scale: 1.01 }}
               transition={{ type: 'spring', stiffness: 400, damping: 28 }}
             >
-              <div
-                className="pointer-events-none absolute -inset-3 rounded-2xl bg-gradient-to-br from-cyan-500/[0.08] via-transparent to-orange-500/[0.06] blur-xl"
-                aria-hidden
+              <AppBrandLogo
+                href={`#${LANDING_SECTIONS.top}`}
+                textClassName="text-lg font-semibold tracking-tight text-white sm:text-xl"
+                className="inline-flex gap-2.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
               />
-              <div className="relative rounded-2xl border border-white/[0.08] bg-zinc-950/80 p-4 pr-5 shadow-[0_0_0_1px_rgba(255,255,255,0.03)] backdrop-blur-sm transition-[border-color,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-cyan-400/15 hover:shadow-[0_0_48px_-16px_rgba(34,211,238,0.12)]">
-                <AppBrandLogo
-                  href={`#${LANDING_SECTIONS.top}`}
-                  textClassName="text-lg font-semibold tracking-tight text-white sm:text-xl"
-                  className="inline-flex gap-2.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
-                />
-                <p className="mt-3 max-w-[16rem] text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
-                  Gestão · agenda · caixa
-                </p>
-              </div>
             </motion.div>
 
-            <p className="mt-8 max-w-md text-[15px] leading-relaxed text-zinc-400 sm:text-base">
+            <p className="mt-4 max-w-[24rem] text-[15px] leading-[1.58] text-zinc-400 sm:mt-[1.125rem] sm:leading-[1.62]">
               Software de gestão para barbearia: grade, ficha do cliente e caixa na mesma tela. Menos improviso na
               bancada e mais corte pago no fechamento.
             </p>
 
-            <div className="mt-8">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.03] px-4 py-2 text-xs font-medium leading-snug text-zinc-400 shadow-sm transition-[border-color,background-color,box-shadow] duration-300 hover:border-cyan-400/20 hover:bg-cyan-500/[0.04]">
-                <ShieldCheck className="size-4 shrink-0 text-cyan-400/85" aria-hidden />
-                Dados e operação pensados para o dia a dia da bancada
+            <div className="mt-4 w-full min-w-0 sm:mt-[1.125rem] sm:w-fit sm:shrink-0">
+              <span className="inline-flex w-full max-w-full items-start gap-2 rounded-full border border-white/[0.07] bg-white/[0.03] px-3.5 py-2 text-left text-[11px] font-medium leading-[1.5] text-zinc-400 shadow-sm transition-[border-color,background-color,box-shadow] duration-300 hover:border-cyan-400/20 hover:bg-cyan-500/[0.04] sm:w-auto sm:items-center sm:gap-2.5 sm:px-4 sm:py-2 sm:text-xs sm:leading-snug md:whitespace-nowrap">
+                <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-cyan-400/85 sm:mt-0 sm:size-4" aria-hidden />
+                <span className="min-w-0 sm:whitespace-nowrap">
+                  Dados e operação pensados para o dia a dia da bancada
+                </span>
               </span>
             </div>
           </motion.div>
 
           <motion.div
             variants={staggerItem}
-            className="grid gap-12 sm:grid-cols-2 sm:gap-10 lg:col-span-4 lg:grid-cols-2 lg:gap-8 xl:col-span-4"
+            className="flex min-w-0 flex-col items-stretch lg:items-end"
           >
-            <div className="sm:border-l sm:border-white/[0.06] sm:pl-8">
-              <FooterSectionTitle>Navegação</FooterSectionTitle>
-              <ul className="flex flex-col gap-3.5">
-                {footerNavPrimary.map((l) => (
-                  <li key={l.href}>
-                    <FooterLink href={l.href}>{l.label}</FooterLink>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="sm:border-l sm:border-white/[0.06] sm:pl-8">
-              <FooterSectionTitle>Produto</FooterSectionTitle>
-              <ul className="flex flex-col gap-3.5">
-                {footerNavSecondary.map((l) => (
-                  <li key={l.href}>
-                    <FooterLink href={l.href}>{l.label}</FooterLink>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </motion.div>
-
-          <motion.div variants={staggerItem} className="lg:col-span-3 xl:col-span-3">
-            <FooterSectionTitle>Contato & suporte</FooterSectionTitle>
-            <div className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.05] to-white/[0.02] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] backdrop-blur-sm transition-[border-color,box-shadow] duration-300 hover:border-white/[0.1]">
-              <a
-                href="mailto:contato@barberapp.com.br"
-                className="group flex items-start gap-3 text-sm text-zinc-200 transition-colors hover:text-white"
-              >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-500/[0.08] text-cyan-300 transition-[transform,border-color,background-color] duration-300 group-hover:scale-105 group-hover:border-cyan-400/35 group-hover:bg-cyan-500/[0.12]">
-                  <Mail className="size-[1.05rem]" strokeWidth={1.75} aria-hidden />
-                </span>
-                <span className="min-w-0 pt-1.5">
-                  <span className="block text-xs font-medium uppercase tracking-wider text-zinc-500">E-mail</span>
-                  <span className="relative mt-1 block font-medium text-zinc-100">
-                    contato@barberapp.com.br
-                    <span
-                      className="absolute -bottom-0.5 left-0 h-px w-full origin-left scale-x-0 bg-gradient-to-r from-cyan-400/70 to-transparent transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-x-100"
-                      aria-hidden
-                    />
+            <div className="flex w-full max-w-full flex-col lg:ml-auto lg:w-fit lg:max-w-[min(100%,20.5rem)]">
+              <FooterSectionTitle align="end">Contato & suporte</FooterSectionTitle>
+              <div className="w-full max-w-full min-w-0 rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.025] p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] backdrop-blur-sm transition-[border-color,box-shadow] duration-300 hover:border-white/[0.12] sm:min-w-[18.75rem] sm:p-[1.125rem] md:min-w-[19.5rem] md:px-5 md:py-[1.125rem]">
+                <a
+                  href="mailto:contato@barberapp.com.br"
+                  className="group flex w-full min-w-0 items-center gap-3 text-zinc-200 transition-colors hover:text-white sm:gap-3.5"
+                >
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-cyan-400/25 bg-cyan-500/[0.1] text-cyan-300 transition-[transform,border-color,background-color] duration-300 group-hover:scale-[1.03] group-hover:border-cyan-400/40 group-hover:bg-cyan-500/[0.14]">
+                    <Mail className="size-4" strokeWidth={1.75} aria-hidden />
                   </span>
-                </span>
-              </a>
-              <p className="mt-5 flex items-start gap-2.5 border-t border-white/[0.06] pt-4 text-xs leading-relaxed text-zinc-500">
-                <Headphones className="mt-0.5 size-4 shrink-0 text-zinc-600" strokeWidth={1.75} aria-hidden />
-                Resposta por e-mail em horário comercial.
-              </p>
-            </div>
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                      E-mail
+                    </span>
+                    <span className="relative mt-1 block text-[14px] font-medium leading-snug tracking-tight text-zinc-50 sm:text-[15px] sm:leading-[1.5]">
+                      <span className="md:hidden">
+                        contato@<wbr />
+                        barberapp.com.br
+                      </span>
+                      <span className="hidden md:inline md:whitespace-nowrap">contato@barberapp.com.br</span>
+                      <span
+                        className="absolute -bottom-0.5 left-0 h-px w-full max-w-full origin-left scale-x-0 bg-gradient-to-r from-cyan-400/70 to-transparent transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-x-100"
+                        aria-hidden
+                      />
+                    </span>
+                  </span>
+                </a>
+                <p className="mt-3.5 flex items-start gap-2 border-t border-white/[0.08] pt-3.5 text-[13px] leading-[1.5] text-zinc-500">
+                  <Headphones className="mt-px size-4 shrink-0 text-zinc-500" strokeWidth={1.75} aria-hidden />
+                  Resposta por e-mail em horário comercial.
+                </p>
+              </div>
 
-            <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">Redes</p>
-            <ul className="mt-4 flex flex-wrap gap-3">
-              {social.map(({ label, href, icon: Icon }) => (
-                <li key={label}>
-                  <motion.a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={label}
-                    className={cn(
-                      'group/social relative inline-flex size-[3.25rem] items-center justify-center rounded-full',
-                      'border border-white/[0.1] bg-white/[0.04] text-zinc-400',
-                      'shadow-[0_2px_12px_-4px_rgba(0,0,0,0.5)]',
-                      'transition-[color,border-color,background-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
-                      'hover:border-cyan-400/30 hover:bg-gradient-to-br hover:from-cyan-500/15 hover:to-teal-600/10 hover:text-cyan-100 hover:shadow-[0_8px_32px_-8px_rgba(34,211,238,0.2)]',
-                    )}
-                    whileHover={reduceMotion ? undefined : { y: -3 }}
-                    whileTap={reduceMotion ? undefined : { scale: 0.94 }}
-                    transition={{ type: 'spring', stiffness: 380, damping: 22 }}
-                  >
-                    <span
-                      className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition-opacity duration-300 group-hover/social:opacity-100"
-                      style={{
-                        background:
-                          'radial-gradient(circle at 50% 0%, rgba(34,211,238,0.15), transparent 65%)',
-                      }}
-                      aria-hidden
-                    />
-                    <Icon className="relative size-[1.2rem]" strokeWidth={1.65} aria-hidden />
-                  </motion.a>
-                </li>
-              ))}
-            </ul>
+              <div className="mt-4 border-t border-white/[0.06] pt-4 lg:flex lg:flex-col lg:items-end">
+                <div className="mb-2 flex items-center justify-start gap-2 lg:justify-end lg:w-full">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Redes</p>
+                  <span className="h-px w-4 shrink-0 bg-gradient-to-l from-cyan-400/40 to-transparent" aria-hidden />
+                </div>
+                <ul className="flex flex-wrap gap-2 justify-start lg:justify-end">
+                  {social.map(({ label, href, icon: Icon }) => (
+                    <li key={label}>
+                      <motion.a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={label}
+                        className={cn(
+                          'group/social relative inline-flex size-10 items-center justify-center rounded-full',
+                          'border border-white/[0.1] bg-white/[0.04] text-zinc-400',
+                          'shadow-[0_2px_10px_-4px_rgba(0,0,0,0.45)]',
+                          'transition-[color,border-color,background-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
+                          'hover:border-cyan-400/30 hover:bg-gradient-to-br hover:from-cyan-500/15 hover:to-teal-600/10 hover:text-cyan-100 hover:shadow-[0_6px_28px_-8px_rgba(34,211,238,0.18)]',
+                        )}
+                        whileHover={reduceMotion ? undefined : { y: -1.5 }}
+                        whileTap={reduceMotion ? undefined : { scale: 0.94 }}
+                        transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+                      >
+                        <span
+                          className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition-opacity duration-300 group-hover/social:opacity-100"
+                          style={{
+                            background:
+                              'radial-gradient(circle at 50% 0%, rgba(34,211,238,0.15), transparent 65%)',
+                          }}
+                          aria-hidden
+                        />
+                        <Icon className="relative size-[1.05rem]" strokeWidth={1.65} aria-hidden />
+                      </motion.a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </motion.div>
         </motion.div>
 
         <motion.div
-          className="border-t border-white/[0.06] bg-gradient-to-b from-transparent to-zinc-950/80 py-10 md:py-11"
+          className="border-t border-white/[0.06] bg-gradient-to-b from-transparent to-zinc-950/80 py-3.5 md:py-4"
           initial={reduceMotion ? false : { opacity: 0 }}
           whileInView={reduceMotion ? undefined : { opacity: 1 }}
           viewport={LANDING_VIEWPORT}
           transition={{ duration: 0.5, ease: LANDING_EASE, delay: 0.06 }}
         >
-          <div className="flex flex-col items-center justify-between gap-6 md:flex-row md:items-end">
-            <p className="text-center text-[13px] text-zinc-500 md:text-left">
-              © {new Date().getFullYear()}{' '}
-              <span className="font-medium text-zinc-400">BarberApp</span>. Todos os direitos reservados.
+          <div className="flex w-full flex-col items-center justify-center gap-2.5 text-center lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:text-left">
+            <p className="text-[13px] leading-snug text-zinc-500 lg:shrink-0">
+              <span className="lg:whitespace-nowrap">
+                © {new Date().getFullYear()}{' '}
+                <span className="font-medium text-zinc-400">BarberApp</span>. Todos os direitos reservados.
+              </span>
             </p>
-            <p className="max-w-md text-center text-xs leading-relaxed text-zinc-600 md:text-right">
-              Feito para donos e equipes que vivem a tesoura, com produto em evolução contínua.
+            <p className="text-xs leading-[1.65] text-zinc-600 lg:shrink-0 lg:text-right lg:leading-snug">
+              <span className="lg:whitespace-nowrap">
+                Feito para donos e equipes que vivem a tesoura, com produto em evolução contínua.
+              </span>
             </p>
           </div>
         </motion.div>
