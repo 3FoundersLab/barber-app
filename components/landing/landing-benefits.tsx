@@ -39,7 +39,7 @@ const blocks: BenefitBlock[] = [
   },
   {
     title: 'Controle financeiro simplificado',
-    lead: 'Saiba quanto entrou e onde está o lucro — sem abrir dez planilhas no domingo à noite.',
+    lead: 'Saiba quanto entrou e onde está o lucro, sem abrir dez planilhas no domingo à noite.',
     bullets: [
       'Corte, barba, Pix e mensalista separados: você vê de onde veio cada real.',
       'Pico da semana e vales no radar: ajuste preço e meta com clareza.',
@@ -63,7 +63,7 @@ const blocks: BenefitBlock[] = [
   },
   {
     title: 'Crescimento e escala',
-    lead: 'Veja o que puxa resultado e repita no próximo mês — contratar ou abrir outra unidade com número na mão.',
+    lead: 'Veja o que puxa resultado e repita no próximo mês, com base para contratar ou abrir outra unidade com número na mão.',
     bullets: [
       'Sinais claros de horário cheio, serviço forte e equipe no limite.',
       'Base para escalar: processo repetível em vez de “jeitinho” de cada um.',
@@ -75,7 +75,7 @@ const blocks: BenefitBlock[] = [
   },
   {
     title: 'Relatórios e inteligência do negócio',
-    lead: 'Pare de decidir no feeling: veja padrões de agenda, ticket e recorrência — e aja antes do problema aparecer no caixa.',
+    lead: 'Pare de decidir no feeling: veja padrões de agenda, ticket e recorrência, e aja antes do problema aparecer no caixa.',
     bullets: [
       'Leitura rápida do que vende, o que enche a grade e o que pode sair de promo.',
       'Histórico que vira previsão: sazonalidade e hábito do cliente na mesma tela.',
@@ -351,7 +351,7 @@ export function LandingBenefits() {
             Benefícios e soluções para sua barbearia crescer
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-zinc-400 sm:text-lg">
-            Navegue pelos destaques: cada slide é um capítulo da operação — da organização à inteligência do negócio.
+            Navegue pelos destaques: cada slide é um capítulo da operação, da organização à inteligência do negócio.
           </p>
         </motion.header>
 
