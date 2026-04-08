@@ -1,12 +1,13 @@
 'use client'
 
+import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
 import type { ReactNode } from 'react'
 import { Headphones, Instagram, Linkedin, Mail, ShieldCheck } from 'lucide-react'
 import { LandingAmbientMotes } from '@/components/landing/landing-ambient-motes'
 import { AppBrandLogo } from '@/components/shared/app-brand-logo'
 import { LANDING_SECTIONS } from '@/components/landing/constants'
-import { LANDING_EASE, LANDING_VIEWPORT, staggerContainer, staggerItem } from '@/lib/landing-motion'
+import { LANDING_VIEWPORT, staggerContainer, staggerItem } from '@/lib/landing-motion'
 import { cn } from '@/lib/utils'
 
 const social = [
@@ -111,7 +112,27 @@ export function LandingFooter() {
               bancada e mais corte pago no fechamento.
             </p>
 
-            <div className="mt-4 w-full min-w-0 sm:mt-[1.125rem] sm:w-fit sm:shrink-0">
+            <nav className="mt-4 sm:mt-[1.125rem]" aria-label="Informações legais">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-left text-[11px] font-medium leading-snug text-zinc-500 sm:text-[12px]">
+                <Link
+                  href="#"
+                  className="rounded-sm transition-colors duration-300 hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/35 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                >
+                  Termos de uso
+                </Link>
+                <span className="select-none text-zinc-600/70" aria-hidden>
+                  ·
+                </span>
+                <Link
+                  href="#"
+                  className="rounded-sm transition-colors duration-300 hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/35 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                >
+                  Política de privacidade
+                </Link>
+              </div>
+            </nav>
+
+            <div className="mt-3.5 w-full min-w-0 sm:mt-4 sm:w-fit sm:shrink-0">
               <span className="inline-flex w-full max-w-full items-start gap-2 rounded-full border border-white/[0.07] bg-white/[0.03] px-3.5 py-2 text-left text-[11px] font-medium leading-[1.5] text-zinc-400 shadow-sm transition-[border-color,background-color,box-shadow] duration-300 hover:border-cyan-400/20 hover:bg-cyan-500/[0.04] sm:w-auto sm:items-center sm:gap-2.5 sm:px-4 sm:py-2 sm:text-xs sm:leading-snug md:whitespace-nowrap">
                 <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-cyan-400/85 sm:mt-0 sm:size-4" aria-hidden />
                 <span className="min-w-0 sm:whitespace-nowrap">
@@ -200,13 +221,7 @@ export function LandingFooter() {
           </motion.div>
         </motion.div>
 
-        <motion.div
-          className="border-t border-white/[0.06] bg-gradient-to-b from-transparent to-zinc-950/80 py-3.5 md:py-4"
-          initial={reduceMotion ? false : { opacity: 0 }}
-          whileInView={reduceMotion ? undefined : { opacity: 1 }}
-          viewport={LANDING_VIEWPORT}
-          transition={{ duration: 0.5, ease: LANDING_EASE, delay: 0.06 }}
-        >
+        <div className="border-t border-white/[0.06] bg-gradient-to-b from-transparent to-zinc-950/80 py-3.5 md:py-4">
           <div className="flex w-full flex-col items-center justify-center gap-2.5 text-center lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:text-left">
             <p className="text-[13px] leading-snug text-zinc-500 lg:shrink-0">
               <span className="lg:whitespace-nowrap">
@@ -220,7 +235,7 @@ export function LandingFooter() {
               </span>
             </p>
           </div>
-        </motion.div>
+        </div>
       </div>
     </footer>
   )
