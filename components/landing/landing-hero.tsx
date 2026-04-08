@@ -23,7 +23,7 @@ function DashboardMockup() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                  Visão geral
+                  Painel · sua barbearia
                 </p>
                 <p className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">Hoje na unidade</p>
               </div>
@@ -72,23 +72,24 @@ export function LandingHero() {
     >
       <div className="mx-auto grid max-w-6xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-[1fr_minmax(0,1.05fr)] lg:gap-20 lg:px-8">
         <div className="animate-in fade-in slide-in-from-bottom-3 duration-700" style={{ animationFillMode: 'both' }}>
-          <p className="mb-5 inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-3.5 py-1.5 text-xs font-semibold text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-            Plataforma de gestão para barbearias
+          <p className="mb-4 inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-3.5 py-1.5 text-xs font-semibold text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            Para donos e gestores de barbearia
           </p>
-          <h1 className="text-balance text-4xl font-bold tracking-tight text-zinc-900 sm:text-5xl sm:leading-[1.08] lg:text-[3.35rem] lg:leading-[1.06] dark:text-white">
-            Gerencie sua barbearia com mais lucro e menos esforço
+          <h1 className="text-balance text-4xl font-bold tracking-tight text-zinc-900 sm:text-5xl sm:leading-[1.06] lg:text-[3.25rem] lg:leading-[1.05] dark:text-white">
+            Controle sua barbearia e aumente seu faturamento em poucos cliques
           </h1>
-          <p className="mt-6 max-w-xl text-pretty text-lg leading-relaxed text-zinc-600 sm:text-xl dark:text-zinc-400">
-            Agenda, clientes, financeiro e assinaturas em um painel único. Menos improviso na bancada, mais previsão
-            no caixa.
+          <p className="mt-5 max-w-xl text-pretty text-base leading-snug text-zinc-600 sm:text-lg dark:text-zinc-400">
+            <span className="font-semibold text-zinc-900 dark:text-zinc-100">BarberApp</span> é software na web: você
+            cadastra a unidade e administra agenda da equipe, clientes e caixa no mesmo painel, em tempo real — sem
+            planilha e sem depender só do WhatsApp para organizar o dia.
           </p>
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <Button
               asChild
               size="lg"
               className="h-12 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-8 text-base font-semibold text-white shadow-lg shadow-amber-500/30 transition hover:scale-[1.02] hover:from-amber-600 hover:to-orange-700 hover:text-white active:scale-[0.98]"
             >
-              <Link href={LANDING_LINKS.cadastro}>Começar agora</Link>
+              <Link href={LANDING_LINKS.cadastro}>Começar grátis</Link>
             </Button>
             <Button
               asChild
@@ -96,11 +97,11 @@ export function LandingHero() {
               size="lg"
               className="h-12 rounded-xl border-zinc-300 bg-white/80 text-base font-medium text-zinc-800 backdrop-blur hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900/80 dark:text-zinc-100 dark:hover:bg-zinc-800"
             >
-              <Link href={`#${LANDING_SECTIONS.funcionalidades}`}>Ver o que está incluso</Link>
+              <Link href={`#${LANDING_SECTIONS.funcionalidades}`}>O que o sistema faz</Link>
             </Button>
           </div>
-          <p className="mt-6 text-sm text-zinc-500 dark:text-zinc-500">
-            Cadastro em poucos minutos · Interface em português
+          <p className="mt-5 text-sm text-zinc-500 dark:text-zinc-500">
+            Cadastro rápido · Tudo em português · Menos caos na operação
           </p>
         </div>
         <DashboardMockup />
