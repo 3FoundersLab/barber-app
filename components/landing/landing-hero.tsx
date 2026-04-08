@@ -96,7 +96,10 @@ export function LandingHero() {
               asChild
               variant="ghost"
               size="lg"
-              className={cn('h-14 rounded-xl px-9 text-base', landingPrimaryCtaClass)}
+              className={cn(
+                'h-14 px-8 text-sm leading-tight sm:px-10 sm:text-base',
+                landingPrimaryCtaClass,
+              )}
             >
               <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.primary}</Link>
             </Button>
@@ -104,12 +107,12 @@ export function LandingHero() {
               asChild
               variant="ghost"
               size="lg"
-              className={cn('h-14 rounded-xl px-7 text-base', landingTrialCtaClass)}
+              className={cn('h-14 px-7 text-sm sm:px-8 sm:text-base', landingTrialCtaClass)}
             >
               <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.trial}</Link>
             </Button>
           </div>
-          <p className="mt-2 text-center text-[11px] font-bold uppercase tracking-wide text-orange-800/90 sm:text-left dark:text-amber-300/90">
+          <p className="mt-6 text-center text-[11px] font-bold uppercase tracking-wide leading-relaxed text-orange-800/90 sm:text-left dark:text-amber-300/90">
             {LANDING_CTA.urgencyBanner}
           </p>
           <Link

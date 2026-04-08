@@ -17,6 +17,9 @@ export const LANDING_LINKS = {
 /** Copy dos CTAs — tom de bancada; alinhar à oferta real (trial, cartão, etc.). */
 export const LANDING_CTA = {
   primary: 'Abrir minha conta agora',
+  /** Atalho no header (pílula, estilo SaaS). */
+  navPrimary: 'Começar grátis',
+  navSecondary: 'Já sou cliente',
   trial: 'Testar 7 dias grátis',
   urgency: 'Só cadastro · em dois minutos você já marca horário',
   urgencyBanner: 'Quem entra agora monta a grade antes do fim do mês',

@@ -27,15 +27,18 @@ export function landingCardClass(interactive = false) {
   )
 }
 
-/** CTA principal: alto contraste, sombra forte, bom alvo de toque. */
+/**
+ * CTA principal — mesmo padrão do header: laranja sólido #ea580c, pílula, sem gradiente.
+ * Combine com h-11 | h-12 | h-14 e text-xs | text-sm conforme o bloco.
+ */
 export const landingPrimaryCtaClass = cn(
-  'border-0 bg-gradient-to-b from-amber-400 via-amber-500 to-orange-700 font-bold text-white shadow-[0_4px_18px_rgba(194,65,12,0.5),inset_0_1px_0_rgba(255,255,255,0.28)] ring-2 ring-orange-900/35',
-  'hover:from-amber-500 hover:via-orange-500 hover:to-orange-800 hover:text-white hover:shadow-[0_6px_24px_rgba(194,65,12,0.55)]',
-  'active:scale-[0.98] active:brightness-95',
+  'rounded-full border-0 bg-[#ea580c] font-bold text-white shadow-sm',
+  'hover:bg-[#d94e08] hover:text-white active:scale-[0.98]',
+  'dark:bg-orange-600 dark:hover:bg-orange-500',
 )
 
-/** CTA secundário (trial) — contorno forte, ainda legível em fundo claro. */
+/** CTA secundário — pílula com borda escura (alinhado ao “Já sou cliente” do header). */
 export const landingTrialCtaClass = cn(
-  'border-2 border-orange-600 bg-white font-bold text-orange-800 shadow-sm',
-  'hover:bg-orange-50 hover:text-orange-900 dark:border-amber-500 dark:bg-zinc-950 dark:text-amber-100 dark:hover:bg-zinc-900',
+  'rounded-full border-2 border-zinc-900 bg-white font-bold text-zinc-900 shadow-none',
+  'hover:bg-zinc-50 dark:border-zinc-100 dark:bg-transparent dark:text-zinc-100 dark:hover:bg-zinc-800',
 )

@@ -7,6 +7,7 @@ import {
   landingContainer,
   landingEyebrow,
   landingPrimaryCtaClass,
+  landingTrialCtaClass,
   landingSectionLead,
   landingSectionTitle,
   landingSectionY,
@@ -126,10 +127,11 @@ export function LandingPricing() {
                 asChild
                 variant={tier.name === 'Empresarial' ? 'outline' : 'ghost'}
                 className={cn(
-                  'mt-10 h-12 w-full rounded-xl text-sm font-bold transition hover:scale-[1.01] active:scale-[0.99]',
-                  tier.name !== 'Empresarial' && landingPrimaryCtaClass,
+                  'mt-10 h-12 w-full text-sm font-bold transition hover:scale-[1.01] active:scale-[0.99]',
+                  tier.name === 'Essencial' && landingPrimaryCtaClass,
+                  tier.name === 'Profissional' && landingTrialCtaClass,
                   tier.name === 'Empresarial' &&
-                    'border-2 border-zinc-400 bg-white text-zinc-900 shadow-sm hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-900',
+                    'rounded-full border-2 border-zinc-400 bg-white text-zinc-900 shadow-sm hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-900',
                 )}
               >
                 <Link href={tier.href}>{tier.cta}</Link>

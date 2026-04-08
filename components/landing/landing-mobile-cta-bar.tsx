@@ -16,7 +16,9 @@ export function LandingMobileCtaBar() {
       <Button asChild variant="ghost" className={cn('h-12 w-full text-base', landingPrimaryCtaClass)}>
         <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.primary}</Link>
       </Button>
-      <p className="mt-1.5 text-center text-[10px] font-medium text-zinc-500 dark:text-zinc-400">{LANDING_CTA.urgency}</p>
+      <p className="mt-2.5 text-center text-[10px] font-medium leading-snug text-zinc-500 dark:text-zinc-400">
+        {LANDING_CTA.urgency}
+      </p>
     </div>
   )
 }

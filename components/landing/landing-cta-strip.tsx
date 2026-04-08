@@ -26,7 +26,7 @@ export function LandingCtaStrip({ headline, className }: LandingCtaStripProps) {
         <p className="max-w-xl text-pretty text-center text-base font-semibold leading-snug text-zinc-950 sm:text-left sm:text-lg dark:text-white">
           {headline}
         </p>
-        <div className="flex w-full flex-col items-center gap-1.5 sm:w-auto sm:shrink-0 sm:items-end">
+        <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:shrink-0 sm:items-end">
           <Button
             asChild
             variant="ghost"
@@ -35,7 +35,7 @@ export function LandingCtaStrip({ headline, className }: LandingCtaStripProps) {
           >
             <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.primary}</Link>
           </Button>
-          <span className="text-center text-[11px] font-semibold uppercase tracking-wide text-orange-900/80 dark:text-amber-200/90 sm:text-right">
+          <span className="mt-0.5 text-center text-[11px] font-semibold uppercase leading-snug tracking-wide text-orange-900/80 dark:text-amber-200/90 sm:text-right">
             {LANDING_CTA.urgency}
           </span>
         </div>

@@ -1,7 +1,12 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { LANDING_CTA, LANDING_LINKS } from '@/components/landing/constants'
-import { landingContainer, landingSectionYCompact } from '@/components/landing/landing-classes'
+import {
+  landingContainer,
+  landingPrimaryCtaClass,
+  landingSectionYCompact,
+  landingTrialCtaClass,
+} from '@/components/landing/landing-classes'
 import { cn } from '@/lib/utils'
 
 export function LandingCta() {
@@ -35,19 +40,19 @@ export function LandingCta() {
             <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
               <Button
                 asChild
+                variant="ghost"
                 size="lg"
-                className={cn(
-                  'h-14 min-w-[220px] rounded-xl bg-white px-10 text-base font-bold text-orange-950 shadow-lg ring-2 ring-amber-400/60 hover:bg-amber-50 hover:text-orange-950',
-                )}
+                className={cn('h-14 min-w-[220px] px-10 text-base', landingPrimaryCtaClass)}
               >
                 <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.primary}</Link>
               </Button>
               <Button
                 asChild
+                variant="ghost"
                 size="lg"
-                variant="outline"
                 className={cn(
-                  'h-14 rounded-xl border-2 border-white/90 bg-transparent px-8 text-base font-bold text-white hover:bg-white/15 hover:text-white',
+                  'h-14 border-white/90 bg-transparent px-8 text-base text-white hover:bg-white/15 hover:text-white dark:border-white/90',
+                  landingTrialCtaClass,
                 )}
               >
                 <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.trial}</Link>
