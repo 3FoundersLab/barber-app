@@ -77,7 +77,7 @@ export function LandingHeroFloatingCard({
             className={cn(
               'group/card max-w-[9.65rem] rounded-xl border px-2.5 py-2 backdrop-blur-[12px] sm:max-w-[11.25rem] sm:px-3.5 sm:py-3',
               onDarkSurface
-                ? 'border-white/[0.14] bg-white/[0.78] shadow-[0_20px_48px_-16px_rgba(0,0,0,0.55)] ring-1 ring-cyan-400/[0.06]'
+                ? 'border-zinc-200/90 bg-white/[0.94] shadow-[0_20px_48px_-16px_rgba(0,0,0,0.55)] ring-1 ring-zinc-950/[0.06]'
                 : 'border-white/55 bg-white/72 shadow-[0_14px_36px_-12px_rgba(15,23,42,0.18)] ring-1 ring-zinc-950/[0.05]',
               !onDarkSurface &&
                 'dark:border-white/[0.14] dark:bg-zinc-950/58 dark:shadow-[0_18px_44px_-14px_rgba(0,0,0,0.55)] dark:ring-white/[0.06]',
@@ -90,18 +90,33 @@ export function LandingHeroFloatingCard({
             <div className="flex items-start gap-2.5">
               <span
                 className={cn(
-                  'flex size-8 shrink-0 items-center justify-center rounded-lg bg-cyan-500/12 text-cyan-700 ring-1 ring-cyan-500/20 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] md:group-hover/card:scale-110 md:group-hover/card:-rotate-6',
-                  'dark:bg-cyan-400/12 dark:text-cyan-300 dark:ring-cyan-400/25',
+                  'flex size-8 shrink-0 items-center justify-center rounded-lg ring-1 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] md:group-hover/card:scale-110 md:group-hover/card:-rotate-6',
+                  onDarkSurface
+                    ? 'bg-cyan-500/15 text-cyan-800 ring-cyan-600/30'
+                    : cn(
+                        'bg-cyan-500/12 text-cyan-700 ring-cyan-500/20',
+                        'dark:bg-cyan-400/12 dark:text-cyan-300 dark:ring-cyan-400/25',
+                      ),
                 )}
               >
                 <Icon className="size-4" aria-hidden />
               </span>
               <div className="min-w-0 pt-0.5">
-                <p className="text-[11px] font-semibold leading-tight tracking-tight text-zinc-950 sm:text-xs dark:text-white">
+                <p
+                  className={cn(
+                    'text-[11px] font-semibold leading-tight tracking-tight sm:text-xs',
+                    onDarkSurface ? 'text-zinc-900' : 'text-zinc-950 dark:text-white',
+                  )}
+                >
                   {title}
                 </p>
                 {subtitle ? (
-                  <p className="mt-0.5 text-[10px] leading-snug text-zinc-600 sm:text-[11px] dark:text-zinc-400">
+                  <p
+                    className={cn(
+                      'mt-0.5 text-[10px] leading-snug sm:text-[11px]',
+                      onDarkSurface ? 'text-zinc-600' : 'text-zinc-600 dark:text-zinc-400',
+                    )}
+                  >
                     {subtitle}
                   </p>
                 ) : null}

@@ -20,12 +20,21 @@ const FOOTER_MOTES: Mote[] = [
   { x: '15%', y: '70%', size: 1.5, duration: 5.2, delay: 0.8, blur: 1 },
 ]
 
+const LOGIN_MOTES: Mote[] = [
+  { x: '12%', y: '18%', size: 2.5, duration: 5.4, delay: 0, blur: 2 },
+  { x: '88%', y: '28%', size: 2, duration: 6.2, delay: 0.4, blur: 2 },
+  { x: '72%', y: '72%', size: 2.5, duration: 5.8, delay: 0.9, blur: 2 },
+  { x: '38%', y: '58%', size: 1.5, duration: 5, delay: 1.2, blur: 1 },
+  { x: '52%', y: '12%', size: 2, duration: 6.5, delay: 0.2, blur: 2 },
+]
+
 /**
  * Pontos de luz mínimos (só opacity + leve scale): custo baixo, efeito premium.
  */
-export function LandingAmbientMotes({ preset }: { preset: 'cta' | 'footer' }) {
+export function LandingAmbientMotes({ preset }: { preset: 'cta' | 'footer' | 'login' }) {
   const reduceMotion = useReducedMotion() === true
-  const motes = preset === 'cta' ? CTA_MOTES : FOOTER_MOTES
+  const motes =
+    preset === 'cta' ? CTA_MOTES : preset === 'footer' ? FOOTER_MOTES : LOGIN_MOTES
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
