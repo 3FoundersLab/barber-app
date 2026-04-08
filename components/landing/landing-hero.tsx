@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
-import { landingContainer } from '@/components/landing/landing-classes'
+import { LANDING_CTA, LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
+import { landingContainer, landingPrimaryCtaClass, landingTrialCtaClass } from '@/components/landing/landing-classes'
+import { cn } from '@/lib/utils'
 
 function DashboardMockup() {
   return (
@@ -90,25 +91,35 @@ export function LandingHero() {
             dinheiro num só lugar. Você vê o dia inteiro em segundos — no celular ou no computador. Chega de planilha e
             de Zap virar agenda oficial.
           </p>
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
             <Button
               asChild
+              variant="ghost"
               size="lg"
-              className="h-12 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-8 text-base font-semibold text-white shadow-lg shadow-amber-500/25 transition hover:scale-[1.02] hover:from-amber-600 hover:to-orange-700 hover:text-white active:scale-[0.98]"
+              className={cn('h-14 rounded-xl px-9 text-base', landingPrimaryCtaClass)}
             >
-              <Link href={LANDING_LINKS.cadastro}>Começar grátis</Link>
+              <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.primary}</Link>
             </Button>
             <Button
               asChild
-              variant="outline"
+              variant="ghost"
               size="lg"
-              className="h-12 rounded-xl border-zinc-300/90 bg-white/90 text-base font-medium text-zinc-800 shadow-sm backdrop-blur hover:bg-white dark:border-zinc-600 dark:bg-zinc-900/90 dark:text-zinc-100 dark:hover:bg-zinc-900"
+              className={cn('h-14 rounded-xl px-7 text-base', landingTrialCtaClass)}
             >
-              <Link href={`#${LANDING_SECTIONS.funcionalidades}`}>O que eu ganho com isso</Link>
+              <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.trial}</Link>
             </Button>
           </div>
-          <p className="mt-6 text-sm font-medium text-zinc-500 dark:text-zinc-500">
-            Leva minutos pra começar · 100% em português · Menos correria, mais lucro
+          <p className="mt-2 text-center text-[11px] font-bold uppercase tracking-wide text-orange-800/90 sm:text-left dark:text-amber-300/90">
+            {LANDING_CTA.urgencyBanner}
+          </p>
+          <Link
+            href={`#${LANDING_SECTIONS.funcionalidades}`}
+            className="mt-5 inline-block text-sm font-semibold text-zinc-500 underline-offset-4 transition hover:text-zinc-800 hover:underline dark:text-zinc-400 dark:hover:text-zinc-200"
+          >
+            Ver o que muda na prática →
+          </Link>
+          <p className="mt-5 text-sm font-medium text-zinc-500 dark:text-zinc-500">
+            100% em português · Menos correria, mais lucro
           </p>
         </div>
         <DashboardMockup />

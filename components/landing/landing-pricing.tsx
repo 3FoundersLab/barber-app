@@ -1,11 +1,12 @@
 import Link from 'next/link'
 import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
+import { LANDING_CTA, LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
 import {
   landingCardClass,
   landingContainer,
   landingEyebrow,
+  landingPrimaryCtaClass,
   landingSectionLead,
   landingSectionTitle,
   landingSectionY,
@@ -35,7 +36,7 @@ const tiers: Tier[] = [
       'Cliente com histórico guardado',
       'Dúvida? Fala com a gente por e-mail',
     ],
-    cta: 'Quero começar',
+    cta: LANDING_CTA.primary,
     href: LANDING_LINKS.cadastro,
   },
   {
@@ -51,7 +52,7 @@ const tiers: Tier[] = [
       'Suporte na frente da fila',
     ],
     highlighted: true,
-    cta: 'Quero crescer',
+    cta: LANDING_CTA.trial,
     href: LANDING_LINKS.cadastro,
   },
   {
@@ -123,19 +124,22 @@ export function LandingPricing() {
               </ul>
               <Button
                 asChild
+                variant={tier.name === 'Empresarial' ? 'outline' : 'ghost'}
                 className={cn(
-                  'mt-10 h-11 w-full rounded-xl text-sm font-semibold transition hover:scale-[1.01] active:scale-[0.99]',
-                  tier.highlighted
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/20 hover:from-amber-600 hover:to-orange-700 hover:text-white'
-                    : '',
+                  'mt-10 h-12 w-full rounded-xl text-sm font-bold transition hover:scale-[1.01] active:scale-[0.99]',
+                  tier.name !== 'Empresarial' && landingPrimaryCtaClass,
+                  tier.name === 'Empresarial' &&
+                    'border-2 border-zinc-400 bg-white text-zinc-900 shadow-sm hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-900',
                 )}
-                variant={tier.highlighted ? 'default' : 'outline'}
               >
                 <Link href={tier.href}>{tier.cta}</Link>
               </Button>
             </div>
           ))}
         </div>
+        <p className="mt-12 text-center text-sm font-medium text-zinc-600 dark:text-zinc-400">
+          {LANDING_CTA.urgency} · {LANDING_CTA.urgencyBanner}
+        </p>
       </div>
     </section>
   )

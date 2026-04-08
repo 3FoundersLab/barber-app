@@ -26,3 +26,16 @@ export function landingCardClass(interactive = false) {
       'duration-300 hover:border-zinc-300 hover:shadow-md dark:hover:border-zinc-700 dark:hover:shadow-lg dark:hover:shadow-black/20',
   )
 }
+
+/** CTA principal: alto contraste, sombra forte, bom alvo de toque. */
+export const landingPrimaryCtaClass = cn(
+  'border-0 bg-gradient-to-b from-amber-400 via-amber-500 to-orange-700 font-bold text-white shadow-[0_4px_18px_rgba(194,65,12,0.5),inset_0_1px_0_rgba(255,255,255,0.28)] ring-2 ring-orange-900/35',
+  'hover:from-amber-500 hover:via-orange-500 hover:to-orange-800 hover:text-white hover:shadow-[0_6px_24px_rgba(194,65,12,0.55)]',
+  'active:scale-[0.98] active:brightness-95',
+)
+
+/** CTA secundário (trial) — contorno forte, ainda legível em fundo claro. */
+export const landingTrialCtaClass = cn(
+  'border-2 border-orange-600 bg-white font-bold text-orange-800 shadow-sm',
+  'hover:bg-orange-50 hover:text-orange-900 dark:border-amber-500 dark:bg-zinc-950 dark:text-amber-100 dark:hover:bg-zinc-900',
+)

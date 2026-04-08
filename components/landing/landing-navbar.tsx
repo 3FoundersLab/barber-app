@@ -6,16 +6,15 @@ import { Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { AppBrandLogo } from '@/components/shared/app-brand-logo'
-import { LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
-import { landingContainer } from '@/components/landing/landing-classes'
+import { LANDING_CTA, LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
+import { landingContainer, landingPrimaryCtaClass } from '@/components/landing/landing-classes'
 
 const navClass =
-  'text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
+  'text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-950 dark:text-zinc-500 dark:hover:text-white'
 
 const links = [
   { href: `#${LANDING_SECTIONS.desafios}`, label: 'Desafios' },
   { href: `#${LANDING_SECTIONS.beneficios}`, label: 'Benefícios' },
-  { href: `#${LANDING_SECTIONS.funcionalidades}`, label: 'Funcionalidades' },
   { href: `#${LANDING_SECTIONS.comoFunciona}`, label: 'Como funciona' },
   { href: `#${LANDING_SECTIONS.planos}`, label: 'Planos' },
 ] as const
@@ -43,20 +42,17 @@ export function LandingNavbar() {
           </Link>
           <Button
             asChild
+            variant="ghost"
             size="sm"
-            className="h-9 shrink-0 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-md shadow-amber-500/20 hover:from-amber-600 hover:to-orange-700 hover:text-white"
+            className={cn('h-10 shrink-0 rounded-lg px-4 text-sm', landingPrimaryCtaClass)}
           >
-            <Link href={LANDING_LINKS.cadastro}>Começar grátis</Link>
+            <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.primary}</Link>
           </Button>
         </nav>
 
         <div className="flex items-center gap-2 lg:hidden">
-          <Button
-            asChild
-            size="sm"
-            className="rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 hover:text-white"
-          >
-            <Link href={LANDING_LINKS.cadastro}>Começar grátis</Link>
+          <Button asChild variant="ghost" size="sm" className={cn('rounded-lg text-sm', landingPrimaryCtaClass)}>
+            <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.primary}</Link>
           </Button>
           <button
             type="button"
