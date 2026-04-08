@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, useReducedMotion } from 'framer-motion'
-import { Banknote, CalendarPlus, Eye, EyeOff, UserCheck } from 'lucide-react'
+import { ArrowLeft, Banknote, CalendarPlus, Eye, EyeOff, UserCheck } from 'lucide-react'
 import { LoginLandingShell } from '@/components/auth/login-landing-shell'
 import { LandingHeroFloatingCard } from '@/components/landing/landing-hero-floating-card'
 import { LANDING_LINKS } from '@/components/landing/constants'
@@ -181,8 +181,9 @@ function LoginPageContent() {
           >
             <Link
               href="/"
-              className="text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-zinc-100"
+              className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-zinc-100"
             >
+              <ArrowLeft className="size-4 shrink-0" aria-hidden />
               Voltar ao site
             </Link>
           </motion.div>
