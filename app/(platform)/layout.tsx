@@ -1,6 +1,6 @@
 'use client'
 
-import { Building2, CreditCard, LayoutDashboard, Ticket, Users } from 'lucide-react'
+import { Building2, CreditCard, DollarSign, LayoutDashboard, Ticket, Users } from 'lucide-react'
 import { BottomTabs, type TabItem } from '@/components/shared/bottom-tabs'
 import { SuperDrawer } from '@/components/shared/super-drawer'
 import { DesktopSidebar } from '@/components/shared/desktop-sidebar'
@@ -13,6 +13,7 @@ const superTabs: TabItem[] = [
   { label: 'Barbearias', href: PLATFORM_PATHS.barbearias, icon: Building2 },
   { label: 'Usuários', href: PLATFORM_PATHS.usuarios, icon: Users },
   { label: 'Planos', href: PLATFORM_PATHS.planos, icon: Ticket },
+  { label: 'Financeiro', href: PLATFORM_PATHS.financeiro, icon: DollarSign },
   { label: 'Assinaturas', href: PLATFORM_PATHS.assinaturas, icon: CreditCard },
 ]
 

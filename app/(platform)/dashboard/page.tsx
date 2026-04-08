@@ -14,6 +14,7 @@ import { SuperDashboardChartsSection } from '@/components/super/super-dashboard-
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatCurrency } from '@/lib/constants'
+import { fetchSuperMrrAtual } from '@/lib/mrr'
 import { createClient } from '@/lib/supabase/client'
 
 interface SuperStats {
@@ -45,19 +46,11 @@ export default function SuperDashboardPage() {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'ativa')
 
-      const { data: assinaturasAtivas, error: assinaturasError } = await supabase
-        .from('assinaturas')
-        .select('status, plano:planos(preco_mensal)')
-        .eq('status', 'ativa')
+      const { mrr: receitaMensal, error: mrrError } = await fetchSuperMrrAtual(supabase)
 
-      if (assinaturasError) {
+      if (mrrError) {
         setError('Não foi possível carregar métricas de assinaturas')
       }
-
-      const receitaMensal = (assinaturasAtivas || []).reduce((acc, assinatura) => {
-        const plano = Array.isArray(assinatura.plano) ? assinatura.plano[0] : assinatura.plano
-        return acc + (plano?.preco_mensal || 0)
-      }, 0)
 
       setStats({
         totalBarbearias: barbeariasCount || 0,

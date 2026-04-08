@@ -1,19 +1,30 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { AppointmentCard } from '@/components/domain/appointment-card'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AppointmentListSkeleton } from '@/components/shared/loading-skeleton'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { tenantBarbeariaBasePath } from '@/lib/routes'
+import { formatCurrency } from '@/lib/constants'
 import type { Agendamento, AppointmentStatus, PaymentStatus } from '@/types'
+
+function formatDateHeading(dateKey: string): string {
+  const d = new Date(`${dateKey}T12:00:00`)
+  return new Intl.DateTimeFormat('pt-BR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(d)
+}
 
 type AtendimentoFilter = AppointmentStatus | 'todos'
 type PagamentoFilter = PaymentStatus | 'todos'
@@ -114,12 +125,84 @@ export default function AdminFinanceiroPage() {
     loadAgendamentos()
   }
 
+  const financeSummary = useMemo(() => {
+    let recebido = 0
+    let pendente = 0
+    for (const a of agendamentos) {
+      if (a.status_pagamento === 'pago') recebido += Number(a.valor) || 0
+      else pendente += Number(a.valor) || 0
+    }
+    return {
+      recebido,
+      pendente,
+      itens: agendamentos.length,
+    }
+  }, [agendamentos])
+
+  const groupedByDate = useMemo(() => {
+    const byDay = new Map<string, Agendamento[]>()
+    for (const a of agendamentos) {
+      const list = byDay.get(a.data) ?? []
+      list.push(a)
+      byDay.set(a.data, list)
+    }
+    const order: string[] = []
+    const seen = new Set<string>()
+    for (const a of agendamentos) {
+      if (!seen.has(a.data)) {
+        seen.add(a.data)
+        order.push(a.data)
+      }
+    }
+    return order.map((dateKey) => ({
+      dateKey,
+      items: byDay.get(dateKey) ?? [],
+    }))
+  }, [agendamentos])
+
   return (
     <PageContainer>
-      <AppPageHeader title="Financeiro" profileHref={`${base}/configuracoes`} avatarFallback="A" />
+      <AppPageHeader
+        title="Financeiro"
+        subtitle="Histórico de pagamentos por atendimento"
+        profileHref={`${base}/configuracoes`}
+        avatarFallback="A"
+      />
 
       <PageContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-2">
+        {!isLoading && !error && agendamentos.length > 0 ? (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2 pt-4">
+                <CardTitle className="text-xs font-medium text-muted-foreground">Recebido (lista)</CardTitle>
+              </CardHeader>
+              <CardContent className="pb-4 pt-0">
+                <p className="text-lg font-semibold text-success">{formatCurrency(financeSummary.recebido)}</p>
+                <p className="text-xs text-muted-foreground">Soma dos itens com status Pago</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2 pt-4">
+                <CardTitle className="text-xs font-medium text-muted-foreground">Pendente (lista)</CardTitle>
+              </CardHeader>
+              <CardContent className="pb-4 pt-0">
+                <p className="text-lg font-semibold text-warning-foreground">{formatCurrency(financeSummary.pendente)}</p>
+                <p className="text-xs text-muted-foreground">Ainda não marcado como pago</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2 pt-4">
+                <CardTitle className="text-xs font-medium text-muted-foreground">Atendimentos</CardTitle>
+              </CardHeader>
+              <CardContent className="pb-4 pt-0">
+                <p className="text-lg font-semibold">{financeSummary.itens}</p>
+                <p className="text-xs text-muted-foreground">Com os filtros atuais</p>
+              </CardContent>
+            </Card>
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Tabs
             value={atendimentoFilter}
             onValueChange={(value) => setAtendimentoFilter(value as AtendimentoFilter)}
@@ -156,14 +239,23 @@ export default function AdminFinanceiroPage() {
         ) : isLoading ? (
           <AppointmentListSkeleton count={4} />
         ) : agendamentos.length > 0 ? (
-          <div className="space-y-3">
-            {agendamentos.map((agendamento) => (
-              <AppointmentCard
-                key={agendamento.id}
-                appointment={agendamento}
-                showActions
-                onMarkPaid={handleMarkPaid}
-              />
+          <div className="space-y-6">
+            {groupedByDate.map(({ dateKey, items }) => (
+              <section key={dateKey} className="space-y-3">
+                <h2 className="border-b pb-1 text-sm font-semibold capitalize text-foreground">
+                  {formatDateHeading(dateKey)}
+                </h2>
+                <div className="space-y-3">
+                  {items.map((agendamento) => (
+                    <AppointmentCard
+                      key={agendamento.id}
+                      appointment={agendamento}
+                      showActions
+                      onMarkPaid={handleMarkPaid}
+                    />
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         ) : (

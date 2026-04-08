@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Building2, CreditCard, LayoutDashboard, Menu, Ticket, Users } from 'lucide-react'
+import { Building2, CreditCard, DollarSign, LayoutDashboard, Menu, Ticket, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
@@ -14,6 +14,7 @@ const superLinks = [
   { label: 'Barbearias', href: PLATFORM_PATHS.barbearias, icon: Building2 },
   { label: 'Usuários', href: PLATFORM_PATHS.usuarios, icon: Users },
   { label: 'Planos', href: PLATFORM_PATHS.planos, icon: Ticket },
+  { label: 'Financeiro', href: PLATFORM_PATHS.financeiro, icon: DollarSign },
   { label: 'Assinaturas', href: PLATFORM_PATHS.assinaturas, icon: CreditCard },
 ]
 

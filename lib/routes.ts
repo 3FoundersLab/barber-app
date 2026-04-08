@@ -6,6 +6,7 @@ export const PLATFORM_PATHS = {
   barbearias: '/barbearias',
   usuarios: '/usuarios',
   planos: '/planos',
+  financeiro: '/financeiro',
   assinaturas: '/assinaturas',
   conta: '/conta',
   contaEditar: '/conta/editar',
@@ -59,6 +60,7 @@ const PLATFORM_PREFIXES = [
   PLATFORM_PATHS.barbearias,
   PLATFORM_PATHS.usuarios,
   PLATFORM_PATHS.planos,
+  PLATFORM_PATHS.financeiro,
   PLATFORM_PATHS.assinaturas,
   PLATFORM_PATHS.conta,
 ]
