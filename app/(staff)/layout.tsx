@@ -21,7 +21,6 @@ export default function BarbeiroLayout({
     <>
       <div className="md:flex md:min-h-screen md:bg-muted/20">
         <DesktopSidebar title="Painel Barbeiro" tabs={barbeiroTabs} />
-        <div className="hidden md:block md:w-64 md:shrink-0" />
         <div className="min-w-0 flex-1">
           <AppPageHeadingProvider>{children}</AppPageHeadingProvider>
         </div>

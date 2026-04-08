@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { AppBrandLogo } from '@/components/shared/app-brand-logo'
 import { LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
 
 const navClass =
@@ -16,16 +17,11 @@ export function LandingNavbar() {
   return (
     <header className="fixed top-0 z-50 w-full border-b border-zinc-200/80 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/80">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <Link
+        <AppBrandLogo
           href={`#${LANDING_SECTIONS.top}`}
-          className="flex items-center gap-2 font-semibold tracking-tight text-zinc-900 dark:text-white"
+          textClassName="text-zinc-900 dark:text-white"
           onClick={() => setOpen(false)}
-        >
-          <span className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-sm font-bold text-white shadow-sm">
-            B
-          </span>
-          <span>BarberApp</span>
-        </Link>
+        />
 
         <nav className="hidden items-center gap-8 md:flex" aria-label="Principal">
           <Link href={`#${LANDING_SECTIONS.top}`} className={navClass}>

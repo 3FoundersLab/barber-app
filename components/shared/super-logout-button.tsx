@@ -10,9 +10,11 @@ import { cn } from '@/lib/utils'
 type SuperLogoutButtonProps = {
   variant?: 'nav' | 'button'
   className?: string
+  /** Ícone centralizado (sidebar recolhido) */
+  compact?: boolean
 }
 
-export function SuperLogoutButton({ variant = 'button', className }: SuperLogoutButtonProps) {
+export function SuperLogoutButton({ variant = 'button', className, compact }: SuperLogoutButtonProps) {
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -27,13 +29,16 @@ export function SuperLogoutButton({ variant = 'button', className }: SuperLogout
       <button
         type="button"
         onClick={handleLogout}
+        title={compact ? 'Sair' : undefined}
+        aria-label={compact ? 'Sair' : undefined}
         className={cn(
-          'flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+          'flex w-full items-center gap-2 rounded-md text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+          compact ? 'justify-center px-2 py-2.5' : 'px-3 py-2',
           className
         )}
       >
-        <LogOut className="h-4 w-4" />
-        Sair
+        <LogOut className="h-4 w-4 shrink-0" />
+        {compact ? <span className="sr-only">Sair</span> : 'Sair'}
       </button>
     )
   }

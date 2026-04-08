@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Instagram, Linkedin, Mail } from 'lucide-react'
+import { AppBrandLogo } from '@/components/shared/app-brand-logo'
 import { LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
 
 const footerLinks = [
@@ -22,12 +23,11 @@ export function LandingFooter() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
           <div>
-            <Link href={`#${LANDING_SECTIONS.top}`} className="flex items-center gap-2 font-semibold text-zinc-900 dark:text-white">
-              <span className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-sm font-bold text-white">
-                B
-              </span>
-              BarberApp
-            </Link>
+            <AppBrandLogo
+              href={`#${LANDING_SECTIONS.top}`}
+              textClassName="text-zinc-900 dark:text-white"
+              className="inline-flex"
+            />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
               Gestão completa para barbearias modernas. Feito para quem corta bem e quer vender melhor.
             </p>

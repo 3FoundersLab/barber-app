@@ -109,7 +109,6 @@ export default function AdminSlugLayout({ children }: { children: React.ReactNod
       <AdminDrawer basePath={base} limitedNav={pagamentoPendenteAdmin} />
       <div className="md:flex md:min-h-screen md:bg-muted/20">
         <DesktopSidebar title="Painel Admin" tabs={adminTabs} />
-        <div className="hidden md:block md:w-64 md:shrink-0" />
         <div className="min-w-0 flex-1">
           <AppPageHeadingProvider>{children}</AppPageHeadingProvider>
         </div>

@@ -6,6 +6,7 @@ import { Building2, CreditCard, DollarSign, LayoutDashboard, Menu, Ticket, Users
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
+import { AppBrandLogo } from '@/components/shared/app-brand-logo'
 import { PLATFORM_PATHS } from '@/lib/routes'
 import { SuperLogoutButton } from '@/components/shared/super-logout-button'
 
@@ -34,8 +35,10 @@ export function SuperDrawer() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-[280px] gap-0 p-0">
-        <SheetHeader className="border-b">
-          <SheetTitle>Painel Super Admin</SheetTitle>
+        <SheetHeader className="border-b px-4 py-4">
+          <SheetTitle asChild className="text-left">
+            <AppBrandLogo href={PLATFORM_PATHS.dashboard} />
+          </SheetTitle>
         </SheetHeader>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">

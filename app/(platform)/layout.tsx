@@ -26,8 +26,13 @@ export default function SuperLayout({
     <>
       <SuperDrawer />
       <div className="md:flex md:min-h-screen md:bg-muted/20">
-        <DesktopSidebar title="Painel Super Admin" tabs={superTabs} footer={<SuperLogoutButton />} />
-        <div className="hidden md:block md:w-64 md:shrink-0" />
+        <DesktopSidebar
+          appBrand={{ href: PLATFORM_PATHS.dashboard, collapsible: true }}
+          tabs={superTabs}
+          footer={({ collapsed }) =>
+            collapsed ? <SuperLogoutButton variant="nav" compact /> : <SuperLogoutButton />
+          }
+        />
         <div className="min-w-0 flex-1">
           <AppPageHeadingProvider>{children}</AppPageHeadingProvider>
         </div>
