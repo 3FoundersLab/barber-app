@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -190,19 +191,15 @@ function ContatoBarbeariaBlock({
     )
   }
   return (
-    <div className="inline-flex max-w-full min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-1.5">
-      <p
-        className="min-w-0 max-w-[min(100%,14rem)] truncate text-xs text-muted-foreground sm:max-w-[min(100%,20rem)]"
-        title={email ?? undefined}
-      >
-        {email ?? '—'}
-      </p>
+    <div className="inline-flex max-w-full min-w-0 items-center">
       {wa ? (
         <a href={wa} target="_blank" rel="noopener noreferrer" className={waLinkTableClass}>
           <MessageCircle className="h-3.5 w-3.5" />
           WhatsApp
         </a>
-      ) : null}
+      ) : (
+        <span className="text-xs text-muted-foreground">—</span>
+      )}
     </div>
   )
 }
@@ -247,6 +244,30 @@ function statusBadgeClass(status: AssinaturaStatus) {
   }
 }
 
+function periodicidadeBadgeClass(p: PlanoPeriodicidade) {
+  switch (p) {
+    case 'mensal':
+      return 'rounded-full border-transparent bg-slate-100 text-slate-800 dark:bg-slate-900/50 dark:text-slate-200'
+    case 'trimestral':
+      return 'rounded-full border-transparent bg-sky-100 text-sky-950 dark:bg-sky-950/50 dark:text-sky-100'
+    case 'semestral':
+      return 'rounded-full border-transparent bg-violet-100 text-violet-950 dark:bg-violet-950/50 dark:text-violet-100'
+    case 'anual':
+      return 'rounded-full border-transparent bg-teal-100 text-teal-950 dark:bg-teal-950/50 dark:text-teal-100'
+    default:
+      return 'rounded-full border-transparent bg-muted text-muted-foreground'
+  }
+}
+
+function PeriodicidadeBadge({ periodicidade }: { periodicidade: string | null | undefined }) {
+  const p = parsePlanoPeriodicidade(periodicidade)
+  return (
+    <Badge variant="outline" className={cn('border-0 font-medium', periodicidadeBadgeClass(p))}>
+      {labelPeriodicidade(p)}
+    </Badge>
+  )
+}
+
 export default function SuperAssinaturasPage() {
   const router = useRouter()
   const [assinaturas, setAssinaturas] = useState<Assinatura[]>([])
@@ -255,8 +276,12 @@ export default function SuperAssinaturasPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
-  const [rejectTarget, setRejectTarget] = useState<Assinatura | null>(null)
+  const [bulkConfirming, setBulkConfirming] = useState(false)
+  const [rejectState, setRejectState] = useState<
+    { type: 'single'; assinatura: Assinatura } | { type: 'bulk'; ids: string[] } | null
+  >(null)
   const [rejectSubmitting, setRejectSubmitting] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [error, setError] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [barbeariaComboOpen, setBarbeariaComboOpen] = useState(false)
@@ -334,6 +359,30 @@ export default function SuperAssinaturasPage() {
     setIsLoading(false)
   }
 
+  const pendenteIdSet = useMemo(() => {
+    const s = new Set<string>()
+    for (const a of assinaturas) {
+      if (a.status === 'pendente') s.add(a.id)
+    }
+    return s
+  }, [assinaturas])
+
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      const next = new Set<string>()
+      for (const id of prev) {
+        if (pendenteIdSet.has(id)) next.add(id)
+      }
+      if (next.size === prev.size) {
+        for (const id of prev) {
+          if (!next.has(id)) return next
+        }
+        return prev
+      }
+      return next
+    })
+  }, [pendenteIdSet])
+
   async function handleCreate() {
     if (!form.barbearia_id || !form.plano_id || !form.inicio_em || !form.fim_em.trim()) return
     setIsSaving(true)
@@ -380,25 +429,64 @@ export default function SuperAssinaturasPage() {
     if (updateError) {
       setError('Não foi possível confirmar o pagamento')
     } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(assinaturaId)
+        return next
+      })
       loadData()
     }
     setConfirmingId(null)
   }
 
-  async function handleRejeitarAssinatura() {
-    if (!rejectTarget) return
-    setRejectSubmitting(true)
+  async function handleBulkConfirmar() {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    setBulkConfirming(true)
     setError(null)
     const supabase = createClient()
     const { error: updateError } = await supabase
       .from('assinaturas')
-      .update({ status: 'cancelada' })
-      .eq('id', rejectTarget.id)
+      .update({ status: 'ativa' })
+      .in('id', ids)
 
     if (updateError) {
-      setError('Não foi possível rejeitar a assinatura')
+      setError('Não foi possível confirmar os pagamentos selecionados')
     } else {
-      setRejectTarget(null)
+      setSelectedIds(new Set())
+      loadData()
+    }
+    setBulkConfirming(false)
+  }
+
+  async function handleRejeitarAssinatura() {
+    if (!rejectState) return
+    setRejectSubmitting(true)
+    setError(null)
+    const supabase = createClient()
+    const ids =
+      rejectState.type === 'single' ? [rejectState.assinatura.id] : rejectState.ids
+    const { error: updateError } = await supabase
+      .from('assinaturas')
+      .update({ status: 'cancelada' })
+      .in('id', ids)
+
+    if (updateError) {
+      setError(
+        rejectState.type === 'bulk'
+          ? 'Não foi possível rejeitar as assinaturas selecionadas'
+          : 'Não foi possível rejeitar a assinatura',
+      )
+    } else {
+      setRejectState(null)
+      setSelectedIds((prev) => {
+        if (rejectState.type === 'single') {
+          const next = new Set(prev)
+          next.delete(rejectState.assinatura.id)
+          return next
+        }
+        return new Set()
+      })
       loadData()
     }
     setRejectSubmitting(false)
@@ -510,6 +598,15 @@ export default function SuperAssinaturasPage() {
     return filtered.slice(start, start + pageSize)
   }, [filtered, currentPage, pageSize])
 
+  const paginatedPendente = useMemo(
+    () => paginated.filter((a) => a.status === 'pendente'),
+    [paginated],
+  )
+  const allPagePendenteSelected =
+    paginatedPendente.length > 0 && paginatedPendente.every((a) => selectedIds.has(a.id))
+  const somePagePendenteSelected = paginatedPendente.some((a) => selectedIds.has(a.id))
+  const selectedCount = selectedIds.size
+
   const pageItems = useMemo(
     () => (totalPages > 0 ? pageNumberItems(currentPage, totalPages) : []),
     [currentPage, totalPages],
@@ -522,7 +619,13 @@ export default function SuperAssinaturasPage() {
   function rowActionsBusy(assinatura: Assinatura) {
     return (
       confirmingId === assinatura.id ||
-      (rejectSubmitting && rejectTarget?.id === assinatura.id) ||
+      (bulkConfirming && selectedIds.has(assinatura.id)) ||
+      (rejectSubmitting &&
+        rejectState?.type === 'single' &&
+        rejectState.assinatura.id === assinatura.id) ||
+      (rejectSubmitting &&
+        rejectState?.type === 'bulk' &&
+        rejectState.ids.includes(assinatura.id)) ||
       (editSaving && editTarget?.id === assinatura.id)
     )
   }
@@ -551,7 +654,7 @@ export default function SuperAssinaturasPage() {
             variant="outline"
             className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
             disabled={busy}
-            onClick={() => setRejectTarget(assinatura)}
+            onClick={() => setRejectState({ type: 'single', assinatura })}
           >
             <X className="mr-1.5 h-4 w-4" />
             Rejeitar
@@ -736,6 +839,47 @@ export default function SuperAssinaturasPage() {
               </Select>
             </div>
 
+            {selectedCount > 0 ? (
+              <div className="flex flex-col gap-2 rounded-lg border border-border/80 bg-muted/30 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">{selectedCount}</span>{' '}
+                  {selectedCount === 1 ? 'assinatura selecionada' : 'assinaturas selecionadas'} (pagamento pendente)
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={bulkConfirming || rejectSubmitting}
+                    onClick={() => setSelectedIds(new Set())}
+                  >
+                    Limpar seleção
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
+                    disabled={bulkConfirming || rejectSubmitting}
+                    onClick={() => void handleBulkConfirmar()}
+                  >
+                    {bulkConfirming ? <Spinner className="mr-2 h-4 w-4" /> : <Check className="mr-1.5 h-4 w-4" />}
+                    Confirmar selecionadas
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    disabled={bulkConfirming || rejectSubmitting}
+                    onClick={() => setRejectState({ type: 'bulk', ids: [...selectedIds] })}
+                  >
+                    <X className="mr-1.5 h-4 w-4" />
+                    Rejeitar selecionadas
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
             {filtered.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-8 text-center text-sm text-muted-foreground">
@@ -752,18 +896,48 @@ export default function SuperAssinaturasPage() {
               <>
                 <div className="hidden overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm lg:block">
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[1000px] table-fixed border-separate border-spacing-0 text-sm">
+                    <table className="w-full min-w-[1140px] table-fixed border-separate border-spacing-0 text-sm">
                       <colgroup>
-                        <col className="w-[18%]" />
-                        <col className="w-[22%]" />
-                        <col className="w-[11%]" />
-                        <col className="w-[12%]" />
-                        <col className="w-[9%]" />
-                        <col className="w-[9%]" />
+                        <col className="w-[2.75rem]" />
+                        <col className="w-[16%]" />
                         <col className="w-[19%]" />
+                        <col className="w-[10%]" />
+                        <col className="w-[10%]" />
+                        <col className="w-[11%]" />
+                        <col className="w-[8%]" />
+                        <col className="w-[8%]" />
+                        <col className="w-[17%]" />
                       </colgroup>
                       <thead>
                         <tr className="border-b bg-muted/40">
+                          <th className="w-11 px-2 py-3 text-left align-middle">
+                            <Checkbox
+                              checked={
+                                paginatedPendente.length === 0
+                                  ? false
+                                  : allPagePendenteSelected
+                                    ? true
+                                    : somePagePendenteSelected
+                                      ? 'indeterminate'
+                                      : false
+                              }
+                              onCheckedChange={(v) => {
+                                const checked = v === true
+                                setSelectedIds((prev) => {
+                                  const next = new Set(prev)
+                                  for (const a of paginatedPendente) {
+                                    if (checked) next.add(a.id)
+                                    else next.delete(a.id)
+                                  }
+                                  return next
+                                })
+                              }}
+                              disabled={
+                                paginatedPendente.length === 0 || bulkConfirming || rejectSubmitting
+                              }
+                              aria-label="Selecionar todas com pagamento pendente nesta página"
+                            />
+                          </th>
                           <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                             Barbearia
                           </th>
@@ -772,6 +946,9 @@ export default function SuperAssinaturasPage() {
                           </th>
                           <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                             Plano
+                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Periodicidade
                           </th>
                           <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                             Status
@@ -791,6 +968,28 @@ export default function SuperAssinaturasPage() {
                         {paginated.map((assinatura) => {
                           return (
                             <tr key={assinatura.id} className="border-b border-border/60 last:border-0">
+                              <td className="w-11 px-2 py-3 align-top">
+                                {assinatura.status === 'pendente' ? (
+                                  <Checkbox
+                                    checked={selectedIds.has(assinatura.id)}
+                                    onCheckedChange={(v) => {
+                                      const checked = v === true
+                                      setSelectedIds((prev) => {
+                                        const next = new Set(prev)
+                                        if (checked) next.add(assinatura.id)
+                                        else next.delete(assinatura.id)
+                                        return next
+                                      })
+                                    }}
+                                    disabled={
+                                      rowActionsBusy(assinatura) || bulkConfirming || rejectSubmitting
+                                    }
+                                    aria-label={`Selecionar ${assinatura.barbearia?.nome ?? 'assinatura'}`}
+                                  />
+                                ) : (
+                                  <span className="inline-block w-4" aria-hidden />
+                                )}
+                              </td>
                               <td className="px-3 py-3 align-top">
                                 <div className="min-w-0 space-y-1">
                                   <p className="font-semibold text-foreground">
@@ -807,12 +1006,10 @@ export default function SuperAssinaturasPage() {
                                 />
                               </td>
                               <td className="px-3 py-3 align-top">
-                                <div className="space-y-1">
-                                  <PlanoBadge plano={assinatura.plano} />
-                                  <p className="text-xs text-muted-foreground">
-                                    {labelPeriodicidade(parsePlanoPeriodicidade(assinatura.periodicidade))}
-                                  </p>
-                                </div>
+                                <PlanoBadge plano={assinatura.plano} />
+                              </td>
+                              <td className="px-3 py-3 align-top">
+                                <PeriodicidadeBadge periodicidade={assinatura.periodicidade} />
                               </td>
                               <td className="px-3 py-3 align-top">
                                 <Badge
@@ -845,6 +1042,25 @@ export default function SuperAssinaturasPage() {
                       <Card key={assinatura.id} className="overflow-hidden border-border/80 shadow-sm">
                         <CardContent className="space-y-3 p-4">
                           <div className="flex items-start justify-between gap-3">
+                            {assinatura.status === 'pendente' ? (
+                              <Checkbox
+                                className="mt-1 shrink-0"
+                                checked={selectedIds.has(assinatura.id)}
+                                onCheckedChange={(v) => {
+                                  const checked = v === true
+                                  setSelectedIds((prev) => {
+                                    const next = new Set(prev)
+                                    if (checked) next.add(assinatura.id)
+                                    else next.delete(assinatura.id)
+                                    return next
+                                  })
+                                }}
+                                disabled={
+                                  rowActionsBusy(assinatura) || bulkConfirming || rejectSubmitting
+                                }
+                                aria-label={`Selecionar ${assinatura.barbearia?.nome ?? 'assinatura'}`}
+                              />
+                            ) : null}
                             <div className="min-w-0 flex-1">
                               <p className="font-semibold text-foreground">
                                 {assinatura.barbearia?.nome || 'Barbearia'}
@@ -869,10 +1085,10 @@ export default function SuperAssinaturasPage() {
                                 <PlanoBadge plano={assinatura.plano} />
                               </dd>
                             </div>
-                            <div className="flex justify-between gap-2">
+                            <div className="flex items-center justify-between gap-2">
                               <dt className="text-muted-foreground">Periodicidade</dt>
-                              <dd className="text-right text-foreground">
-                                {labelPeriodicidade(parsePlanoPeriodicidade(assinatura.periodicidade))}
+                              <dd className="flex justify-end">
+                                <PeriodicidadeBadge periodicidade={assinatura.periodicidade} />
                               </dd>
                             </div>
                             <div className="flex justify-between gap-2">
@@ -973,21 +1189,37 @@ export default function SuperAssinaturasPage() {
       </PageContent>
 
       <AlertDialog
-        open={!!rejectTarget}
+        open={!!rejectState}
         onOpenChange={(open) => {
-          if (!open && !rejectSubmitting) setRejectTarget(null)
+          if (!open && !rejectSubmitting) setRejectState(null)
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Rejeitar assinatura?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {rejectState?.type === 'bulk'
+                ? `Rejeitar ${rejectState.ids.length} assinaturas?`
+                : 'Rejeitar assinatura?'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              A assinatura de{' '}
-              <span className="font-medium text-foreground">
-                {rejectTarget?.barbearia?.nome ?? 'esta barbearia'}
-              </span>{' '}
-              será marcada como cancelada. O pagamento não será confirmado e o painel completo continuará bloqueado até
-              existir uma assinatura ativa.
+              {rejectState?.type === 'bulk' ? (
+                <>
+                  As <span className="font-medium text-foreground">{rejectState.ids.length}</span> assinaturas
+                  selecionadas serão marcadas como canceladas. O pagamento não será confirmado e o painel completo de
+                  cada barbearia continuará bloqueado até existir uma assinatura ativa.
+                </>
+              ) : (
+                <>
+                  A assinatura de{' '}
+                  <span className="font-medium text-foreground">
+                    {rejectState?.type === 'single'
+                      ? (rejectState.assinatura.barbearia?.nome ?? 'esta barbearia')
+                      : 'esta barbearia'}
+                  </span>{' '}
+                  será marcada como cancelada. O pagamento não será confirmado e o painel completo continuará bloqueado
+                  até existir uma assinatura ativa.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

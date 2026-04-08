@@ -418,20 +418,23 @@ export function SubscriptionRowSkeleton({ className }: { className?: string }) {
 export function SubscriptionTableRowSkeleton({ className }: { className?: string }) {
   return (
     <tr className={cn('border-b border-border', className)}>
+      <td className="w-11 px-2 py-3">
+        <Skeleton className="h-4 w-4 rounded-[4px]" />
+      </td>
       <td className="px-3 py-3">
         <Skeleton className="h-4 w-36" />
       </td>
       <td className="min-w-0 px-3 py-3">
-        <div className="flex max-w-full flex-col gap-2 sm:flex-row sm:items-center sm:gap-1.5">
-          <Skeleton className="h-3 w-40" />
-          <Skeleton className="h-6 w-24 shrink-0 rounded-md" />
-        </div>
-      </td>
-      <td className="px-3 py-3">
-        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-6 w-24 shrink-0 rounded-md" />
       </td>
       <td className="px-3 py-3">
         <Skeleton className="h-6 w-20 rounded-full" />
+      </td>
+      <td className="px-3 py-3">
+        <Skeleton className="h-4 w-16" />
+      </td>
+      <td className="px-3 py-3">
+        <Skeleton className="h-6 w-24 rounded-full" />
       </td>
       <td className="px-3 py-3">
         <Skeleton className="h-4 w-24" />
@@ -488,12 +491,12 @@ export function SuperAssinaturasPageSkeleton({ count = 5 }: ListSkeletonProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/40">
-              {Array.from({ length: 7 }).map((_, i) => (
+              {Array.from({ length: 9 }).map((_, i) => (
                 <th
                   key={i}
-                  className={cn('px-3 py-3', i === 6 ? 'text-right' : 'text-left')}
+                  className={cn('px-3 py-3', i === 8 ? 'text-right' : 'text-left')}
                 >
-                  <Skeleton className={cn('h-3 w-20', i === 6 && 'ml-auto')} />
+                  <Skeleton className={cn('h-3 w-20', i === 8 && 'ml-auto')} />
                 </th>
               ))}
             </tr>
