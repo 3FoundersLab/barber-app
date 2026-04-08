@@ -298,7 +298,7 @@ export function LandingBenefits() {
           viewport={LANDING_VIEWPORT}
         >
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-400/95 sm:text-xs">
-            Benefícios · resultado na bancada
+            Benefícios: resultado na bancada
           </p>
           <h2
             id="landing-beneficios-heading"

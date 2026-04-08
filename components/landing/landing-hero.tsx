@@ -125,7 +125,7 @@ export function LandingHero() {
             className="mb-5 inline-flex items-center rounded-full border border-cyan-400/25 bg-cyan-500/[0.09] px-4 py-1.5 text-xs font-semibold text-cyan-100/95 shadow-[0_0_28px_-10px_rgba(34,211,238,0.22)]"
             variants={heroStaggerItem}
           >
-            Software para barbearia · agenda, equipe e caixa
+            Software para barbearia: agenda, equipe e caixa
           </motion.p>
           <motion.h1
             id="landing-hero-heading"
@@ -184,7 +184,7 @@ export function LandingHero() {
               Ver funcionalidades do sistema →
             </Link>
             <p className="mt-5 text-sm font-medium text-zinc-500">
-              Feito para quem vive a bancada · Tom profissional, zero enrolação
+              Feito para quem vive a bancada: tom profissional, zero enrolação
             </p>
           </motion.div>
         </motion.div>
@@ -254,7 +254,7 @@ export function LandingHero() {
             <LandingHeroFloatingCard
               icon={CalendarPlus}
               title="Novo agendamento"
-              subtitle="Hoje · 14:30 · corte + barba"
+              subtitle="Hoje, 14:30, corte + barba"
               delay={0.1}
               floatDuration={5.6}
               floatRange={4}
@@ -266,7 +266,7 @@ export function LandingHero() {
             <LandingHeroFloatingCard
               icon={UserCheck}
               title="Cliente confirmado"
-              subtitle="Lembrete lido · há 2 min"
+              subtitle="Lembrete lido, há 2 min"
               delay={0.24}
               floatDuration={6.3}
               floatRange={5}
@@ -278,7 +278,7 @@ export function LandingHero() {
             <LandingHeroFloatingCard
               icon={Banknote}
               title="Pagamento recebido"
-              subtitle="Pix · R$ 65,00"
+              subtitle="Pix, R$ 65,00"
               delay={0.36}
               floatDuration={5.1}
               floatRange={4}
@@ -290,7 +290,7 @@ export function LandingHero() {
             <LandingHeroFloatingCard
               icon={CheckCircle2}
               title="Serviço realizado"
-              subtitle="Corte máquina · check-out"
+              subtitle="Corte máquina, check-out"
               delay={0.42}
               floatDuration={6}
               floatRange={5}
@@ -302,7 +302,7 @@ export function LandingHero() {
             <LandingHeroFloatingCard
               icon={Package}
               title="Produto recomendado"
-              subtitle="Pomada · cliente aceitou"
+              subtitle="Pomada, cliente aceitou"
               delay={0.5}
               floatDuration={5.4}
               floatRange={6}
@@ -314,7 +314,7 @@ export function LandingHero() {
             <LandingHeroFloatingCard
               icon={Percent}
               title="Comissão liberada"
-              subtitle="Hoje · R$ 142,80"
+              subtitle="Hoje, R$ 142,80"
               delay={0.58}
               floatDuration={6.6}
               floatRange={4}

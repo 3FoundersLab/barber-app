@@ -38,7 +38,7 @@ export function LandingSolution() {
     >
       <div className={landingContainer}>
         <LandingFadeIn className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Interesse · a resposta</p>
+          <p className={landingEyebrow}>Interesse: a resposta</p>
           <h2 id="landing-solucao-heading" className={landingSectionTitle}>
             BarberApp: software para barbearia com agenda e caixa no mesmo lugar
           </h2>
@@ -59,7 +59,7 @@ export function LandingSolution() {
           viewport={LANDING_VIEWPORT}
           transition={{ duration: 0.62, ease: LANDING_EASE, delay: 0.06 }}
         >
-          <p className={landingEyebrow}>Desejo · o que muda na prática</p>
+          <p className={landingEyebrow}>Desejo: o que muda na prática</p>
           <h3 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-white sm:text-[1.65rem] sm:leading-snug">
             Você volta a mandar na grade, com clareza e sem depender do grupo do Zap
           </h3>

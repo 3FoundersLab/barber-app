@@ -49,7 +49,7 @@ export function LandingFeatures() {
     >
       <div className={landingContainer}>
         <LandingFadeIn className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Funcionalidades · o que o sistema faz</p>
+          <p className={landingEyebrow}>Funcionalidades: o que o sistema faz</p>
           <h2 id="landing-funcionalidades-heading" className={landingSectionTitle}>
             Agendamento, clientes, caixa e mensalista, tudo integrado
           </h2>

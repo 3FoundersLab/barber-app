@@ -21,7 +21,7 @@ export const LANDING_CTA = {
   navPrimary: 'Começar grátis',
   navSecondary: 'Já sou cliente',
   trial: 'Testar 7 dias grátis',
-  urgency: 'Cadastro rápido · em poucos minutos você já usa na bancada',
+  urgency: 'Cadastro rápido: em poucos minutos você já usa na bancada',
   urgencyBanner: 'Quem entra agora organiza a grade antes do fim do mês',
 } as const
 

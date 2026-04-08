@@ -47,7 +47,7 @@ export function LandingHowItWorks() {
     >
       <div className={landingContainer}>
         <LandingFadeIn className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Ação · como começar</p>
+          <p className={landingEyebrow}>Ação: como começar</p>
           <h2 id="landing-como-heading" className={landingSectionTitle}>
             Três passos para colocar a barbearia no ar
           </h2>

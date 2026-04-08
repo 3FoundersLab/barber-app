@@ -3,7 +3,17 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronLeft, ChevronRight, Eye, EyeOff, Scissors } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { Check, ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react'
+import { LoginLandingShell } from '@/components/auth/login-landing-shell'
+import { LANDING_LINKS } from '@/components/landing/constants'
+import {
+  landingButtonLift,
+  landingContainer,
+  landingEyebrow,
+  landingPrimaryCtaClass,
+} from '@/components/landing/landing-classes'
+import { AppBrandLogo } from '@/components/shared/app-brand-logo'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,7 +22,6 @@ import {
   AlertTitle,
   ALERT_DEFAULT_AUTO_CLOSE_MS,
 } from '@/components/ui/alert'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
@@ -40,12 +49,25 @@ import {
   type PlanoPeriodicidade,
 } from '@/lib/plano-periodicidade'
 import type { Plano } from '@/types'
+import { LANDING_EASE } from '@/lib/landing-motion'
 
 const STEPS = [
   { id: 1 as const, label: 'Dados principais', short: 'Dados' },
   { id: 2 as const, label: 'Endereço', short: 'Endereço' },
   { id: 3 as const, label: 'Plano', short: 'Plano' },
 ]
+
+const cadastroInputPremium = cn(
+  'h-11 rounded-xl border-zinc-700/80 bg-zinc-900/70 text-zinc-100 shadow-none placeholder:text-zinc-500',
+  'focus-visible:border-cyan-400/45 focus-visible:ring-2 focus-visible:ring-cyan-400/20',
+)
+
+const cadastroLabelPremium = cn(
+  'text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500',
+  '[&_span.text-destructive]:text-red-400',
+)
+
+const cadastroInputError = 'border-red-500/70 focus-visible:border-red-500/70 focus-visible:ring-red-500/25'
 
 function slugify(text: string) {
   return text
@@ -127,6 +149,7 @@ function validateStep2(parts: BarbeariaEnderecoParts): Partial<Record<keyof Barb
 
 export default function CadastroBarbeariaPage() {
   const router = useRouter()
+  const reduceMotion = useReducedMotion() === true
   const [currentStep, setCurrentStep] = useState(1)
   const [planos, setPlanos] = useState<Plano[]>([])
   const [isLoadingPlans, setIsLoadingPlans] = useState(true)
@@ -356,7 +379,7 @@ export default function CadastroBarbeariaPage() {
         })
         if (signInError || !signInData.session) {
           setSuccess(
-            'Conta criada. Confirme o link no e-mail. Depois faça login e volte nesta página (Cadastrar barbearia), preencha nome da barbearia, slug e plano — não é preciso criar senha de novo; você já estará logado e o sistema só criará a barbearia.',
+            'Conta criada. Confirme o link no e-mail. Depois faça login e volte nesta página (Cadastrar barbearia), preencha nome da barbearia, slug e plano. Não é preciso criar senha de novo; você já estará logado e o sistema só criará a barbearia.',
           )
           return
         }
@@ -408,99 +431,151 @@ export default function CadastroBarbeariaPage() {
   const inputErr = (key: string) => step1Errors[key]
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <div className="w-full max-w-3xl space-y-6">
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-accent">
-            <Scissors className="h-7 w-7 text-accent-foreground" />
+    <LoginLandingShell>
+      <header className="shrink-0 border-b border-white/[0.06] bg-zinc-950/40 backdrop-blur-sm">
+        <div className={cn(landingContainer, 'flex items-center justify-between py-4')}>
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: LANDING_EASE }}
+          >
+            <AppBrandLogo
+              href="/"
+              textClassName="text-lg font-semibold tracking-tight text-white sm:text-xl"
+              className="gap-2.5 rounded-lg outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-cyan-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+            />
+          </motion.div>
+          <div className="flex items-center gap-4">
+            <Link
+              href={LANDING_LINKS.login}
+              className="text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-zinc-100"
+            >
+              Já tenho conta
+            </Link>
+            <Button
+              asChild
+              variant="ghost"
+              className={cn(
+                landingPrimaryCtaClass,
+                landingButtonLift,
+                'hidden h-10 shrink-0 px-5 text-xs font-bold uppercase tracking-wide sm:inline-flex sm:h-11 sm:px-7',
+              )}
+            >
+              <Link href="/">Site</Link>
+            </Button>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Cadastro de Barbearia</h1>
-          <p className="text-sm text-muted-foreground">Crie sua conta e escolha um plano para comecar</p>
         </div>
+      </header>
 
-        <nav aria-label="Progresso do cadastro" className="rounded-xl border bg-card/50 p-4 shadow-sm">
-          <ol className="flex w-full items-center">
-            {STEPS.map((step, index) => {
-              const done = currentStep > step.id
-              const active = currentStep === step.id
-              const isLast = index === STEPS.length - 1
-              return (
-                <li
-                  key={step.id}
-                  className={cn('flex min-w-0 items-center', !isLast && 'flex-1')}
-                >
-                  <div className="flex min-w-0 flex-col items-center gap-1 sm:flex-row sm:gap-2.5">
-                    <div
-                      className={cn(
-                        'flex size-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold transition-all duration-200',
-                        done &&
-                          'border-emerald-600 bg-emerald-600 text-white dark:border-emerald-500 dark:bg-emerald-600',
-                        active &&
-                          !done &&
-                          'border-emerald-500 bg-emerald-500/15 text-emerald-800 shadow-md ring-2 ring-emerald-500/30 dark:text-emerald-200',
-                        !active &&
-                          !done &&
-                          'border-muted-foreground/30 bg-muted/40 text-muted-foreground',
-                      )}
-                      aria-current={active ? 'step' : undefined}
-                    >
-                      {done ? <Check className="size-4 stroke-[3]" aria-hidden /> : step.id}
-                    </div>
-                    <span
-                      className={cn(
-                        'max-w-[5.5rem] text-center text-[10px] font-medium leading-tight sm:max-w-none sm:text-left sm:text-sm',
-                        active ? 'text-foreground' : 'text-muted-foreground',
-                      )}
-                    >
-                      <span className="sm:hidden">{step.short}</span>
-                      <span className="hidden sm:inline">{step.label}</span>
-                    </span>
-                  </div>
-                  {!isLast ? (
-                    <div
-                      className={cn(
-                        'mx-1.5 h-0.5 min-w-[0.75rem] flex-1 rounded-full transition-colors duration-300 sm:mx-3',
-                        currentStep > step.id ? 'bg-emerald-500' : 'bg-border',
-                      )}
-                      aria-hidden
-                    />
-                  ) : null}
-                </li>
-              )
-            })}
-          </ol>
-        </nav>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {currentStep === 1 && 'Dados principais'}
-              {currentStep === 2 && 'Endereço da barbearia'}
-              {currentStep === 3 && 'Escolha do plano'}
-            </CardTitle>
-            <CardDescription>
-              {currentStep === 1 &&
-                'Nome, identificador na URL, contato e dados de acesso da conta responsável.'}
-              {currentStep === 2 &&
-                'CEP com preenchimento automático. Complemento é opcional; os demais campos são obrigatórios.'}
-              {currentStep === 3 && 'Selecione o plano e revise o resumo antes de finalizar.'}
-            </CardDescription>
-            {hasSession ? (
-              <p className="text-sm text-muted-foreground">
-                Voce ja esta logado. Complete os passos; nao e necessario informar senha novamente.
+      <main className="flex flex-1 flex-col">
+        <div className={cn(landingContainer, 'w-full py-8 sm:py-10 lg:py-12')}>
+          <motion.div
+            className="mx-auto max-w-3xl space-y-8"
+            initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, ease: LANDING_EASE, delay: reduceMotion ? 0 : 0.05 }}
+          >
+            <div className="text-center lg:text-left">
+              <p className={cn(landingEyebrow, 'text-amber-400/95')}>Onboarding BarberApp</p>
+              <h1 className="mt-3 text-balance text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                Cadastre sua barbearia
+              </h1>
+              <p className="mx-auto mt-3 max-w-xl text-pretty text-sm leading-relaxed text-zinc-400 sm:text-base lg:mx-0">
+                Três passos rápidos: dados, endereço e plano. Mesma identidade visual da landing, com você dentro do
+                produto o tempo todo.
               </p>
-            ) : null}
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-6" onSubmit={handleSubmit} noValidate>
-              <div
-                key={currentStep}
-                className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
-              >
+            </div>
+
+            <nav
+              aria-label="Progresso do cadastro"
+              className="rounded-2xl border border-white/[0.08] bg-zinc-950/50 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] backdrop-blur-sm sm:p-5"
+            >
+              <ol className="flex w-full items-center">
+                {STEPS.map((step, index) => {
+                  const done = currentStep > step.id
+                  const active = currentStep === step.id
+                  const isLast = index === STEPS.length - 1
+                  return (
+                    <li key={step.id} className={cn('flex min-w-0 items-center', !isLast && 'flex-1')}>
+                      <div className="flex min-w-0 flex-col items-center gap-1.5 sm:flex-row sm:gap-3">
+                        <div
+                          className={cn(
+                            'flex size-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold transition-all duration-300 sm:size-10',
+                            done &&
+                              'border-cyan-400/70 bg-cyan-500/20 text-cyan-100 shadow-[0_0_20px_-6px_rgba(34,211,238,0.45)]',
+                            active &&
+                              !done &&
+                              'border-cyan-400/90 bg-cyan-500/15 text-white shadow-md ring-2 ring-cyan-400/35 ring-offset-2 ring-offset-zinc-950',
+                            !active && !done && 'border-zinc-600 bg-zinc-900/80 text-zinc-500',
+                          )}
+                          aria-current={active ? 'step' : undefined}
+                        >
+                          {done ? <Check className="size-4 stroke-[3]" aria-hidden /> : step.id}
+                        </div>
+                        <span
+                          className={cn(
+                            'max-w-[5.5rem] text-center text-[10px] font-medium leading-tight sm:max-w-none sm:text-left sm:text-sm',
+                            active ? 'text-zinc-100' : 'text-zinc-500',
+                          )}
+                        >
+                          <span className="sm:hidden">{step.short}</span>
+                          <span className="hidden sm:inline">{step.label}</span>
+                        </span>
+                      </div>
+                      {!isLast ? (
+                        <div
+                          className={cn(
+                            'mx-1.5 h-0.5 min-w-[0.75rem] flex-1 rounded-full transition-colors duration-300 sm:mx-3',
+                            currentStep > step.id ? 'bg-cyan-500/60' : 'bg-zinc-700/80',
+                          )}
+                          aria-hidden
+                        />
+                      ) : null}
+                    </li>
+                  )
+                })}
+              </ol>
+            </nav>
+
+            <div
+              className={cn(
+                'rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.07] to-white/[0.025] p-6 shadow-[0_24px_64px_-28px_rgba(0,0,0,0.55)] backdrop-blur-md sm:p-8',
+                'ring-1 ring-white/[0.04]',
+              )}
+            >
+              <div className="border-b border-white/[0.06] pb-6">
+                <h2 className="text-xl font-semibold tracking-tight text-white sm:text-[1.35rem]">
+                  {currentStep === 1 && 'Dados principais'}
+                  {currentStep === 2 && 'Endereço da barbearia'}
+                  {currentStep === 3 && 'Escolha do plano'}
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                  {currentStep === 1 &&
+                    'Nome, identificador na URL, contato e dados de acesso da conta responsável.'}
+                  {currentStep === 2 &&
+                    'CEP com preenchimento automático. Complemento é opcional; os demais campos são obrigatórios.'}
+                  {currentStep === 3 && 'Selecione o plano e revise o resumo antes de finalizar.'}
+                </p>
+                {hasSession ? (
+                  <p className="mt-3 rounded-lg border border-cyan-500/20 bg-cyan-500/[0.08] px-3 py-2 text-sm text-cyan-100/90">
+                    Você já está logado. Complete os passos; não é necessário informar senha novamente.
+                  </p>
+                ) : null}
+              </div>
+
+              <form className="mt-6 space-y-6" onSubmit={handleSubmit} noValidate>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={currentStep}
+                    initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
+                    transition={{ duration: 0.32, ease: LANDING_EASE }}
+                  >
                 {currentStep === 1 && (
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="nomeBarbearia" required>
+                      <Label htmlFor="nomeBarbearia" required className={cadastroLabelPremium}>
                         Nome da barbearia
                       </Label>
                       <Input
@@ -520,15 +595,15 @@ export default function CadastroBarbeariaPage() {
                         }}
                         disabled={isSubmitting}
                         aria-invalid={!!inputErr('nomeBarbearia')}
-                        className={cn(inputErr('nomeBarbearia') && 'border-destructive')}
+                        className={cn(cadastroInputPremium, inputErr('nomeBarbearia') && cadastroInputError)}
                       />
                       {inputErr('nomeBarbearia') ? (
-                        <p className="text-xs text-destructive">{inputErr('nomeBarbearia')}</p>
+                        <p className="text-xs text-red-400">{inputErr('nomeBarbearia')}</p>
                       ) : null}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="slug" required>
+                      <Label htmlFor="slug" required className={cadastroLabelPremium}>
                         Slug (identificador)
                       </Label>
                       <Input
@@ -546,15 +621,15 @@ export default function CadastroBarbeariaPage() {
                         }}
                         disabled={isSubmitting}
                         aria-invalid={!!inputErr('slug')}
-                        className={cn(inputErr('slug') && 'border-destructive')}
+                        className={cn(cadastroInputPremium, inputErr('slug') && cadastroInputError)}
                       />
                       {inputErr('slug') ? (
-                        <p className="text-xs text-destructive">{inputErr('slug')}</p>
+                        <p className="text-xs text-red-400">{inputErr('slug')}</p>
                       ) : null}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="telefoneBarbearia" required>
+                      <Label htmlFor="telefoneBarbearia" required className={cadastroLabelPremium}>
                         Telefone
                       </Label>
                       <Input
@@ -576,15 +651,15 @@ export default function CadastroBarbeariaPage() {
                         autoComplete="tel"
                         placeholder="(00) 00000-0000"
                         aria-invalid={!!inputErr('telefoneBarbearia')}
-                        className={cn(inputErr('telefoneBarbearia') && 'border-destructive')}
+                        className={cn(cadastroInputPremium, inputErr('telefoneBarbearia') && cadastroInputError)}
                       />
                       {inputErr('telefoneBarbearia') ? (
-                        <p className="text-xs text-destructive">{inputErr('telefoneBarbearia')}</p>
+                        <p className="text-xs text-red-400">{inputErr('telefoneBarbearia')}</p>
                       ) : null}
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="emailResponsavel" required>
+                      <Label htmlFor="emailResponsavel" required className={cadastroLabelPremium}>
                         E-mail de acesso
                       </Label>
                       <Input
@@ -607,15 +682,15 @@ export default function CadastroBarbeariaPage() {
                         autoComplete="email"
                         placeholder="seu@email.com"
                         aria-invalid={!!inputErr('emailResponsavel')}
-                        className={cn(inputErr('emailResponsavel') && 'border-destructive')}
+                        className={cn(cadastroInputPremium, inputErr('emailResponsavel') && cadastroInputError)}
                       />
                       {inputErr('emailResponsavel') ? (
-                        <p className="text-xs text-destructive">{inputErr('emailResponsavel')}</p>
+                        <p className="text-xs text-red-400">{inputErr('emailResponsavel')}</p>
                       ) : null}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="senha" required={!hasSession}>
+                      <Label htmlFor="senha" required={!hasSession} className={cadastroLabelPremium}>
                         Senha
                       </Label>
                       <div className="relative">
@@ -633,25 +708,25 @@ export default function CadastroBarbeariaPage() {
                           }}
                           disabled={isSubmitting || hasSession}
                           minLength={6}
-                          className={cn('pr-10', inputErr('senha') && 'border-destructive')}
+                          className={cn(cadastroInputPremium, 'pr-11', inputErr('senha') && cadastroInputError)}
                           aria-invalid={!!inputErr('senha')}
                         />
                         <button
                           type="button"
                           onClick={() => setShowSenha((prev) => !prev)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-zinc-200"
                           aria-label={showSenha ? 'Ocultar senha' : 'Mostrar senha'}
                         >
                           {showSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
                       {inputErr('senha') ? (
-                        <p className="text-xs text-destructive">{inputErr('senha')}</p>
+                        <p className="text-xs text-red-400">{inputErr('senha')}</p>
                       ) : null}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="confirmarSenha" required={!hasSession}>
+                      <Label htmlFor="confirmarSenha" required={!hasSession} className={cadastroLabelPremium}>
                         Confirmar senha
                       </Label>
                       <div className="relative">
@@ -669,20 +744,24 @@ export default function CadastroBarbeariaPage() {
                           }}
                           disabled={isSubmitting || hasSession}
                           minLength={6}
-                          className={cn('pr-10', inputErr('confirmarSenha') && 'border-destructive')}
+                          className={cn(
+                            cadastroInputPremium,
+                            'pr-11',
+                            inputErr('confirmarSenha') && cadastroInputError,
+                          )}
                           aria-invalid={!!inputErr('confirmarSenha')}
                         />
                         <button
                           type="button"
                           onClick={() => setShowConfirmarSenha((prev) => !prev)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-zinc-200"
                           aria-label={showConfirmarSenha ? 'Ocultar senha' : 'Mostrar senha'}
                         >
                           {showConfirmarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
                       {inputErr('confirmarSenha') ? (
-                        <p className="text-xs text-destructive">{inputErr('confirmarSenha')}</p>
+                        <p className="text-xs text-red-400">{inputErr('confirmarSenha')}</p>
                       ) : null}
                     </div>
                   </div>
@@ -699,14 +778,17 @@ export default function CadastroBarbeariaPage() {
                     disabled={isSubmitting}
                     showHeading={false}
                     fieldErrors={step2Errors}
+                    inputClassName={cadastroInputPremium}
+                    labelClassName={cadastroLabelPremium}
+                    className="[&_.text-muted-foreground]:text-zinc-500"
                   />
                 )}
 
                 {currentStep === 3 && (
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Período de cobrança</Label>
-                      <p className="text-xs text-muted-foreground">
+                      <Label className={cadastroLabelPremium}>Período de cobrança</Label>
+                      <p className="text-xs leading-relaxed text-zinc-500">
                         O valor exibido em cada plano é o total do período (preço mensal do catálogo × meses).
                       </p>
                       <PlanoPeriodicidadeToggle
@@ -716,12 +798,15 @@ export default function CadastroBarbeariaPage() {
                           setFormData((prev) => ({ ...prev, planoPeriodicidade }))
                         }
                         disabled={isSubmitting || isLoadingPlans}
+                        tone="darkSurface"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label required>Planos disponíveis</Label>
+                      <Label required className={cadastroLabelPremium}>
+                        Planos disponíveis
+                      </Label>
                       {isLoadingPlans ? (
-                        <CadastroPlanoGridSkeleton />
+                        <CadastroPlanoGridSkeleton className="[&>div]:border-white/[0.08] [&>div]:bg-zinc-900/35" />
                       ) : planos.length > 0 ? (
                         <div className="grid gap-3 md:grid-cols-3">
                           {planos.map((plano) => {
@@ -739,54 +824,55 @@ export default function CadastroBarbeariaPage() {
                                 aria-checked={isSelected}
                                 onClick={() => setFormData((prev) => ({ ...prev, planoId: plano.id }))}
                                 className={cn(
-                                  'relative rounded-xl border-2 p-4 pt-5 text-left transition-all duration-200',
-                                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                                  'relative rounded-xl border-2 p-4 pt-5 text-left transition-all duration-300',
+                                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
                                   isSelected
-                                    ? 'border-emerald-500 bg-emerald-50 shadow-md shadow-emerald-600/15 ring-2 ring-emerald-500/25 dark:border-emerald-400 dark:bg-emerald-950/50 dark:shadow-emerald-900/30 dark:ring-emerald-400/20'
-                                    : 'border-border bg-card hover:border-emerald-500/40 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20',
+                                    ? 'border-cyan-400/55 bg-cyan-500/[0.12] shadow-[0_0_0_1px_rgba(34,211,238,0.12)] shadow-cyan-950/25 ring-2 ring-cyan-400/20'
+                                    : 'border-white/[0.1] bg-zinc-900/40 hover:border-cyan-500/35 hover:bg-zinc-800/50',
                                 )}
                                 disabled={isSubmitting}
                               >
                                 <span
                                   className={cn(
-                                    'absolute right-3 top-3 flex size-8 items-center justify-center rounded-full border-2 transition-colors',
+                                    'absolute right-3 top-3 flex size-8 items-center justify-center rounded-full border-2 transition-colors duration-200',
                                     isSelected
-                                      ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm dark:border-emerald-400 dark:bg-emerald-500'
-                                      : 'border-muted-foreground/30 bg-muted/30',
+                                      ? 'border-cyan-400 bg-cyan-500 text-white shadow-[0_0_12px_-2px_rgba(34,211,238,0.45)]'
+                                      : 'border-zinc-600/80 bg-zinc-800/80',
                                   )}
                                   aria-hidden
                                 >
                                   {isSelected ? <Check className="size-4 stroke-[3]" /> : null}
                                 </span>
-                                <p className="pr-10 font-semibold text-foreground">{plano.nome}</p>
+                                <p className="pr-10 font-semibold text-zinc-100">{plano.nome}</p>
                                 <p
                                   className={cn(
                                     'pr-10 text-sm font-medium tabular-nums',
-                                    isSelected
-                                      ? 'text-emerald-900/80 dark:text-emerald-100/80'
-                                      : 'text-muted-foreground',
+                                    isSelected ? 'text-cyan-100/90' : 'text-zinc-500',
                                   )}
                                 >
                                   {formatCurrency(totalPeriodo)}
                                   {sufixoPrecoPeriodicidade(formData.planoPeriodicidade)}
                                 </p>
                                 {formData.planoPeriodicidade !== 'mensal' ? (
-                                  <p className="pr-10 text-[11px] text-muted-foreground">
+                                  <p className="pr-10 text-[11px] text-zinc-500">
                                     {meses}× {formatCurrency(plano.preco_mensal)}/mês
                                   </p>
                                 ) : null}
-                                <ul className="mt-2 space-y-1 text-left text-xs text-muted-foreground">
+                                <ul className="mt-2 space-y-1 text-left text-xs text-zinc-500">
                                   {linhasBeneficiosPlano(plano).length === 0 ? (
-                                    <li className="list-none text-muted-foreground/80">Sem benefícios listados</li>
+                                    <li className="list-none text-zinc-600">Sem benefícios listados</li>
                                   ) : (
                                     linhasBeneficiosPlano(plano).map((linha, idx) => (
                                       <li key={`${plano.id}-${idx}`} className="flex items-start gap-1.5">
                                         <Check
-                                          className="mt-0.5 size-3 shrink-0 text-emerald-600 dark:text-emerald-400"
+                                          className={cn(
+                                            'mt-0.5 size-3 shrink-0',
+                                            isSelected ? 'text-cyan-400' : 'text-zinc-600',
+                                          )}
                                           strokeWidth={2.5}
                                           aria-hidden
                                         />
-                                        <span>{linha}</span>
+                                        <span className={isSelected ? 'text-zinc-400' : ''}>{linha}</span>
                                       </li>
                                     ))
                                   )}
@@ -796,36 +882,39 @@ export default function CadastroBarbeariaPage() {
                           })}
                         </div>
                       ) : (
-                        <Card className="border-dashed">
-                          <CardContent className="py-4 text-sm text-muted-foreground">
-                            Nenhum plano disponivel no momento.
-                          </CardContent>
-                        </Card>
+                        <div className="rounded-xl border border-dashed border-white/[0.12] bg-zinc-900/30 px-4 py-5 text-center text-sm text-zinc-500">
+                          Nenhum plano disponivel no momento.
+                        </div>
                       )}
                     </div>
 
                     {selectedPlan && (
-                      <Alert variant="success" className="text-left" role="status" aria-live="polite">
-                        <AlertTitle>Resumo do plano selecionado</AlertTitle>
-                        <AlertDescription>
+                      <Alert
+                        variant="success"
+                        className="border-cyan-500/25 bg-cyan-950/30 text-left text-cyan-50"
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <AlertTitle className="text-cyan-100">Resumo do plano selecionado</AlertTitle>
+                        <AlertDescription className="text-cyan-100/85">
                           <p>
-                            <span className="font-semibold">{selectedPlan.nome}</span>
-                            {' '}
-                            · {labelPeriodicidade(formData.planoPeriodicidade).toLowerCase()}
+                            <span className="font-semibold text-white">{selectedPlan.nome}</span>
+                            {', '}
+                            {labelPeriodicidade(formData.planoPeriodicidade).toLowerCase()}
                           </p>
-                          <p className="mt-1 font-medium tabular-nums">
+                          <p className="mt-1 font-medium tabular-nums text-cyan-50">
                             {formatCurrency(
                               precoTotalNoPeriodo(selectedPlan.preco_mensal, formData.planoPeriodicidade),
                             )}
                             {sufixoPrecoPeriodicidade(formData.planoPeriodicidade)}
                             {formData.planoPeriodicidade !== 'mensal' ? (
-                              <span className="block text-xs font-normal text-muted-foreground">
+                              <span className="block text-xs font-normal text-cyan-200/70">
                                 Base {formatCurrency(selectedPlan.preco_mensal)}/mês ×{' '}
                                 {mesesPorPeriodicidade(formData.planoPeriodicidade)} meses
                               </span>
                             ) : null}
                           </p>
-                          <p className="mt-2">
+                          <p className="mt-2 text-sm leading-relaxed text-cyan-100/80">
                             Voce sera o administrador/proprietario da barbearia. Ate o pagamento ser confirmado em
                             Assinaturas, o acesso fica limitado ao dashboard e as configuracoes; o restante do painel
                             libera apos a aprovacao.
@@ -835,12 +924,13 @@ export default function CadastroBarbeariaPage() {
                     )}
                   </div>
                 )}
-              </div>
+                  </motion.div>
+                </AnimatePresence>
 
               {error && (
                 <Alert
                   variant="danger"
-                  className="text-left"
+                  className="border-red-500/30 bg-red-950/40 text-left text-red-100"
                   onClose={() => setError(null)}
                   autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
                 >
@@ -848,28 +938,51 @@ export default function CadastroBarbeariaPage() {
                 </Alert>
               )}
               {success ? (
-                <Alert variant="success" className="text-left" role="status" aria-live="polite">
+                <Alert
+                  variant="success"
+                  className="border-emerald-500/30 bg-emerald-950/35 text-left text-emerald-50"
+                  role="status"
+                  aria-live="polite"
+                >
                   <AlertTitle>Cadastro concluído</AlertTitle>
-                  <AlertDescription>{success}</AlertDescription>
+                  <AlertDescription className="text-emerald-100/90">{success}</AlertDescription>
                 </Alert>
               ) : null}
 
-              <div className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col-reverse gap-3 border-t border-white/[0.06] pt-6 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <Link href="/login" className="text-sm text-muted-foreground hover:underline">
-                    Ja tem conta? Entrar
+                  <Link
+                    href={LANDING_LINKS.login}
+                    className="text-sm text-zinc-500 transition-colors hover:text-cyan-400/95 hover:underline"
+                  >
+                    Já tem conta? Entrar
                   </Link>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   {currentStep > 1 ? (
-                    <Button type="button" variant="outline" onClick={goBack} disabled={isSubmitting}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={goBack}
+                      disabled={isSubmitting}
+                      className="h-11 rounded-full border-white/[0.12] bg-transparent text-zinc-200 hover:bg-white/[0.06] hover:text-white"
+                    >
                       <ChevronLeft className="mr-1 size-4" aria-hidden />
                       Voltar
                     </Button>
                   ) : null}
                   {currentStep < 3 ? (
-                    <Button type="button" onClick={goNext} disabled={isSubmitting}>
+                    <Button
+                      type="button"
+                      onClick={goNext}
+                      disabled={isSubmitting}
+                      className={cn(
+                        'h-11 rounded-full px-6 text-sm font-bold',
+                        landingPrimaryCtaClass,
+                        landingButtonLift,
+                      )}
+                    >
                       Próximo
                       <ChevronRight className="ml-1 size-4" aria-hidden />
                     </Button>
@@ -882,17 +995,23 @@ export default function CadastroBarbeariaPage() {
                         !formData.planoId ||
                         planos.length === 0
                       }
+                      className={cn(
+                        'h-11 min-w-[200px] rounded-full text-sm font-bold',
+                        landingPrimaryCtaClass,
+                        landingButtonLift,
+                      )}
                     >
-                      {isSubmitting ? <Spinner className="mr-2" /> : null}
-                      {isSubmitting ? 'Finalizando cadastro...' : 'Finalizar cadastro'}
+                      {isSubmitting ? <Spinner className="mr-2 size-4 text-white" /> : null}
+                      {isSubmitting ? 'Finalizando cadastro…' : 'Finalizar cadastro'}
                     </Button>
                   )}
                 </div>
               </div>
             </form>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+            </div>
+          </motion.div>
+        </div>
+      </main>
+    </LoginLandingShell>
   )
 }

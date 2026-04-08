@@ -14,6 +14,8 @@ type Props = {
   /** id prefix para acessibilidade */
   idPrefix?: string
   size?: 'default' | 'compact'
+  /** Visual alinhado ao tema escuro da landing (ciano + zinco). */
+  tone?: 'default' | 'darkSurface'
 }
 
 export function PlanoPeriodicidadeToggle({
@@ -23,7 +25,9 @@ export function PlanoPeriodicidadeToggle({
   className,
   idPrefix = 'periodicidade',
   size = 'default',
+  tone = 'default',
 }: Props) {
+  const isDark = tone === 'darkSurface'
   return (
     <div
       role="group"
@@ -45,11 +49,18 @@ export function PlanoPeriodicidadeToggle({
             onClick={() => onChange(opt.id)}
             className={cn(
               'rounded-lg border-2 text-center font-medium transition-all duration-200',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+              isDark
+                ? 'focus-visible:ring-cyan-400/45 focus-visible:ring-offset-zinc-950'
+                : 'focus-visible:ring-emerald-500/60 focus-visible:ring-offset-background',
               size === 'default' ? 'px-2 py-2.5 text-xs sm:text-sm' : 'px-1.5 py-2 text-[11px] sm:text-xs',
-              selected
-                ? 'border-emerald-500 bg-emerald-500/10 text-emerald-900 shadow-sm dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-100'
-                : 'border-border bg-card text-muted-foreground hover:border-emerald-500/35 hover:bg-muted/50',
+              isDark
+                ? selected
+                  ? 'border-cyan-400/55 bg-cyan-500/15 text-cyan-50 shadow-sm shadow-cyan-950/20'
+                  : 'border-white/[0.1] bg-zinc-900/50 text-zinc-400 hover:border-cyan-500/35 hover:bg-zinc-800/50 hover:text-zinc-200'
+                : selected
+                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-900 shadow-sm dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-100'
+                  : 'border-border bg-card text-muted-foreground hover:border-emerald-500/35 hover:bg-muted/50',
               disabled && 'pointer-events-none opacity-50',
             )}
           >

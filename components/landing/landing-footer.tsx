@@ -121,7 +121,7 @@ export function LandingFooter() {
                   Termos de uso
                 </Link>
                 <span className="select-none text-zinc-600/70" aria-hidden>
-                  ·
+                  {', '}
                 </span>
                 <Link
                   href="#"

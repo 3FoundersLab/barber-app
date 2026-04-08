@@ -92,7 +92,7 @@ export function LandingPricing() {
     >
       <div className={landingContainer}>
         <LandingFadeIn className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Investimento · planos</p>
+          <p className={landingEyebrow}>Investimento: planos</p>
           <h2 id="landing-planos-heading" className={landingSectionTitle}>
             Planos que acompanham o tamanho da sua bancada
           </h2>
@@ -162,7 +162,7 @@ export function LandingPricing() {
         </motion.div>
         <LandingFadeIn delay={0.12} className="mt-12 text-center">
           <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-            {LANDING_CTA.urgency} · {LANDING_CTA.urgencyBanner}
+            {LANDING_CTA.urgency}, {LANDING_CTA.urgencyBanner}
           </p>
         </LandingFadeIn>
       </div>

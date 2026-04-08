@@ -54,7 +54,7 @@ export function LandingSocialProof() {
     >
       <div className={landingContainer}>
         <LandingFadeIn className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Prova social · autoridade</p>
+          <p className={landingEyebrow}>Prova social: autoridade</p>
           <h2 id="landing-prova-heading" className={landingSectionTitle}>
             Quem já usa BarberApp no dia a dia da bancada
           </h2>

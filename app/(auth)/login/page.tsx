@@ -192,7 +192,7 @@ function LoginPageContent() {
       <main className="flex flex-1 flex-col justify-center">
         <div className={cn(landingContainer, 'w-full py-10 sm:py-12 lg:py-16')}>
           <div className="grid items-center gap-12 lg:grid-cols-[1fr_minmax(0,26rem)] lg:gap-16 xl:grid-cols-[1.15fr_minmax(0,28rem)] xl:gap-20">
-            {/* Coluna visual — desktop */}
+            {/* Coluna visual (desktop) */}
             <motion.div
               className="relative hidden lg:block"
               initial={reduceMotion ? false : { opacity: 0, x: -28 }}
@@ -246,7 +246,7 @@ function LoginPageContent() {
                 <LandingHeroFloatingCard
                   icon={CalendarPlus}
                   title="Agenda do dia"
-                  subtitle="Grade ao vivo · equipe alinhada"
+                  subtitle="Grade ao vivo, equipe alinhada"
                   delay={0.15}
                   floatDuration={5.4}
                   floatRange={4}
@@ -270,7 +270,7 @@ function LoginPageContent() {
                 <LandingHeroFloatingCard
                   icon={Banknote}
                   title="Caixa do turno"
-                  subtitle="Fechamento claro · sem surpresa"
+                  subtitle="Fechamento claro, sem surpresa"
                   delay={0.4}
                   floatDuration={5.2}
                   floatRange={4}

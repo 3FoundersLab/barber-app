@@ -47,7 +47,7 @@ export function LandingProblem() {
     >
       <div className={landingContainer}>
         <LandingFadeIn className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Atenção · o que dói hoje</p>
+          <p className={landingEyebrow}>Atenção: o que dói hoje</p>
           <h2 id="landing-problema-heading" className={landingSectionTitle}>
             Sua barbearia merece mais do que agenda no improviso
           </h2>

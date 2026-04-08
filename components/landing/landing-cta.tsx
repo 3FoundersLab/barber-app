@@ -274,7 +274,7 @@ export function LandingCta() {
               <LandingHeroFloatingCard
                 icon={CalendarPlus}
                 title="Agenda do dia"
-                subtitle="Próximo: 15:00 · corte + barba"
+                subtitle="Próximo: 15:00, corte + barba"
                 delay={0.08}
                 floatDuration={5.5}
                 floatRange={3}
@@ -286,7 +286,7 @@ export function LandingCta() {
               <LandingHeroFloatingCard
                 icon={Banknote}
                 title="Caixa em dia"
-                subtitle="Pix · R$ 70,00"
+                subtitle="Pix, R$ 70,00"
                 delay={0.16}
                 floatDuration={6}
                 floatRange={4}
@@ -298,7 +298,7 @@ export function LandingCta() {
               <LandingHeroFloatingCard
                 icon={Sparkles}
                 title="Fechamento limpo"
-                subtitle="Meta · comissões"
+                subtitle="Meta, comissões"
                 delay={0.24}
                 floatDuration={5.8}
                 floatRange={3}
