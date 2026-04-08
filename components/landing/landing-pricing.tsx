@@ -28,34 +28,44 @@ const tiers: Tier[] = [
     name: 'Essencial',
     price: 'R$ 79',
     period: '/mês',
-    description: 'Para quem está estruturando a primeira unidade.',
-    features: ['Até 2 barbeiros', 'Agendamentos ilimitados', 'Gestão de clientes', 'Suporte por e-mail'],
-    cta: 'Assinar',
+    description: 'Primeira unidade firme. Começa simples, lucra com método.',
+    features: [
+      'Até 2 barbeiros no time',
+      'Agenda sem limite de marcação',
+      'Cliente com histórico guardado',
+      'Dúvida? Fala com a gente por e-mail',
+    ],
+    cta: 'Quero começar',
     href: LANDING_LINKS.cadastro,
   },
   {
     name: 'Profissional',
     price: 'R$ 149',
     period: '/mês',
-    description: 'O equilíbrio ideal para crescer com relatórios e equipe maior.',
+    description: 'Equipe maior, caixa na mão. Pra quem quer número todo dia.',
     features: [
       'Até 8 barbeiros',
-      'Dashboard e métricas',
-      'Planos e assinaturas',
-      'Relatórios exportáveis',
-      'Suporte prioritário',
+      'Resultado do dia na tela',
+      'Mensalidade e cobrança organizadas',
+      'Relatório na hora que precisar',
+      'Suporte na frente da fila',
     ],
     highlighted: true,
-    cta: 'Assinar',
+    cta: 'Quero crescer',
     href: LANDING_LINKS.cadastro,
   },
   {
     name: 'Empresarial',
     price: 'Sob consulta',
     period: '',
-    description: 'Rede de unidades ou operações com necessidades específicas.',
-    features: ['Barbeiros ilimitados', 'Múltiplas unidades', 'Integrações', 'Gerente de conta dedicado'],
-    cta: 'Falar com vendas',
+    description: 'Várias lojas ou operação grande. A gente monta do seu jeito.',
+    features: [
+      'Barbeiros à vontade',
+      'Mais de uma unidade',
+      'Encaixa no que você já usa',
+      'Alguém só pra você',
+    ],
+    cta: 'Falar com a gente',
     href: 'mailto:contato@barberapp.com.br?subject=Plano%20Empresarial%20BarberApp',
   },
 ]
@@ -71,10 +81,10 @@ export function LandingPricing() {
     >
       <div className={landingContainer}>
         <div className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Investimento</p>
-          <h2 className={landingSectionTitle}>Planos que acompanham seu crescimento</h2>
+          <p className={landingEyebrow}>Planos</p>
+          <h2 className={landingSectionTitle}>Pague pelo tamanho da sua operação</h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Valores ilustrativos — escolha o plano definitivo no cadastro. Sem surpresas na fatura.
+            Valores de exemplo. Você fecha o plano certo no cadastro. Conta clara — sem pegadinha na fatura.
           </p>
         </div>
         <div className="mt-20 grid gap-8 lg:grid-cols-3 lg:gap-6 xl:gap-8">

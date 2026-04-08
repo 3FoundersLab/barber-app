@@ -46,7 +46,7 @@ export function LandingNavbar() {
             size="sm"
             className="h-9 shrink-0 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-md shadow-amber-500/20 hover:from-amber-600 hover:to-orange-700 hover:text-white"
           >
-            <Link href={LANDING_LINKS.cadastro}>Começar</Link>
+            <Link href={LANDING_LINKS.cadastro}>Começar grátis</Link>
           </Button>
         </nav>
 
@@ -56,7 +56,7 @@ export function LandingNavbar() {
             size="sm"
             className="rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700 hover:text-white"
           >
-            <Link href={LANDING_LINKS.cadastro}>Começar</Link>
+            <Link href={LANDING_LINKS.cadastro}>Começar grátis</Link>
           </Button>
           <button
             type="button"

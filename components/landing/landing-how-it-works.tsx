@@ -14,20 +14,20 @@ const steps = [
   {
     step: 1,
     icon: Building2,
-    title: 'Crie sua barbearia',
-    text: 'Cadastro rápido com dados do negócio. Em minutos você já entra no painel.',
+    title: 'Abra sua conta',
+    text: 'Nome da loja, dados básicos. Em minutos você já está dentro.',
   },
   {
     step: 2,
     icon: SlidersHorizontal,
-    title: 'Configure agenda e equipe',
-    text: 'Serviços, horários e profissionais do seu jeito. Tudo visível para quem atende.',
+    title: 'Monte do seu jeito',
+    text: 'Serviço, horário, barbeiro. Cada um vê o que precisa. Zero confusão.',
   },
   {
     step: 3,
     icon: Rocket,
-    title: 'Opere com clareza',
-    text: 'Agenda, clientes e financeiro no mesmo lugar — do primeiro corte à meta do mês.',
+    title: 'Atenda e lucre',
+    text: 'Agenda, cliente e caixa num só lugar. Do primeiro corte ao fim do mês.',
   },
 ]
 
@@ -39,10 +39,10 @@ export function LandingHowItWorks() {
     >
       <div className={landingContainer}>
         <div className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Onboarding</p>
-          <h2 className={landingSectionTitle}>Como funciona</h2>
+          <p className={landingEyebrow}>Comece hoje</p>
+          <h2 className={landingSectionTitle}>Três passos. Loja outra cara.</h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Três passos para sair do improviso e passar a operar com painel profissional.
+            Sem curso. Sem complicação. Você enxerga a barbearia diferente ainda na primeira semana.
           </p>
         </div>
         <ol className="mt-20 grid gap-6 md:grid-cols-3 md:gap-8">

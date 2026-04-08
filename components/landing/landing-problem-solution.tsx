@@ -14,24 +14,24 @@ const pains = [
   {
     icon: CalendarX,
     title: 'Agenda espalhada',
-    text: 'Caderno, WhatsApp e lembretes soltos. Buracos na grade e retrabalho para remarcar.',
+    text: 'Um horário no caderno, outro no Zap. O dia vira bagunça. Você deixa dinheiro na mesa sem perceber.',
   },
   {
     icon: UsersRound,
     title: 'Cadeira vazia',
-    text: 'Faltas e desmarcações de última hora sem visão do que isso custa ao mês.',
+    text: 'Cliente some ou desmarca em cima da hora. Você não sabe quanto isso custou no mês.',
   },
   {
     icon: Banknote,
-    title: 'Financeiro no feeling',
-    text: 'Difícil saber o que entrou, o que é assinatura e onde está o lucro real.',
+    title: 'Caixa no escuro',
+    text: 'Fechou o dia sem saber se lucrou de verdade. Assinatura misturada com corte. Bolso aperta e você não sabe o porquê.',
   },
 ]
 
 const outcomes = [
-  'Agenda unificada com visão da equipe e do dia.',
-  'Clientes e histórico centralizados para fidelizar.',
-  'Números claros: receitas, planos e indicadores no painel.',
+  'Vê todos os horários da equipe de uma vez. Acabou o buraco escondido na agenda.',
+  'Lembra do cliente antes dele te esquecer. Mais volta, mais corte, mais caixa.',
+  'Abriu o app: já sabe o que entrou, o que falta cobrar e o que vem de mensalidade.',
 ]
 
 export function LandingProblemSolution() {
@@ -42,19 +42,16 @@ export function LandingProblemSolution() {
     >
       <div className={landingContainer}>
         <div className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Do caos ao controle</p>
-          <h2 className={landingSectionTitle}>
-            O dia a dia da barbearia não precisa ser uma corrida contra o relógio
-          </h2>
+          <p className={landingEyebrow}>Cansado disso?</p>
+          <h2 className={landingSectionTitle}>Menos correria. Mais dinheiro na mesa.</h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Quando a operação não conversa, você perde tempo, dinheiro e oportunidade de encantar quem senta na
-            cadeira.
+            Quando nada conversa, você perde hora. O caixa sofre. E o cliente bom escapa sem você nem notar.
           </p>
         </div>
 
         <div className="mt-20 grid gap-10 lg:grid-cols-2 lg:items-stretch lg:gap-12 xl:gap-16">
           <div className="flex flex-col gap-5">
-            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Sons familiares?</p>
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Soa familiar?</p>
             <ul className="flex flex-col gap-5">
               {pains.map(({ icon: Icon, title, text }) => (
                 <li
@@ -82,13 +79,12 @@ export function LandingProblemSolution() {
               'flex flex-col justify-center rounded-3xl border border-amber-200/70 bg-gradient-to-br from-amber-500/[0.08] via-white to-orange-500/[0.06] p-8 shadow-sm ring-1 ring-amber-500/[0.08] dark:border-amber-500/20 dark:from-amber-500/[0.12] dark:via-zinc-950 dark:to-orange-500/[0.06] dark:ring-amber-500/10 sm:p-10 lg:p-11',
             )}
           >
-            <p className={landingEyebrow}>A solução</p>
+            <p className={landingEyebrow}>Com BarberApp</p>
             <h3 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-white sm:text-[1.65rem] sm:leading-snug">
-              Um sistema pensado para a rotina da barbearia
+              Você manda no negócio de novo — sem virar refém de planilha
             </h3>
             <p className="mt-4 text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
-              O BarberApp reúne agenda, clientes, financeiro e assinaturas em um fluxo só — para você decidir rápido e
-              trabalhar com método.
+              Um lugar só pra ver o que importa: quem vem, quem paga e quanto sobrou no fim do dia.
             </p>
             <ul className="mt-10 flex flex-col gap-4">
               {outcomes.map((line) => (

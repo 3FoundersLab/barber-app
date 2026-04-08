@@ -25,10 +25,10 @@ export function LandingCta() {
               id="landing-cta-heading"
               className="text-balance text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-[2.375rem] md:leading-[1.15]"
             >
-              Mais lucro e menos esforço na gestão da sua barbearia
+              Pronto pra encher a agenda e ver o caixa de outro jeito?
             </h2>
             <p className="mx-auto mt-6 max-w-lg text-base leading-relaxed text-zinc-300 sm:text-lg">
-              Junte agenda, clientes e financeiro em um só sistema. Comece agora e veja a diferença na primeira semana.
+              Cadastro leve. Em minutos você já enxerga a loja de outro ângulo — agenda, cliente e caixa alinhados.
             </p>
             <div className="mt-11 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
               <Button
@@ -36,7 +36,7 @@ export function LandingCta() {
                 size="lg"
                 className="h-12 min-w-[200px] rounded-xl bg-white px-10 text-base font-semibold text-zinc-950 shadow-lg transition hover:scale-[1.02] hover:bg-zinc-100"
               >
-                <Link href={LANDING_LINKS.cadastro}>Criar minha barbearia</Link>
+                <Link href={LANDING_LINKS.cadastro}>Começar grátis</Link>
               </Button>
               <Button
                 asChild
@@ -44,7 +44,7 @@ export function LandingCta() {
                 variant="outline"
                 className="h-12 rounded-xl border-zinc-500/70 bg-white/5 text-base font-medium text-white backdrop-blur-sm hover:bg-white/10 hover:text-white"
               >
-                <Link href={LANDING_LINKS.login}>Já tenho conta</Link>
+                <Link href={LANDING_LINKS.login}>Entrar na minha conta</Link>
               </Button>
             </div>
           </div>

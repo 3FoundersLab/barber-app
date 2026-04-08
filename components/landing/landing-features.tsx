@@ -13,23 +13,23 @@ import { cn } from '@/lib/utils'
 const cards = [
   {
     icon: CalendarRange,
-    title: 'Agenda inteligente',
-    description: 'Grade da equipe, horários e status em tempo real. Menos buracos, menos retrabalho para remarcar.',
+    title: 'Agenda que enche o dia',
+    description: 'Marca, remarca e vê a equipe inteira. Menos furo. Mais horário pago.',
   },
   {
     icon: Wallet,
-    title: 'Controle financeiro',
-    description: 'Receitas, assinaturas e visão do fluxo. Saiba o que a unidade gerou sem abrir dez abas.',
+    title: 'Dinheiro claro, todo dia',
+    description: 'O que entrou, o que é mensalidade, o que falta receber. Sem abrir dez conversas pra saber.',
   },
   {
     icon: Users,
-    title: 'Gestão de clientes',
-    description: 'Perfil, histórico e relacionamento centralizados. Atendimento personalizado em escala.',
+    title: 'Cliente que você não esquece',
+    description: 'Nome, volta, preferência na mão. Atende melhor sem esforço — e ele sente.',
   },
   {
     icon: CreditCard,
-    title: 'Planos e assinaturas',
-    description: 'Cobrança recorrente e status sob controle. Previsibilidade para você e clareza para o cliente.',
+    title: 'Mensalidade no piloto',
+    description: 'Cliente paga certo. Você sabe o que entra no mês antes do mês acabar.',
   },
 ]
 
@@ -41,10 +41,10 @@ export function LandingFeatures() {
     >
       <div className={landingContainer}>
         <div className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Funcionalidades</p>
-          <h2 className={landingSectionTitle}>Tudo integrado no mesmo fluxo</h2>
+          <p className={landingEyebrow}>Por dentro</p>
+          <h2 className={landingSectionTitle}>Do “marcou” ao “pagou”, tudo junto</h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Módulos que conversam entre si — da reserva ao pagamento, sem soluções paralelas.
+            Quatro frentes que trabalham juntas. Você ganha tempo. O cliente ganha clareza. O caixa agradece.
           </p>
         </div>
         <ul className="mt-20 grid gap-6 sm:grid-cols-2 lg:gap-8">

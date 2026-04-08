@@ -24,9 +24,9 @@ function DashboardMockup() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                  Painel · sua barbearia
+                  Sua barbearia · hoje
                 </p>
-                <p className="mt-1 text-xl font-semibold tracking-tight text-zinc-950 dark:text-white">Hoje na unidade</p>
+                <p className="mt-1 text-xl font-semibold tracking-tight text-zinc-950 dark:text-white">Tudo numa tela</p>
               </div>
               <span className="rounded-full bg-emerald-600/10 px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-400">
                 Faturamento +12%
@@ -46,13 +46,13 @@ function DashboardMockup() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-zinc-100 bg-zinc-50/90 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Agendamentos</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Horários hoje</p>
                 <p className="mt-1.5 text-2xl font-semibold tabular-nums tracking-tight text-zinc-950 dark:text-white">
                   48
                 </p>
               </div>
               <div className="rounded-xl border border-zinc-100 bg-zinc-50/90 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Clientes ativos</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Quem volta</p>
                 <p className="mt-1.5 text-2xl font-semibold tabular-nums tracking-tight text-zinc-950 dark:text-white">
                   312
                 </p>
@@ -80,15 +80,15 @@ export function LandingHero() {
       >
         <div className="animate-in fade-in slide-in-from-bottom-3 duration-700" style={{ animationFillMode: 'both' }}>
           <p className="mb-5 inline-flex items-center rounded-full border border-amber-200/90 bg-amber-50/90 px-4 py-1.5 text-xs font-semibold text-amber-950 shadow-sm dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-100">
-            Para donos e gestores de barbearia
+            Feito pra quem manda na barbearia
           </p>
           <h1 className="text-balance text-4xl font-semibold tracking-tight text-zinc-950 sm:text-5xl sm:leading-[1.06] lg:text-[3.125rem] lg:leading-[1.04] dark:text-white">
-            Controle sua barbearia e aumente seu faturamento em poucos cliques
+            Organize sua barbearia, aumente seu faturamento e nunca mais perca clientes
           </h1>
           <p className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-zinc-600 sm:text-lg dark:text-zinc-400">
-            <span className="font-semibold text-zinc-950 dark:text-zinc-100">BarberApp</span> é software na web: você
-            cadastra a unidade e administra agenda da equipe, clientes e caixa no mesmo painel, em tempo real — sem
-            planilha e sem depender só do WhatsApp para organizar o dia.
+            <span className="font-semibold text-zinc-950 dark:text-zinc-100">BarberApp</span> junta agenda, clientes e
+            dinheiro num só lugar. Você vê o dia inteiro em segundos — no celular ou no computador. Chega de planilha e
+            de Zap virar agenda oficial.
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <Button
@@ -104,11 +104,11 @@ export function LandingHero() {
               size="lg"
               className="h-12 rounded-xl border-zinc-300/90 bg-white/90 text-base font-medium text-zinc-800 shadow-sm backdrop-blur hover:bg-white dark:border-zinc-600 dark:bg-zinc-900/90 dark:text-zinc-100 dark:hover:bg-zinc-900"
             >
-              <Link href={`#${LANDING_SECTIONS.funcionalidades}`}>O que o sistema faz</Link>
+              <Link href={`#${LANDING_SECTIONS.funcionalidades}`}>O que eu ganho com isso</Link>
             </Button>
           </div>
           <p className="mt-6 text-sm font-medium text-zinc-500 dark:text-zinc-500">
-            Cadastro rápido · Tudo em português · Menos caos na operação
+            Leva minutos pra começar · 100% em português · Menos correria, mais lucro
           </p>
         </div>
         <DashboardMockup />

@@ -38,8 +38,7 @@ export function LandingFooter() {
               className="inline-flex"
             />
             <p className="mt-6 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-              Gestão completa para barbearias que querem lucrar com método — agenda, clientes e financeiro no mesmo
-              lugar.
+              Agenda, cliente e dinheiro no mesmo lugar. Menos improviso. Mais lucro na mesa.
             </p>
           </div>
           <div>

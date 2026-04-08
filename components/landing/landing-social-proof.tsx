@@ -11,28 +11,28 @@ import {
 import { cn } from '@/lib/utils'
 
 const stats = [
-  { value: '+120', label: 'barbearias ativas' },
-  { value: '4,8/5', label: 'satisfação média' },
-  { value: '35%', label: 'menos faltas (média)' },
+  { value: '+120', label: 'barbearias usando' },
+  { value: '4,8/5', label: 'nota dos donos' },
+  { value: '35%', label: 'menos buraco na agenda' },
 ]
 
 const quotes = [
   {
     name: 'Rafael M.',
     role: 'Dono, Barbearia Centro',
-    text: 'Centralizei agenda e financeiro. Hoje sei exatamente o que entra no caixa por semana.',
+    text: 'Sei o que entra no caixa por semana. Acabou o chute.',
   },
   {
     name: 'Diego A.',
     role: 'Sócio, Studio Corte',
-    text: 'A equipe adotou rápido. O dashboard ajuda a bater meta sem ficar no Excel à noite.',
+    text: 'Equipe pegou num dia. Meta fecha mais fácil — sem planilha até de madrugada.',
   },
 ]
 
 const trust = [
-  { icon: Lock, label: 'Ambiente seguro', sub: 'Boas práticas de dados' },
-  { icon: MessageCircle, label: 'Suporte em português', sub: 'Fale com quem entende o negócio' },
-  { icon: RefreshCw, label: 'Evolução contínua', sub: 'Melhorias frequentes na plataforma' },
+  { icon: Lock, label: 'Seus dados protegidos', sub: 'Negócio com trava, sem drama' },
+  { icon: MessageCircle, label: 'Suporte em português', sub: 'Gente de verdade, não robô' },
+  { icon: RefreshCw, label: 'Sempre melhorando', sub: 'Você sente no dia a dia' },
 ]
 
 export function LandingSocialProof() {
@@ -46,10 +46,10 @@ export function LandingSocialProof() {
     >
       <div className={landingContainer}>
         <div className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Prova social</p>
-          <h2 className={landingSectionTitle}>Quem usa, recomenda</h2>
+          <p className={landingEyebrow}>Quem já entrou</p>
+          <h2 className={landingSectionTitle}>Barbearias que pararam de adivinhar</h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Números e relatos de quem trocou improviso por método na gestão do salão.
+            Números na tela. Donos que dormem melhor. Menos achismo, mais resultado.
           </p>
         </div>
 

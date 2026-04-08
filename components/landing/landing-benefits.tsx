@@ -15,23 +15,23 @@ type Item = { icon: LucideIcon; title: string; description: string }
 const items: Item[] = [
   {
     icon: TrendingUp,
-    title: 'Mais clientes',
-    description: 'Histórico e recorrência na palma da mão. Você lembra do cliente antes dele lembrar de você.',
+    title: 'Mais clientes na cadeira',
+    description: 'Vê quem some e quem vale pena puxar de volta. Mais retorno. Menos lugar vazio.',
   },
   {
     icon: LayoutGrid,
-    title: 'Mais organização',
-    description: 'Agenda e equipe alinhadas. Todo mundo enxerga o mesmo dia — sem versões conflitantes.',
+    title: 'Dia redondo, equipe alinhada',
+    description: 'Todo mundo olha o mesmo horário. Acabou o “eu não sabia desse corte”.',
   },
   {
     icon: Wallet,
-    title: 'Mais faturamento',
-    description: 'Visão do que entra, assinaturas e picos de demanda. Decisões com número, não com achismo.',
+    title: 'Caixa que você confia',
+    description: 'Sabe o que vendeu, o que é mensalidade e onde está o pico. Decide com cabeça fria.',
   },
   {
     icon: Clock,
-    title: 'Economia de tempo',
-    description: 'Menos mensagens e planilhas. O sistema faz o trabalho chato; você foca no corte e na experiência.',
+    title: 'Horas de volta pra você',
+    description: 'Menos Zap, menos papel. Você corta; o resto roda sozinho.',
   },
 ]
 
@@ -46,10 +46,10 @@ export function LandingBenefits() {
     >
       <div className={landingContainer}>
         <div className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Resultados</p>
-          <h2 className={landingSectionTitle}>O que muda no seu negócio</h2>
+          <p className={landingEyebrow}>O que você sente</p>
+          <h2 className={landingSectionTitle}>Mais gente, mais ordem, mais lucro</h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Benefícios diretos para quem quer escalar sem perder o padrão da cadeira.
+            Nada de promessa vazia. É o que muda no bolso e na cabeça quando a loja para de viver no improviso.
           </p>
         </div>
         <ul className="mt-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
