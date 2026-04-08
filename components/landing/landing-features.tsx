@@ -1,27 +1,26 @@
-import { LayoutDashboard, PieChart, UserCog, Wallet } from 'lucide-react'
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { CalendarRange, CreditCard, Users, Wallet } from 'lucide-react'
 import { LANDING_SECTIONS } from '@/components/landing/constants'
 
 const cards = [
   {
-    icon: LayoutDashboard,
-    title: 'Dashboard com gráficos',
-    description: 'Visão consolidada de desempenho, tendências e KPIs da sua unidade.',
+    icon: CalendarRange,
+    title: 'Agenda inteligente',
+    description: 'Grade da equipe, horários e status em tempo real. Menos buracos, menos retrabalho para remarcar.',
   },
   {
     icon: Wallet,
-    title: 'Controle de pagamentos',
-    description: 'Acompanhe recebimentos, assinaturas e fluxo financeiro com clareza.',
+    title: 'Controle financeiro',
+    description: 'Receitas, assinaturas e visão do fluxo. Saiba o que a unidade gerou sem abrir dez abas.',
   },
   {
-    icon: UserCog,
-    title: 'Gestão de usuários',
-    description: 'Equipe, permissões e perfis organizados para escalar com segurança.',
+    icon: Users,
+    title: 'Gestão de clientes',
+    description: 'Perfil, histórico e relacionamento centralizados. Atendimento personalizado em escala.',
   },
   {
-    icon: PieChart,
-    title: 'Relatórios',
-    description: 'Exporte insights para planejar campanhas, metas e horários de pico.',
+    icon: CreditCard,
+    title: 'Planos e assinaturas',
+    description: 'Cobrança recorrente e status sob controle. Previsibilidade para você e clareza para o cliente.',
   },
 ]
 
@@ -29,33 +28,38 @@ export function LandingFeatures() {
   return (
     <section
       id={LANDING_SECTIONS.funcionalidades}
-      className="scroll-mt-24 bg-zinc-50/80 py-20 dark:bg-zinc-900/50 md:py-28"
+      className="scroll-mt-24 bg-white py-20 dark:bg-zinc-950 md:py-28"
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">
-            Funcionalidades principais
+          <p className="text-sm font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+            Funcionalidades
+          </p>
+          <h2 className="mt-3 text-balance text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">
+            Tudo integrado no mesmo fluxo
           </h2>
           <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
-            Módulos que conversam entre si — menos retrabalho, mais consistência no atendimento.
+            Módulos que conversam entre si — da reserva ao pagamento, sem soluções paralelas.
           </p>
         </div>
-        <div className="mt-14 grid gap-6 sm:grid-cols-2">
+        <ul className="mt-16 grid gap-6 sm:grid-cols-2">
           {cards.map(({ icon: Icon, title, description }) => (
-            <Card
+            <li
               key={title}
-              className="border-zinc-200/80 transition-all duration-300 hover:-translate-y-0.5 hover:border-amber-200/60 hover:shadow-lg dark:border-zinc-700 dark:hover:border-amber-500/25"
+              className="flex gap-5 rounded-2xl border border-zinc-200/80 bg-zinc-50/30 p-6 transition-all duration-300 hover:border-amber-200/70 hover:bg-white hover:shadow-lg dark:border-zinc-800 dark:bg-zinc-900/40 dark:hover:border-amber-500/25 dark:hover:bg-zinc-900 sm:p-8"
             >
-              <CardHeader className="gap-3">
-                <div className="inline-flex size-11 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                  <Icon className="size-5" aria-hidden />
-                </div>
-                <CardTitle className="text-xl">{title}</CardTitle>
-                <CardDescription className="text-base leading-relaxed">{description}</CardDescription>
-              </CardHeader>
-            </Card>
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <Icon className="size-6" aria-hidden />
+              </span>
+              <div>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 sm:text-base">
+                  {description}
+                </p>
+              </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   )

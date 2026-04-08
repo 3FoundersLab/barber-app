@@ -5,9 +5,11 @@ import { LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
 
 const footerLinks = [
   { label: 'Início', href: `#${LANDING_SECTIONS.top}` },
+  { label: 'Desafios', href: `#${LANDING_SECTIONS.desafios}` },
   { label: 'Benefícios', href: `#${LANDING_SECTIONS.beneficios}` },
-  { label: 'Como funciona', href: `#${LANDING_SECTIONS.comoFunciona}` },
   { label: 'Funcionalidades', href: `#${LANDING_SECTIONS.funcionalidades}` },
+  { label: 'Depoimentos', href: `#${LANDING_SECTIONS.provaSocial}` },
+  { label: 'Como funciona', href: `#${LANDING_SECTIONS.comoFunciona}` },
   { label: 'Planos', href: `#${LANDING_SECTIONS.planos}` },
 ]
 
@@ -19,21 +21,22 @@ const social = [
 
 export function LandingFooter() {
   return (
-    <footer className="border-t border-zinc-200 bg-zinc-50 py-14 dark:border-zinc-800 dark:bg-zinc-950">
+    <footer className="border-t border-zinc-200 bg-zinc-50 py-16 dark:border-zinc-800 dark:bg-zinc-950 md:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
-          <div>
+        <div className="flex flex-col gap-12 md:flex-row md:items-start md:justify-between">
+          <div className="max-w-sm">
             <AppBrandLogo
               href={`#${LANDING_SECTIONS.top}`}
               textClassName="text-zinc-900 dark:text-white"
               className="inline-flex"
             />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-              Gestão completa para barbearias modernas. Feito para quem corta bem e quer vender melhor.
+            <p className="mt-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+              Gestão completa para barbearias que querem lucrar com método — agenda, clientes e financeiro no mesmo
+              lugar.
             </p>
           </div>
           <div>
-            <p className="text-sm font-semibold text-zinc-900 dark:text-white">Links úteis</p>
+            <p className="text-sm font-semibold text-zinc-900 dark:text-white">Navegação</p>
             <ul className="mt-4 flex flex-col gap-2">
               {footerLinks.map((l) => (
                 <li key={l.href}>
@@ -50,7 +53,7 @@ export function LandingFooter() {
                   href={LANDING_LINKS.login}
                   className="text-sm text-zinc-600 transition-colors hover:text-amber-600 dark:text-zinc-400 dark:hover:text-amber-400"
                 >
-                  Login
+                  Entrar
                 </Link>
               </li>
               <li>
@@ -70,7 +73,7 @@ export function LandingFooter() {
                 contato@barberapp.com.br
               </a>
             </p>
-            <p className="mt-4 text-sm font-semibold text-zinc-900 dark:text-white">Redes</p>
+            <p className="mt-6 text-sm font-semibold text-zinc-900 dark:text-white">Redes</p>
             <ul className="mt-3 flex gap-3">
               {social.map(({ label, href, icon: Icon }) => (
                 <li key={label}>
@@ -88,7 +91,7 @@ export function LandingFooter() {
             </ul>
           </div>
         </div>
-        <p className="mt-12 border-t border-zinc-200 pt-8 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-500">
+        <p className="mt-14 border-t border-zinc-200 pt-8 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-500">
           © {new Date().getFullYear()} BarberApp. Todos os direitos reservados.
         </p>
       </div>

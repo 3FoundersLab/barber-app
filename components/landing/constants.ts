@@ -1,9 +1,11 @@
 /** Âncoras da landing (scroll suave). */
 export const LANDING_SECTIONS = {
   top: 'inicio',
-  comoFunciona: 'como-funciona',
+  desafios: 'desafios',
   beneficios: 'beneficios',
   funcionalidades: 'funcionalidades',
+  provaSocial: 'prova-social',
+  comoFunciona: 'como-funciona',
   planos: 'planos',
 } as const
 
