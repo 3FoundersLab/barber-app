@@ -13,25 +13,25 @@ import { cn } from '@/lib/utils'
 const pains = [
   {
     icon: CalendarX,
-    title: 'Agenda espalhada',
-    text: 'Um horário no caderno, outro no Zap. O dia vira bagunça. Você deixa dinheiro na mesa sem perceber.',
+    title: 'Agenda no papel e no Zap',
+    text: 'Cliente marcou no direct, outro ligou, um terceiro mandou áudio. Quando vira sexta, a grade tá furada e você nem sabe quem falta.',
   },
   {
     icon: UsersRound,
-    title: 'Cadeira vazia',
-    text: 'Cliente some ou desmarca em cima da hora. Você não sabe quanto isso custou no mês.',
+    title: 'Cadeira fria no melhor horário',
+    text: 'Deu bolo, faltou ou desmarcou em cima da hora. Cada buraco é corte que não entrou no caixa — e ninguém soma isso no fim do mês.',
   },
   {
     icon: Banknote,
-    title: 'Caixa no escuro',
-    text: 'Fechou o dia sem saber se lucrou de verdade. Assinatura misturada com corte. Bolso aperta e você não sabe o porquê.',
+    title: 'Caixa misturado com barba',
+    text: 'Pix do corte, dinheiro do combo, mensalista e produto tudo no mesmo bolso mental. Fecha a loja e ainda fica na dúvida: deu lucro ou só movimento?',
   },
 ]
 
 const outcomes = [
-  'Vê todos os horários da equipe de uma vez. Acabou o buraco escondido na agenda.',
-  'Lembra do cliente antes dele te esquecer. Mais volta, mais corte, mais caixa.',
-  'Abriu o app: já sabe o que entrou, o que falta cobrar e o que vem de mensalidade.',
+  'Grade da turma inteira na tela: quem tá com cliente, quem tem buraco, quem pode encaixe.',
+  'Ficha do cliente na mão — último corte, o que ele gosta, quando costuma voltar.',
+  'Abriu o celular: já sabe o que entrou hoje, o que é assinatura e o que ainda tá pra cobrar.',
 ]
 
 export function LandingProblemSolution() {
@@ -42,16 +42,17 @@ export function LandingProblemSolution() {
     >
       <div className={landingContainer}>
         <div className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Cansado disso?</p>
-          <h2 className={landingSectionTitle}>Menos correria. Mais dinheiro na mesa.</h2>
+          <p className={landingEyebrow}>Já rolou contigo?</p>
+          <h2 className={landingSectionTitle}>Cadeira vazia não paga aluguel</h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Quando nada conversa, você perde hora. O caixa sofre. E o cliente bom escapa sem você nem notar.
+            Quando a loja vive no improviso, o cliente some, a equipe briga por horário e você fecha o dia cansado —
+            sem saber se o bolso agradeceu.
           </p>
         </div>
 
         <div className="mt-20 grid gap-10 lg:grid-cols-2 lg:items-stretch lg:gap-12 xl:gap-16">
           <div className="flex flex-col gap-5">
-            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Soa familiar?</p>
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Cena de segunda a sábado</p>
             <ul className="flex flex-col gap-5">
               {pains.map(({ icon: Icon, title, text }) => (
                 <li
@@ -79,12 +80,13 @@ export function LandingProblemSolution() {
               'flex flex-col justify-center rounded-3xl border border-amber-200/70 bg-gradient-to-br from-amber-500/[0.08] via-white to-orange-500/[0.06] p-8 shadow-sm ring-1 ring-amber-500/[0.08] dark:border-amber-500/20 dark:from-amber-500/[0.12] dark:via-zinc-950 dark:to-orange-500/[0.06] dark:ring-amber-500/10 sm:p-10 lg:p-11',
             )}
           >
-            <p className={landingEyebrow}>Com BarberApp</p>
+            <p className={landingEyebrow}>Com BarberApp na bancada</p>
             <h3 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-white sm:text-[1.65rem] sm:leading-snug">
-              Você manda no negócio de novo — sem virar refém de planilha
+              Você volta a mandar na grade — sem virar refém de planilha nem de print no grupo
             </h3>
             <p className="mt-4 text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
-              Um lugar só pra ver o que importa: quem vem, quem paga e quanto sobrou no fim do dia.
+              Um painel que fala a mesma língua que a sua loja: quem sentou, quem vai sentar e quanto isso virou
+              dinheiro no fim do dia.
             </p>
             <ul className="mt-10 flex flex-col gap-4">
               {outcomes.map((line) => (

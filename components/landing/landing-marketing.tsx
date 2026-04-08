@@ -20,14 +20,14 @@ export function LandingMarketing() {
         <main className="pb-[5.5rem] lg:pb-0">
           <LandingHero />
           <LandingProblemSolution />
-          <LandingCtaStrip headline="Chega de adivinhar? Veja agenda e caixa no mesmo lugar — grátis pra começar." />
+          <LandingCtaStrip headline="Chega de chutar o caixa no domingo? Agenda e dinheiro na mesma tela — abre a conta e vê na hora." />
           <LandingBenefits />
-          <LandingCtaStrip headline="Quer mais gente na cadeira e menos correria? Entre agora e monte sua loja em minutos." />
+          <LandingCtaStrip headline="Quer cadeira girando e menos briga por horário? Monta a grade em minutos e chama a equipe." />
           <LandingFeatures />
-          <LandingCtaStrip headline="Um clique e você enxerga como fica o dia da sua barbearia organizado." />
+          <LandingCtaStrip headline="Do encaixe ao Pix: vê como a sua bancada fica quando tudo conversa." />
           <LandingSocialProof />
           <LandingHowItWorks />
-          <LandingCtaStrip headline="Falta só você: crie a conta em ~2 minutos e comece a usar hoje." />
+          <LandingCtaStrip headline="Falta só você: dois minutos e já marca o primeiro horário de verdade." />
           <LandingPricing />
           <LandingCta />
         </main>

@@ -7,12 +7,12 @@ import { cn } from '@/lib/utils'
 
 const footerLinks = [
   { label: 'Início', href: `#${LANDING_SECTIONS.top}` },
-  { label: 'Desafios', href: `#${LANDING_SECTIONS.desafios}` },
-  { label: 'Benefícios', href: `#${LANDING_SECTIONS.beneficios}` },
-  { label: 'Funcionalidades', href: `#${LANDING_SECTIONS.funcionalidades}` },
-  { label: 'Depoimentos', href: `#${LANDING_SECTIONS.provaSocial}` },
-  { label: 'Como funciona', href: `#${LANDING_SECTIONS.comoFunciona}` },
-  { label: 'Planos', href: `#${LANDING_SECTIONS.planos}` },
+  { label: 'Na rotina', href: `#${LANDING_SECTIONS.desafios}` },
+  { label: 'Na prática', href: `#${LANDING_SECTIONS.beneficios}` },
+  { label: 'Ferramentas', href: `#${LANDING_SECTIONS.funcionalidades}` },
+  { label: 'Quem usa', href: `#${LANDING_SECTIONS.provaSocial}` },
+  { label: 'Como entra', href: `#${LANDING_SECTIONS.comoFunciona}` },
+  { label: 'Mensalidade', href: `#${LANDING_SECTIONS.planos}` },
 ]
 
 const social = [
@@ -38,7 +38,7 @@ export function LandingFooter() {
               className="inline-flex"
             />
             <p className="mt-6 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-              Agenda, cliente e dinheiro no mesmo lugar. Menos improviso. Mais lucro na mesa.
+              Grade, ficha do cliente e caixa na mesma tela. Menos improviso na bancada. Mais corte pago no fim do dia.
             </p>
           </div>
           <div>

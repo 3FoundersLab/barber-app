@@ -13,23 +13,23 @@ import { cn } from '@/lib/utils'
 const cards = [
   {
     icon: CalendarRange,
-    title: 'Agenda que enche o dia',
-    description: 'Marca, remarca e vê a equipe inteira. Menos furo. Mais horário pago.',
+    title: 'Grade firme, buraco à mostra',
+    description: 'Marca, remarca, encaixe e vê quem tá livre. Menos buraco no meio do dia cheio.',
   },
   {
     icon: Wallet,
-    title: 'Dinheiro claro, todo dia',
-    description: 'O que entrou, o que é mensalidade, o que falta receber. Sem abrir dez conversas pra saber.',
+    title: 'Dinheiro do dia separado direitinho',
+    description: 'Corte, barba, combo, Pix e mensalista cada um no seu canto. Fecha a loja sabendo o que ficou.',
   },
   {
     icon: Users,
-    title: 'Cliente que você não esquece',
-    description: 'Nome, volta, preferência na mão. Atende melhor sem esforço — e ele sente.',
+    title: 'Cliente com nome e história',
+    description: 'Quem gosta de pezinho baixo, quem só vem de mês em mês. Atende melhor sem perguntar de novo.',
   },
   {
     icon: CreditCard,
-    title: 'Mensalidade no piloto',
-    description: 'Cliente paga certo. Você sabe o que entra no mês antes do mês acabar.',
+    title: 'Mensalista no eixo',
+    description: 'Quem paga fixo mês a mês fica sob controle. Você projeta o caixa antes do pagamento dos meninos.',
   },
 ]
 
@@ -41,10 +41,11 @@ export function LandingFeatures() {
     >
       <div className={landingContainer}>
         <div className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Por dentro</p>
-          <h2 className={landingSectionTitle}>Do “marcou” ao “pagou”, tudo junto</h2>
+          <p className={landingEyebrow}>Ferramenta de bancada</p>
+          <h2 className={landingSectionTitle}>Do “tem vaga?” ao “pago no Pix” — junto</h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Quatro frentes que trabalham juntas. Você ganha tempo. O cliente ganha clareza. O caixa agradece.
+            Quatro coisas que qualquer barbearia usa todo santo dia, falando a mesma língua: horário, cliente, caixa e
+            quem paga direto.
           </p>
         </div>
         <ul className="mt-20 grid gap-6 sm:grid-cols-2 lg:gap-8">

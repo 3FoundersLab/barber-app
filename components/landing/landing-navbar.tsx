@@ -13,10 +13,10 @@ const navClass =
   'text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-950 dark:text-zinc-500 dark:hover:text-white'
 
 const links = [
-  { href: `#${LANDING_SECTIONS.desafios}`, label: 'Desafios' },
-  { href: `#${LANDING_SECTIONS.beneficios}`, label: 'Benefícios' },
-  { href: `#${LANDING_SECTIONS.comoFunciona}`, label: 'Como funciona' },
-  { href: `#${LANDING_SECTIONS.planos}`, label: 'Planos' },
+  { href: `#${LANDING_SECTIONS.desafios}`, label: 'Na rotina' },
+  { href: `#${LANDING_SECTIONS.beneficios}`, label: 'Na prática' },
+  { href: `#${LANDING_SECTIONS.comoFunciona}`, label: 'Como entra' },
+  { href: `#${LANDING_SECTIONS.planos}`, label: 'Mensalidade' },
 ] as const
 
 export function LandingNavbar() {

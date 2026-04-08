@@ -25,12 +25,12 @@ function DashboardMockup() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                  Sua barbearia · hoje
+                  Bancada · hoje
                 </p>
-                <p className="mt-1 text-xl font-semibold tracking-tight text-zinc-950 dark:text-white">Tudo numa tela</p>
+                <p className="mt-1 text-xl font-semibold tracking-tight text-zinc-950 dark:text-white">Grade na mão</p>
               </div>
               <span className="rounded-full bg-emerald-600/10 px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-400">
-                Faturamento +12%
+                Caixa +12%
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -47,13 +47,13 @@ function DashboardMockup() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-zinc-100 bg-zinc-50/90 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Horários hoje</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Cortes hoje</p>
                 <p className="mt-1.5 text-2xl font-semibold tabular-nums tracking-tight text-zinc-950 dark:text-white">
                   48
                 </p>
               </div>
               <div className="rounded-xl border border-zinc-100 bg-zinc-50/90 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Quem volta</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Cliente fiel</p>
                 <p className="mt-1.5 text-2xl font-semibold tabular-nums tracking-tight text-zinc-950 dark:text-white">
                   312
                 </p>
@@ -81,15 +81,15 @@ export function LandingHero() {
       >
         <div className="animate-in fade-in slide-in-from-bottom-3 duration-700" style={{ animationFillMode: 'both' }}>
           <p className="mb-5 inline-flex items-center rounded-full border border-amber-200/90 bg-amber-50/90 px-4 py-1.5 text-xs font-semibold text-amber-950 shadow-sm dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-100">
-            Feito pra quem manda na barbearia
+            Pra quem vive a loja — dono ou barbeiro na ponta da tesoura
           </p>
           <h1 className="text-balance text-4xl font-semibold tracking-tight text-zinc-950 sm:text-5xl sm:leading-[1.06] lg:text-[3.125rem] lg:leading-[1.04] dark:text-white">
-            Organize sua barbearia, aumente seu faturamento e nunca mais perca clientes
+            Pare de perder cliente por desorganização. Busque agenda cheia de novo — todos os dias.
           </h1>
           <p className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-zinc-600 sm:text-lg dark:text-zinc-400">
-            <span className="font-semibold text-zinc-950 dark:text-zinc-100">BarberApp</span> junta agenda, clientes e
-            dinheiro num só lugar. Você vê o dia inteiro em segundos — no celular ou no computador. Chega de planilha e
-            de Zap virar agenda oficial.
+            <span className="font-semibold text-zinc-950 dark:text-zinc-100">BarberApp</span> é a sua bancada digital:
+            encaixe, remarcação e fila da equipe num lugar só. Pix, dinheiro e mensalista separados. Chega de grupo do
+            Zap virar agenda e de dois barbeiros marcarem o mesmo horário sem querer.
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
             <Button
@@ -116,10 +116,10 @@ export function LandingHero() {
             href={`#${LANDING_SECTIONS.funcionalidades}`}
             className="mt-5 inline-block text-sm font-semibold text-zinc-500 underline-offset-4 transition hover:text-zinc-800 hover:underline dark:text-zinc-400 dark:hover:text-zinc-200"
           >
-            Ver o que muda na prática →
+            Ver o que entra na prática na sua loja →
           </Link>
           <p className="mt-5 text-sm font-medium text-zinc-500 dark:text-zinc-500">
-            100% em português · Menos correria, mais lucro
+            Fala a língua da barbearia · Menos correria entre corte e corte
           </p>
         </div>
         <DashboardMockup />

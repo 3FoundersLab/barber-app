@@ -14,20 +14,20 @@ const steps = [
   {
     step: 1,
     icon: Building2,
-    title: 'Abra sua conta',
-    text: 'Nome da loja, dados básicos. Em minutos você já está dentro.',
+    title: 'Coloca a loja no sistema',
+    text: 'Nome da bancada, endereço, quem corta. Em poucos minutos você já entra como se fosse abrir a porta.',
   },
   {
     step: 2,
     icon: SlidersHorizontal,
-    title: 'Monte do seu jeito',
-    text: 'Serviço, horário, barbeiro. Cada um vê o que precisa. Zero confusão.',
+    title: 'Ajusta serviço e horário',
+    text: 'Corte, barba, tempo de cada um, folga do menino. Cada barbeiro vê a própria fila sem passar por cima do outro.',
   },
   {
     step: 3,
     icon: Rocket,
-    title: 'Atenda e lucre',
-    text: 'Agenda, cliente e caixa num só lugar. Do primeiro corte ao fim do mês.',
+    title: 'Liga o dia e acompanha o caixa',
+    text: 'Marcação, cliente e dinheiro no mesmo lugar. Do primeiro cliente da manhã ao último Pix da noite.',
   },
 ]
 
@@ -39,10 +39,11 @@ export function LandingHowItWorks() {
     >
       <div className={landingContainer}>
         <div className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Comece hoje</p>
-          <h2 className={landingSectionTitle}>Três passos. Loja outra cara.</h2>
+          <p className={landingEyebrow}>Sem enrolação</p>
+          <h2 className={landingSectionTitle}>Três passos e a bancada muda de patamar</h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Sem curso. Sem complicação. Você enxerga a barbearia diferente ainda na primeira semana.
+            Ninguém aqui vai te mandar fazer curso. É abrir, configurar e voltar pro que você faz melhor: cortar e
+            receber bem.
           </p>
         </div>
         <ol className="mt-20 grid gap-6 md:grid-cols-3 md:gap-8">

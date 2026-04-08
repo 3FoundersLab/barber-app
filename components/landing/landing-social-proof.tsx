@@ -11,28 +11,28 @@ import {
 import { cn } from '@/lib/utils'
 
 const stats = [
-  { value: '+120', label: 'barbearias usando' },
+  { value: '+120', label: 'bancadas no BarberApp' },
   { value: '4,8/5', label: 'nota dos donos' },
-  { value: '35%', label: 'menos buraco na agenda' },
+  { value: '35%', label: 'menos horário morto' },
 ]
 
 const quotes = [
   {
     name: 'Rafael M.',
     role: 'Dono, Barbearia Centro',
-    text: 'Sei o que entra no caixa por semana. Acabou o chute.',
+    text: 'Sei quanto entrou na semana só de corte e barba. Antes eu chutava no final do domingo.',
   },
   {
     name: 'Diego A.',
     role: 'Sócio, Studio Corte',
-    text: 'Equipe pegou num dia. Meta fecha mais fácil — sem planilha até de madrugada.',
+    text: 'A rapaziada da equipe adotou num dia. Meta de corte fecha mais de boa — sem Excel na madrugada.',
   },
 ]
 
 const trust = [
-  { icon: Lock, label: 'Seus dados protegidos', sub: 'Negócio com trava, sem drama' },
-  { icon: MessageCircle, label: 'Suporte em português', sub: 'Gente de verdade, não robô' },
-  { icon: RefreshCw, label: 'Sempre melhorando', sub: 'Você sente no dia a dia' },
+  { icon: Lock, label: 'Teus dados fechados', sub: 'Loja com tranca, sem novela' },
+  { icon: MessageCircle, label: 'Suporte em português', sub: 'Fala com gente, não com robô' },
+  { icon: RefreshCw, label: 'Sempre melhorando', sub: 'Atualização que você sente no sábado cheio' },
 ]
 
 export function LandingSocialProof() {
@@ -46,10 +46,10 @@ export function LandingSocialProof() {
     >
       <div className={landingContainer}>
         <div className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Quem já entrou</p>
-          <h2 className={landingSectionTitle}>Barbearias que pararam de adivinhar</h2>
+          <p className={landingEyebrow}>Quem já ligou o BarberApp</p>
+          <h2 className={landingSectionTitle}>Dono que parou de adivinhar no fechamento</h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Números na tela. Donos que dormem melhor. Menos achismo, mais resultado.
+            Número na tela, relato de quem vive a mesma rotina: cadeira, barba e caixa no fim do dia.
           </p>
         </div>
 

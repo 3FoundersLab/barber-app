@@ -14,10 +14,10 @@ export const LANDING_LINKS = {
   login: '/login',
 } as const
 
-/** Copy dos CTAs — manter alinhado à oferta real (ex.: trial de 7 dias). */
+/** Copy dos CTAs — tom de bancada; alinhar à oferta real (trial, cartão, etc.). */
 export const LANDING_CTA = {
-  primary: 'Começar grátis agora',
+  primary: 'Abrir minha conta agora',
   trial: 'Testar 7 dias grátis',
-  urgency: 'Sem cartão pra abrir · leva ~2 minutos',
-  urgencyBanner: 'Vagas abertas · entre antes do fim do mês',
+  urgency: 'Só cadastro · em dois minutos você já marca horário',
+  urgencyBanner: 'Quem entra agora monta a grade antes do fim do mês',
 } as const

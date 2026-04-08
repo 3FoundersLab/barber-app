@@ -29,12 +29,12 @@ const tiers: Tier[] = [
     name: 'Essencial',
     price: 'R$ 79',
     period: '/mês',
-    description: 'Primeira unidade firme. Começa simples, lucra com método.',
+    description: 'Bancada pequena, mas organizada: você e mais um na tesoura, sem bagunça na grade.',
     features: [
-      'Até 2 barbeiros no time',
-      'Agenda sem limite de marcação',
-      'Cliente com histórico guardado',
-      'Dúvida? Fala com a gente por e-mail',
+      'Até 2 barbeiros na chapa',
+      'Marcação à vontade — corte, barba, combo',
+      'Ficha do cliente guardada',
+      'Dúvida? Chama a gente no e-mail',
     ],
     cta: LANDING_CTA.primary,
     href: LANDING_LINKS.cadastro,
@@ -43,12 +43,12 @@ const tiers: Tier[] = [
     name: 'Profissional',
     price: 'R$ 149',
     period: '/mês',
-    description: 'Equipe maior, caixa na mão. Pra quem quer número todo dia.',
+    description: 'Turma grande, sábado lotado: você vê o movimento e o caixa sem adivinhar.',
     features: [
-      'Até 8 barbeiros',
-      'Resultado do dia na tela',
-      'Mensalidade e cobrança organizadas',
-      'Relatório na hora que precisar',
+      'Até 8 barbeiros na loja',
+      'Fechamento do dia na cara',
+      'Mensalista e cobrança no eixo',
+      'Puxa relatório quando precisar fechar mês',
       'Suporte na frente da fila',
     ],
     highlighted: true,
@@ -59,12 +59,12 @@ const tiers: Tier[] = [
     name: 'Empresarial',
     price: 'Sob consulta',
     period: '',
-    description: 'Várias lojas ou operação grande. A gente monta do seu jeito.',
+    description: 'Rede, franquia ou várias bancadas: a gente encaixa no seu jeito de tocar negócio.',
     features: [
-      'Barbeiros à vontade',
-      'Mais de uma unidade',
-      'Encaixa no que você já usa',
-      'Alguém só pra você',
+      'Barbeiros sem teto',
+      'Mais de uma loja',
+      'Conversa com o que você já usa',
+      'Alguém dedicado só pra você',
     ],
     cta: 'Falar com a gente',
     href: 'mailto:contato@barberapp.com.br?subject=Plano%20Empresarial%20BarberApp',
@@ -82,10 +82,10 @@ export function LandingPricing() {
     >
       <div className={landingContainer}>
         <div className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Planos</p>
-          <h2 className={landingSectionTitle}>Pague pelo tamanho da sua operação</h2>
+          <p className={landingEyebrow}>Mensalidade</p>
+          <h2 className={landingSectionTitle}>Paga pelo tamanho da sua bancada</h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Valores de exemplo. Você fecha o plano certo no cadastro. Conta clara — sem pegadinha na fatura.
+            Valores de exemplo — no cadastro você escolhe o pacote certo. Sem letras miúdas escondidas na fatura.
           </p>
         </div>
         <div className="mt-20 grid gap-8 lg:grid-cols-3 lg:gap-6 xl:gap-8">

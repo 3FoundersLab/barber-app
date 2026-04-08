@@ -15,23 +15,23 @@ type Item = { icon: LucideIcon; title: string; description: string }
 const items: Item[] = [
   {
     icon: TrendingUp,
-    title: 'Mais clientes na cadeira',
-    description: 'Vê quem some e quem vale pena puxar de volta. Mais retorno. Menos lugar vazio.',
+    title: 'Fila na cadeira, não no corredor',
+    description: 'Cliente lembrado volta mais. Menos “sumiu”, mais corte e mais gorjeta no fim do dia.',
   },
   {
     icon: LayoutGrid,
-    title: 'Dia redondo, equipe alinhada',
-    description: 'Todo mundo olha o mesmo horário. Acabou o “eu não sabia desse corte”.',
+    title: 'Mesma grade pra todo mundo',
+    description: 'Acabou o “fulano não sabia do seu horário”. A equipe inteira olha o mesmo relógio.',
   },
   {
     icon: Wallet,
-    title: 'Caixa que você confia',
-    description: 'Sabe o que vendeu, o que é mensalidade e onde está o pico. Decide com cabeça fria.',
+    title: 'Caixa que bate com a realidade',
+    description: 'Sabe o que foi corte, o que foi barba, o que é mensalista e onde tá o pico da semana.',
   },
   {
     icon: Clock,
-    title: 'Horas de volta pra você',
-    description: 'Menos Zap, menos papel. Você corta; o resto roda sozinho.',
+    title: 'Tempo pra cortar de verdade',
+    description: 'Menos mensagem no ouvido no meio do degradê. Você fica na tesoura; o resto fica organizado.',
   },
 ]
 
@@ -46,10 +46,11 @@ export function LandingBenefits() {
     >
       <div className={landingContainer}>
         <div className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>O que você sente</p>
-          <h2 className={landingSectionTitle}>Mais gente, mais ordem, mais lucro</h2>
+          <p className={landingEyebrow}>Na prática, no salão</p>
+          <h2 className={landingSectionTitle}>Agenda cheia pesa diferente no bolso</h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Nada de promessa vazia. É o que muda no bolso e na cabeça quando a loja para de viver no improviso.
+            Não é discurso de escritório. É o que muda quando a cadeira gira, o Pix entra certo e a turma para de se
+            pisar na grade.
           </p>
         </div>
         <ul className="mt-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">

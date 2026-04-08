@@ -26,10 +26,11 @@ export function LandingCta() {
               id="landing-cta-heading"
               className="mt-4 text-balance text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-[2.375rem] md:leading-[1.15]"
             >
-              Pronto pra encher a agenda e ver o caixa de outro jeito?
+              Bora encher a grade e fechar o dia sabendo quanto sobrou?
             </h2>
             <p className="mx-auto mt-6 max-w-lg text-base leading-relaxed text-zinc-300 sm:text-lg">
-              Cadastro leve. Em minutos você já enxerga a loja de outro ângulo — agenda, cliente e caixa alinhados.
+              Cadastro rápido. Em minutos você já vê a loja como quem olha a fila da manhã com calma — horário, cliente
+              e Pix no mesmo lugar.
             </p>
             <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
               <Button
