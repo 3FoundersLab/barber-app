@@ -10,12 +10,13 @@ import { cn } from '@/lib/utils'
 
 const footerLinks = [
   { label: 'Início', href: `#${LANDING_SECTIONS.top}` },
-  { label: 'Na rotina', href: `#${LANDING_SECTIONS.desafios}` },
-  { label: 'Na prática', href: `#${LANDING_SECTIONS.beneficios}` },
-  { label: 'Ferramentas', href: `#${LANDING_SECTIONS.funcionalidades}` },
-  { label: 'Quem usa', href: `#${LANDING_SECTIONS.provaSocial}` },
-  { label: 'Como entra', href: `#${LANDING_SECTIONS.comoFunciona}` },
-  { label: 'Mensalidade', href: `#${LANDING_SECTIONS.planos}` },
+  { label: 'Problema', href: `#${LANDING_SECTIONS.problema}` },
+  { label: 'Solução', href: `#${LANDING_SECTIONS.solucao}` },
+  { label: 'Benefícios', href: `#${LANDING_SECTIONS.beneficios}` },
+  { label: 'Funcionalidades', href: `#${LANDING_SECTIONS.funcionalidades}` },
+  { label: 'Prova social', href: `#${LANDING_SECTIONS.provaSocial}` },
+  { label: 'Como funciona', href: `#${LANDING_SECTIONS.comoFunciona}` },
+  { label: 'Planos', href: `#${LANDING_SECTIONS.planos}` },
 ]
 
 const social = [

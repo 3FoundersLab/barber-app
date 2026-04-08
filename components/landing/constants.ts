@@ -1,7 +1,8 @@
-/** Âncoras da landing (scroll suave). */
+/** Âncoras da landing (scroll suave), ordem tipo sales page. */
 export const LANDING_SECTIONS = {
   top: 'inicio',
-  desafios: 'desafios',
+  problema: 'problema',
+  solucao: 'solucao',
   beneficios: 'beneficios',
   funcionalidades: 'funcionalidades',
   provaSocial: 'prova-social',
@@ -14,13 +15,28 @@ export const LANDING_LINKS = {
   login: '/login',
 } as const
 
-/** Copy dos CTAs — tom de bancada; alinhar à oferta real (trial, cartão, etc.). */
+/** Copy dos CTAs: conversão e clareza. */
 export const LANDING_CTA = {
-  primary: 'Abrir minha conta agora',
-  /** Atalho no header (pílula, estilo SaaS). */
+  primary: 'Começar gratuitamente',
   navPrimary: 'Começar grátis',
   navSecondary: 'Já sou cliente',
   trial: 'Testar 7 dias grátis',
-  urgency: 'Só cadastro · em dois minutos você já marca horário',
-  urgencyBanner: 'Quem entra agora monta a grade antes do fim do mês',
+  urgency: 'Cadastro rápido · em poucos minutos você já usa na bancada',
+  urgencyBanner: 'Quem entra agora organiza a grade antes do fim do mês',
+} as const
+
+/** SEO / meta: palavras-chave usadas de forma natural no corpo da página. */
+export const LANDING_SEO = {
+  siteName: 'BarberApp',
+  title: 'BarberApp, software para barbearia | Agenda, clientes e caixa',
+  description:
+    'Software para barbearia com agendamento online, gestão da equipe e controle financeiro. Menos caos no WhatsApp, mais horários preenchidos e caixa claro. Teste grátis.',
+  keywords: [
+    'software para barbearia',
+    'sistema de agendamento para barbearia',
+    'gestão de barbearia',
+    'agenda barbearia online',
+    'app barbearia',
+    'controle financeiro barbearia',
+  ],
 } as const

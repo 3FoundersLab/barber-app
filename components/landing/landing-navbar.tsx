@@ -16,10 +16,11 @@ import {
 } from '@/components/landing/landing-classes'
 
 const links = [
-  { href: `#${LANDING_SECTIONS.desafios}`, label: 'Na rotina' },
-  { href: `#${LANDING_SECTIONS.beneficios}`, label: 'Na prática' },
-  { href: `#${LANDING_SECTIONS.comoFunciona}`, label: 'Como entra' },
-  { href: `#${LANDING_SECTIONS.planos}`, label: 'Mensalidade' },
+  { href: `#${LANDING_SECTIONS.problema}`, label: 'Problema' },
+  { href: `#${LANDING_SECTIONS.solucao}`, label: 'Solução' },
+  { href: `#${LANDING_SECTIONS.beneficios}`, label: 'Benefícios' },
+  { href: `#${LANDING_SECTIONS.funcionalidades}`, label: 'Funcionalidades' },
+  { href: `#${LANDING_SECTIONS.planos}`, label: 'Planos' },
 ] as const
 
 /** Navegação um pouco mais leve que os CTAs (hierarquia visual). */
@@ -59,7 +60,7 @@ export function LandingNavbar() {
           />
         </div>
 
-        {/* flex-1 + min-w-0: ocupa só o espaço ENTRE logo e botões — não invade os CTAs */}
+        {/* flex-1 + min-w-0: ocupa só o espaço entre logo e botões, sem invadir os CTAs */}
         <nav
           className="mx-1 hidden min-h-0 min-w-0 flex-1 flex-wrap items-center justify-center gap-x-4 gap-y-1 lg:flex xl:gap-x-6 2xl:gap-x-8"
           aria-label="Principal"

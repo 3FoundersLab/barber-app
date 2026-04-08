@@ -20,23 +20,24 @@ type Item = { icon: LucideIcon; title: string; description: string }
 const items: Item[] = [
   {
     icon: TrendingUp,
-    title: 'Fila na cadeira, não no corredor',
-    description: 'Cliente lembrado volta mais. Menos “sumiu”, mais corte e mais gorjeta no fim do dia.',
+    title: 'Mais cadeira cheia, menos buraco na agenda',
+    description: 'Lembretes e visão da fila ajudam o cliente a voltar. Menos “sumiu”, mais corte e gorjeta no fechamento.',
   },
   {
     icon: LayoutGrid,
-    title: 'Mesma grade pra todo mundo',
-    description: 'Acabou o “fulano não sabia do seu horário”. A equipe inteira olha o mesmo relógio.',
+    title: 'Uma grade só para a equipe inteira',
+    description:
+      'Acabou o conflito de horário. Dono e barbeiro enxergam o mesmo agendamento, em tempo real.',
   },
   {
     icon: Wallet,
-    title: 'Caixa que bate com a realidade',
-    description: 'Sabe o que foi corte, o que foi barba, o que é mensalista e onde tá o pico da semana.',
+    title: 'Caixa do dia que você confia',
+    description: 'Corte, barba, Pix e mensalista separados. Você sabe o que entrou e onde está o pico da semana.',
   },
   {
     icon: Clock,
-    title: 'Tempo pra cortar de verdade',
-    description: 'Menos mensagem no ouvido no meio do degradê. Você fica na tesoura; o resto fica organizado.',
+    title: 'Menos tela, mais tesoura na mão',
+    description: 'Menos interrupção no meio do corte. O sistema cuida da rotina; você cuida do cliente.',
   },
 ]
 
@@ -50,14 +51,18 @@ export function LandingBenefits() {
         'scroll-mt-24 border-b border-zinc-200/80 bg-[#f4f4f5] dark:border-zinc-800 dark:bg-zinc-900/50',
         landingSectionY,
       )}
+      aria-labelledby="landing-beneficios-heading"
     >
       <div className={landingContainer}>
         <LandingFadeIn className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Na prática, no salão</p>
-          <h2 className={landingSectionTitle}>Agenda cheia pesa diferente no bolso</h2>
+          <p className={landingEyebrow}>Desejo · benefícios reais</p>
+          <h2 id="landing-beneficios-heading" className={landingSectionTitle}>
+            Por que donos de barbearia trocam planilha por software
+          </h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Não é discurso de escritório. É o que muda quando a cadeira gira, o Pix entra certo e a turma para de se
-            pisar na grade.
+            Benefícios que aparecem no sábado cheio: mais previsibilidade na{' '}
+            <strong className="font-semibold text-zinc-800 dark:text-zinc-200">gestão de barbearia</strong>, menos atrito
+            na equipe e caixa mais transparente.
           </p>
         </LandingFadeIn>
         <motion.ul

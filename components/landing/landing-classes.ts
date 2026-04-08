@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 export const landingContainer = 'mx-auto w-full max-w-6xl px-5 sm:px-8 lg:px-12'
 
 /** Espaço vertical generoso entre seções (padrão SaaS premium). */
-export const landingSectionY = 'py-24 md:py-32 lg:py-36'
+export const landingSectionY = 'py-28 md:py-36 lg:py-40'
 
 /** Seções um pouco mais compactas (ex.: CTA final). */
 export const landingSectionYCompact = 'py-20 md:py-28 lg:py-32'
@@ -33,7 +33,7 @@ export function landingCardClass(interactive = false) {
 }
 
 /**
- * CTA principal — mesmo padrão do header: laranja sólido #ea580c, pílula, sem gradiente.
+ * CTA principal: mesmo padrão do header (laranja sólido #ea580c, pílula, sem gradiente).
  * Combine com h-11 | h-12 | h-14 e text-xs | text-sm conforme o bloco.
  */
 export const landingPrimaryCtaClass = cn(
@@ -44,7 +44,7 @@ export const landingPrimaryCtaClass = cn(
   'dark:bg-orange-600 dark:hover:bg-orange-500 dark:hover:shadow-orange-500/25',
 )
 
-/** CTA secundário — pílula com borda escura (alinhado ao “Já sou cliente” do header). */
+/** CTA secundário: pílula com borda escura (alinhado ao “Já sou cliente” do header). */
 export const landingTrialCtaClass = cn(
   'rounded-full border-2 border-zinc-900 bg-white font-bold text-zinc-900 shadow-none',
   'transition-[transform,box-shadow,background-color,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
@@ -52,7 +52,7 @@ export const landingTrialCtaClass = cn(
   'dark:border-zinc-100 dark:bg-transparent dark:text-zinc-100 dark:hover:bg-zinc-800 dark:hover:shadow-black/40',
 )
 
-/** Hover com leve elevação — CTAs da landing (CSS, leve na GPU). */
+/** Hover com leve elevação nos CTAs da landing (CSS, leve na GPU). */
 export const landingButtonLift = cn(
   'transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
   'hover:-translate-y-0.5 hover:scale-[1.012] hover:shadow-xl',
@@ -60,7 +60,7 @@ export const landingButtonLift = cn(
 )
 
 /**
- * Links da navegação desktop — sublinhado animado + leve lift.
+ * Links da navegação desktop: sublinhado animado e leve lift.
  * Use com `inline-block` no elemento.
  */
 export const landingNavLinkMicro = cn(
@@ -70,7 +70,7 @@ export const landingNavLinkMicro = cn(
   'dark:after:bg-amber-400',
 )
 
-/** Painel em destaque (ex.: coluna “Com BarberApp”) — brilho no hover. */
+/** Painel em destaque (ex.: coluna “Com BarberApp”): brilho no hover. */
 export const landingPanelGlowHover = cn(
   'transition-[transform,box-shadow,border-color,ring-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
   'hover:-translate-y-0.5 hover:border-amber-300/90 hover:shadow-xl hover:shadow-amber-500/10 hover:ring-2 hover:ring-amber-400/25',

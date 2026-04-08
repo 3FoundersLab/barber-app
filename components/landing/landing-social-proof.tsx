@@ -30,7 +30,7 @@ const quotes = [
   {
     name: 'Diego A.',
     role: 'Sócio, Studio Corte',
-    text: 'A rapaziada da equipe adotou num dia. Meta de corte fecha mais de boa — sem Excel na madrugada.',
+    text: 'A rapaziada da equipe adotou num dia. Meta de corte fecha mais de boa, sem Excel na madrugada.',
   },
 ]
 
@@ -50,13 +50,18 @@ export function LandingSocialProof() {
         'scroll-mt-24 border-b border-zinc-200/80 bg-[#f4f4f5] dark:border-zinc-800 dark:bg-zinc-900/50',
         landingSectionY,
       )}
+      aria-labelledby="landing-prova-heading"
     >
       <div className={landingContainer}>
         <LandingFadeIn className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Quem já ligou o BarberApp</p>
-          <h2 className={landingSectionTitle}>Dono que parou de adivinhar no fechamento</h2>
+          <p className={landingEyebrow}>Prova social · autoridade</p>
+          <h2 id="landing-prova-heading" className={landingSectionTitle}>
+            Quem já usa BarberApp no dia a dia da bancada
+          </h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Número na tela, relato de quem vive a mesma rotina: cadeira, barba e caixa no fim do dia.
+            Números e relatos de donos que queriam o mesmo que você:{' '}
+            <strong className="font-semibold text-zinc-800 dark:text-zinc-200">controle financeiro da barbearia</strong>{' '}
+            sem planilha na madrugada.
           </p>
         </LandingFadeIn>
 
@@ -119,7 +124,7 @@ export function LandingSocialProof() {
                 </blockquote>
                 <figcaption className="mt-5 text-sm">
                   <span className="font-semibold text-zinc-950 dark:text-white">{q.name}</span>
-                  <span className="text-zinc-500 dark:text-zinc-400"> — {q.role}</span>
+                  <span className="text-zinc-500 dark:text-zinc-400">, {q.role}</span>
                 </figcaption>
               </motion.li>
             ))}

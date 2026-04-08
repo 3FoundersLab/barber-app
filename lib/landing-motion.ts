@@ -1,4 +1,4 @@
-/** Curva premium — suave, sem “bounce” genérico. */
+/** Curva premium: suave, sem “bounce” genérico. */
 export const LANDING_EASE = [0.22, 1, 0.36, 1] as const
 
 /** Uma vez por seção; margem evita disparo ao rolar rápido demais. */
@@ -45,7 +45,7 @@ export const heroStaggerItem = {
   },
 } as const
 
-/** Foto / mockup — discreto. */
+/** Foto / mockup, discreto. */
 export const heroImageReveal = {
   hidden: { opacity: 0, scale: 0.98 },
   visible: {

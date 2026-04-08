@@ -45,6 +45,7 @@ export function LandingHero() {
       ref={sectionRef}
       id={LANDING_SECTIONS.top}
       className="relative scroll-mt-24 overflow-hidden bg-zinc-950 pt-[7.5rem] pb-24 text-white md:pb-32 lg:pt-36 lg:pb-36"
+      aria-labelledby="landing-hero-heading"
     >
       {/* Base + profundidade escura */}
       <div className="pointer-events-none absolute inset-0 bg-zinc-950" aria-hidden />
@@ -56,7 +57,7 @@ export function LandingHero() {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_100%_80%_at_50%_-20%,rgba(24,24,27,0.9),transparent_55%)]"
         aria-hidden
       />
-      {/* Luz ambiente teal / ciano — discretas */}
+      {/* Luz ambiente teal / ciano, discretas */}
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_45%_at_78%_32%,rgba(6,182,212,0.09),transparent_62%),radial-gradient(ellipse_40%_35%_at_12%_72%,rgba(59,130,246,0.06),transparent_58%),radial-gradient(ellipse_50%_40%_at_50%_100%,rgba(20,184,166,0.05),transparent_55%)]"
         aria-hidden
@@ -71,7 +72,7 @@ export function LandingHero() {
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.028)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.028)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_72%_62%_at_50%_42%,black,transparent)]"
         aria-hidden
       />
-      {/* Névoa inferior — profundidade sem blur pesado */}
+      {/* Névoa inferior: profundidade sem blur pesado */}
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-zinc-950/90 via-zinc-950/20 to-transparent [mask-image:linear-gradient(to_top,black,transparent)]"
         aria-hidden
@@ -124,7 +125,7 @@ export function LandingHero() {
       <div
         className={`${landingContainer} relative z-10 grid items-center gap-14 md:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] md:gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-16 xl:gap-20`}
       >
-        {/* Coluna esquerda: headline — cascata no load */}
+        {/* Coluna esquerda: headline, cascata no load */}
         <motion.div
           className="relative z-30 max-w-xl lg:max-w-none"
           variants={heroStaggerContainer}
@@ -135,21 +136,22 @@ export function LandingHero() {
             className="mb-5 inline-flex items-center rounded-full border border-cyan-400/25 bg-cyan-500/[0.09] px-4 py-1.5 text-xs font-semibold text-cyan-100/95 shadow-[0_0_28px_-10px_rgba(34,211,238,0.22)]"
             variants={heroStaggerItem}
           >
-            Pra quem vive a barbearia — dono ou barbeiro na ponta da tesoura
+            Software para barbearia · agenda, equipe e caixa
           </motion.p>
           <motion.h1
+            id="landing-hero-heading"
             className="text-balance text-4xl font-semibold tracking-tight text-white sm:text-5xl sm:leading-[1.06] lg:text-[3.125rem] lg:leading-[1.04]"
             variants={heroStaggerItem}
           >
-            Pare de perder cliente por desorganização. Busque agenda cheia de novo — todos os dias.
+            Software para barbearia que enche a agenda e organiza o caixa
           </motion.h1>
           <motion.p
             className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-zinc-400 sm:text-lg"
             variants={heroStaggerItem}
           >
-            <span className="font-semibold text-zinc-100">BarberApp</span> é a sua bancada digital: encaixe,
-            remarcação e fila da equipe num lugar só. Pix, dinheiro e mensalista separados. Chega de grupo do Zap virar
-            agenda e de dois barbeiros marcarem o mesmo horário sem querer.
+            <span className="font-semibold text-zinc-100">BarberApp</span> é o sistema de gestão e{' '}
+            <span className="text-zinc-300">agendamento para barbearia</span> na palma da mão: uma grade só, cliente com
+            histórico e fechamento do dia claro, sem depender do grupo do Zap.
           </motion.p>
           <motion.div
             className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"
@@ -190,10 +192,10 @@ export function LandingHero() {
               href={`#${LANDING_SECTIONS.funcionalidades}`}
               className="mt-5 inline-block text-sm font-semibold text-cyan-400/85 underline-offset-4 transition duration-300 hover:text-cyan-300 hover:underline"
             >
-              Ver o que entra na prática na sua barbearia →
+              Ver funcionalidades do sistema →
             </Link>
             <p className="mt-5 text-sm font-medium text-zinc-500">
-              Fala a língua da barbearia · Menos correria entre corte e corte
+              Feito para quem vive a bancada · Tom profissional, zero enrolação
             </p>
           </motion.div>
         </motion.div>
@@ -210,7 +212,7 @@ export function LandingHero() {
             initial={reduceMotion ? 'visible' : 'hidden'}
             animate={reduceMotion ? undefined : 'visible'}
           >
-            {/* Glow localizado atrás da foto — apoia a composição */}
+            {/* Glow localizado atrás da foto; apoia a composição */}
             <motion.div
               aria-hidden
               className="pointer-events-none absolute left-1/2 top-1/2 z-[5] h-[108%] w-[91%] -translate-x-1/2 -translate-y-1/2 rounded-[2rem] bg-gradient-to-b from-cyan-500/[0.2] via-teal-600/[0.1] to-indigo-950/[0.32] blur-[48px] md:blur-[58px]"
@@ -244,7 +246,7 @@ export function LandingHero() {
                 sizes="(max-width: 1024px) 100vw, 42vw"
                 priority
               />
-              {/* Vinheta na foto — contraste com o glow ao redor */}
+              {/* Vinheta na foto: contraste com o glow ao redor */}
               <div
                 className="pointer-events-none absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/18 to-transparent"
                 aria-hidden

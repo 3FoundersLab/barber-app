@@ -38,7 +38,7 @@ type LandingIconLiftProps = {
   className?: string
 }
 
-/** Microinteração no ícone — hover só se não for reduced motion. */
+/** Microinteração no ícone: hover só se não for reduced motion. */
 export function LandingIconLift({ children, className }: LandingIconLiftProps) {
   const reduceMotion = useReducedMotion() === true
 

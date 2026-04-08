@@ -45,14 +45,17 @@ export function LandingFeatures() {
     <section
       id={LANDING_SECTIONS.funcionalidades}
       className={cn('scroll-mt-24 bg-white dark:bg-zinc-950', landingSectionY)}
+      aria-labelledby="landing-funcionalidades-heading"
     >
       <div className={landingContainer}>
         <LandingFadeIn className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Ferramenta de bancada</p>
-          <h2 className={landingSectionTitle}>Do “tem vaga?” ao “pago no Pix” — junto</h2>
+          <p className={landingEyebrow}>Funcionalidades · o que o sistema faz</p>
+          <h2 id="landing-funcionalidades-heading" className={landingSectionTitle}>
+            Agendamento, clientes, caixa e mensalista, tudo integrado
+          </h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Quatro coisas que qualquer barbearia usa todo santo dia, falando a mesma língua: horário, cliente, caixa e
-            quem paga direto.
+            O essencial do <strong className="font-semibold text-zinc-800 dark:text-zinc-200">agendamento online para
+            barbearia</strong> e da operação diária, sem telas inúteis. Quatro pilares que você usa todo dia.
           </p>
         </LandingFadeIn>
         <motion.ul

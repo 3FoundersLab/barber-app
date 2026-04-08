@@ -14,8 +14,35 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'BarberApp - Sistema de Agendamentos',
-  description: 'Sistema completo de agendamentos para barbearias',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://barberapp.com.br'),
+  title: {
+    default: 'BarberApp, software para barbearia | Agenda, clientes e caixa',
+    template: '%s | BarberApp',
+  },
+  description:
+    'Software para barbearia com agendamento online, equipe alinhada e controle financeiro. Menos caos no WhatsApp, mais horários preenchidos. Teste grátis.',
+  keywords: [
+    'software para barbearia',
+    'sistema de agendamento para barbearia',
+    'gestão de barbearia',
+    'agenda barbearia online',
+    'app barbearia',
+    'controle financeiro barbearia',
+  ],
+  openGraph: {
+    type: 'website',
+    locale: 'pt_BR',
+    siteName: 'BarberApp',
+    title: 'BarberApp, software para barbearia',
+    description:
+      'Agenda, clientes e caixa na mesma tela. Sistema de gestão feito para donos e barbeiros. Comece grátis.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'BarberApp, software para barbearia',
+    description: 'Agenda cheia, equipe organizada e caixa claro. Teste grátis.',
+  },
+  robots: { index: true, follow: true },
   generator: 'v0.app',
   icons: {
     icon: [

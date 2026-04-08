@@ -39,7 +39,7 @@ const tiers: Tier[] = [
     description: 'Bancada pequena, mas organizada: você e mais um na tesoura, sem bagunça na grade.',
     features: [
       'Até 2 barbeiros na chapa',
-      'Marcação à vontade — corte, barba, combo',
+      'Marcação à vontade: corte, barba, combo',
       'Ficha do cliente guardada',
       'Dúvida? Chama a gente no e-mail',
     ],
@@ -88,13 +88,18 @@ export function LandingPricing() {
         'scroll-mt-24 border-t border-zinc-200/80 bg-[#f4f4f5] dark:border-zinc-800 dark:bg-zinc-900/50',
         landingSectionY,
       )}
+      aria-labelledby="landing-planos-heading"
     >
       <div className={landingContainer}>
         <LandingFadeIn className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Mensalidade</p>
-          <h2 className={landingSectionTitle}>Paga pelo tamanho da sua bancada</h2>
+          <p className={landingEyebrow}>Investimento · planos</p>
+          <h2 id="landing-planos-heading" className={landingSectionTitle}>
+            Planos que acompanham o tamanho da sua bancada
+          </h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Valores de exemplo — no cadastro você escolhe o pacote certo. Sem letras miúdas escondidas na fatura.
+            Preços transparentes. No cadastro você confirma o pacote ideal para sua{' '}
+            <strong className="font-semibold text-zinc-800 dark:text-zinc-200">barbearia</strong>, sem surpresa na
+            fatura.
           </p>
         </LandingFadeIn>
         <motion.div

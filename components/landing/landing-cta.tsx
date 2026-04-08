@@ -44,11 +44,12 @@ export function LandingCta() {
               id="landing-cta-heading"
               className="mt-4 text-balance text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-[2.375rem] md:leading-[1.15]"
             >
-              Bora encher a grade e fechar o dia sabendo quanto sobrou?
+              Pronto para ter agenda cheia e caixa sob controle?
             </h2>
             <p className="mx-auto mt-6 max-w-lg text-base leading-relaxed text-zinc-300 sm:text-lg">
-              Cadastro rápido. Em minutos você já vê a barbearia como quem olha a fila da manhã com calma — horário, cliente
-              e Pix no mesmo lugar.
+              Último passo: criar sua conta. Em poucos minutos você já usa o BarberApp na rotina, com{' '}
+              <strong className="font-medium text-zinc-200">agendamento</strong>, equipe e fechamento do dia na mesma
+              tela.
             </p>
             <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
               <Button
@@ -78,7 +79,7 @@ export function LandingCta() {
               variant="link"
               className="mt-2 h-auto p-0 text-sm font-semibold text-zinc-400 underline-offset-4 transition duration-300 hover:text-white"
             >
-              <Link href={LANDING_LINKS.login}>Já tenho conta — entrar</Link>
+              <Link href={LANDING_LINKS.login}>Já tenho conta: entrar</Link>
             </Button>
           </div>
         </motion.div>

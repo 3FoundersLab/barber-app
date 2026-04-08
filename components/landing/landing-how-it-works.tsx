@@ -43,14 +43,17 @@ export function LandingHowItWorks() {
     <section
       id={LANDING_SECTIONS.comoFunciona}
       className={cn('scroll-mt-24 bg-white dark:bg-zinc-950', landingSectionY)}
+      aria-labelledby="landing-como-heading"
     >
       <div className={landingContainer}>
         <LandingFadeIn className="mx-auto max-w-2xl text-center">
-          <p className={landingEyebrow}>Sem enrolação</p>
-          <h2 className={landingSectionTitle}>Três passos e a bancada muda de patamar</h2>
+          <p className={landingEyebrow}>Ação · como começar</p>
+          <h2 id="landing-como-heading" className={landingSectionTitle}>
+            Três passos para colocar a barbearia no ar
+          </h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Ninguém aqui vai te mandar fazer curso. É abrir, configurar e voltar pro que você faz melhor: cortar e
-            receber bem.
+            Sem curso longo. Você configura em minutos e volta para o que importa: cortar, atender e fechar o dia com
+            números claros.
           </p>
         </LandingFadeIn>
         <motion.ol
