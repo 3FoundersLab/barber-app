@@ -134,49 +134,6 @@ function BenefitsDarkBackdrop({ reduceMotion }: { reduceMotion: boolean }) {
   )
 }
 
-function BenefitsSectionEdgeBlends() {
-  return (
-    <>
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[clamp(5.5rem,14vw,10.5rem)] dark:hidden"
-        style={{
-          backgroundImage: [
-            'linear-gradient(180deg, #f7f7f8 0%, rgba(247,247,248,0.82) 14%, rgba(247,247,248,0.42) 36%, rgba(247,247,248,0.14) 62%, rgba(247,247,248,0.03) 84%, transparent 100%)',
-            'radial-gradient(95% 120% at 50% -8%, rgba(247,247,248,0.55) 0%, rgba(247,247,248,0.12) 42%, transparent 72%)',
-          ].join(', '),
-        }}
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1] hidden h-[clamp(4rem,11vw,7rem)] dark:block"
-        style={{
-          backgroundImage:
-            'linear-gradient(180deg, rgb(9 9 11) 0%, rgba(9,9,11,0.55) 38%, rgba(9,9,11,0.12) 72%, transparent 100%)',
-        }}
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[clamp(5rem,13vw,9.5rem)] dark:hidden"
-        style={{
-          backgroundImage: [
-            'linear-gradient(0deg, #ffffff 0%, rgba(255,255,255,0.82) 16%, rgba(255,255,255,0.38) 40%, rgba(255,255,255,0.12) 68%, rgba(255,255,255,0.02) 88%, transparent 100%)',
-            'radial-gradient(90% 100% at 50% 108%, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.08) 48%, transparent 70%)',
-          ].join(', '),
-        }}
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] hidden h-[clamp(4rem,10vw,7rem)] dark:block"
-        style={{
-          backgroundImage:
-            'linear-gradient(0deg, rgb(9 9 11) 0%, rgba(9,9,11,0.5) 40%, rgba(9,9,11,0.1) 78%, transparent 100%)',
-        }}
-        aria-hidden
-      />
-    </>
-  )
-}
-
 function BenefitImagePanel({
   src,
   alt,
@@ -328,7 +285,6 @@ export function LandingBenefits() {
       aria-labelledby="landing-beneficios-heading"
     >
       <BenefitsDarkBackdrop reduceMotion={reduceMotion} />
-      <BenefitsSectionEdgeBlends />
 
       <div className={`${landingContainer} relative z-10`}>
         <motion.header

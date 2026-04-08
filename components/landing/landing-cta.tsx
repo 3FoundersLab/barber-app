@@ -99,25 +99,6 @@ export function LandingCta() {
     >
       <CtaFinalBackdrop reduceMotion={reduceMotion} />
 
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[clamp(4.5rem,12vw,9rem)] dark:hidden"
-        style={{
-          backgroundImage: [
-            'linear-gradient(180deg, #f4f4f5 0%, rgba(244,244,245,0.75) 22%, rgba(244,244,245,0.2) 58%, rgba(244,244,245,0.04) 86%, transparent 100%)',
-            'radial-gradient(90% 100% at 50% -5%, rgba(244,244,245,0.4) 0%, transparent 58%)',
-          ].join(', '),
-        }}
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1] hidden h-[clamp(3.5rem,9vw,6rem)] dark:block"
-        style={{
-          backgroundImage:
-            'linear-gradient(180deg, rgb(9 9 11) 0%, rgba(9,9,11,0.5) 45%, transparent 100%)',
-        }}
-        aria-hidden
-      />
-
       <div className={`${landingContainer} relative z-10`}>
         <div className="grid items-center gap-14 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-16 xl:gap-20">
           <motion.div

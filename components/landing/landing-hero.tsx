@@ -47,7 +47,6 @@ export function LandingHero() {
       className="relative scroll-mt-24 overflow-hidden bg-zinc-950 pt-[7.5rem] pb-24 text-white md:pb-32 lg:pt-36 lg:pb-36"
       aria-labelledby="landing-hero-heading"
     >
-      {/* Base + profundidade escura */}
       <div className="pointer-events-none absolute inset-0 bg-zinc-950" aria-hidden />
       <div
         className="pointer-events-none absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950 to-zinc-900"
@@ -57,22 +56,18 @@ export function LandingHero() {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_100%_80%_at_50%_-20%,rgba(24,24,27,0.9),transparent_55%)]"
         aria-hidden
       />
-      {/* Luz ambiente teal / ciano, discretas */}
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_45%_at_78%_32%,rgba(6,182,212,0.09),transparent_62%),radial-gradient(ellipse_40%_35%_at_12%_72%,rgba(59,130,246,0.06),transparent_58%),radial-gradient(ellipse_50%_40%_at_50%_100%,rgba(20,184,166,0.05),transparent_55%)]"
         aria-hidden
       />
-      {/* Vinheta de borda cinematográfica */}
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_85%_70%_at_50%_45%,transparent_0%,rgba(9,9,11,0.55)_100%)]"
         aria-hidden
       />
-      {/* Grade técnica suave */}
       <div
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.028)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.028)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_72%_62%_at_50%_42%,black,transparent)]"
         aria-hidden
       />
-      {/* Névoa inferior: profundidade sem blur pesado */}
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-zinc-950/90 via-zinc-950/20 to-transparent [mask-image:linear-gradient(to_top,black,transparent)]"
         aria-hidden
@@ -114,12 +109,6 @@ export function LandingHero() {
               }
         }
         transition={{ duration: 13, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }}
-      />
-
-      {/* Funde com a próxima seção (clara no tema claro) */}
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-36 bg-gradient-to-t from-[#f7f7f8] to-transparent dark:from-zinc-950 dark:to-transparent"
-        aria-hidden
       />
 
       <div
