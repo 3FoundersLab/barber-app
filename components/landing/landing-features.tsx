@@ -19,7 +19,7 @@ const cards = [
   {
     icon: Wallet,
     title: 'Dinheiro do dia separado direitinho',
-    description: 'Corte, barba, combo, Pix e mensalista cada um no seu canto. Fecha a loja sabendo o que ficou.',
+    description: 'Corte, barba, combo, Pix e mensalista cada um no seu canto. Fecha o dia sabendo o que ficou.',
   },
   {
     icon: Users,

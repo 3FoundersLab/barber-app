@@ -46,7 +46,7 @@ const tiers: Tier[] = [
     period: '/mês',
     description: 'Turma grande, sábado lotado: você vê o movimento e o caixa sem adivinhar.',
     features: [
-      'Até 8 barbeiros na loja',
+      'Até 8 barbeiros na mesma barbearia',
       'Fechamento do dia na cara',
       'Mensalista e cobrança no eixo',
       'Puxa relatório quando precisar fechar mês',
@@ -63,7 +63,7 @@ const tiers: Tier[] = [
     description: 'Rede, franquia ou várias bancadas: a gente encaixa no seu jeito de tocar negócio.',
     features: [
       'Barbeiros sem teto',
-      'Mais de uma loja',
+      'Mais de uma unidade',
       'Conversa com o que você já usa',
       'Alguém dedicado só pra você',
     ],

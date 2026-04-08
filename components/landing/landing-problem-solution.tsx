@@ -24,7 +24,7 @@ const pains = [
   {
     icon: Banknote,
     title: 'Caixa misturado com barba',
-    text: 'Pix do corte, dinheiro do combo, mensalista e produto tudo no mesmo bolso mental. Fecha a loja e ainda fica na dúvida: deu lucro ou só movimento?',
+    text: 'Pix do corte, dinheiro do combo, mensalista e produto tudo no mesmo bolso mental. Fecha o dia e ainda fica na dúvida: deu lucro ou só movimento?',
   },
 ]
 
@@ -45,7 +45,7 @@ export function LandingProblemSolution() {
           <p className={landingEyebrow}>Já rolou contigo?</p>
           <h2 className={landingSectionTitle}>Cadeira vazia não paga aluguel</h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
-            Quando a loja vive no improviso, o cliente some, a equipe briga por horário e você fecha o dia cansado —
+            Quando a barbearia vive no improviso, o cliente some, a equipe briga por horário e você fecha o dia cansado —
             sem saber se o bolso agradeceu.
           </p>
         </div>
@@ -85,7 +85,7 @@ export function LandingProblemSolution() {
               Você volta a mandar na grade — sem virar refém de planilha nem de print no grupo
             </h3>
             <p className="mt-4 text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
-              Um painel que fala a mesma língua que a sua loja: quem sentou, quem vai sentar e quanto isso virou
+              Um painel que fala a mesma língua da sua barbearia: quem sentou, quem vai sentar e quanto isso virou
               dinheiro no fim do dia.
             </p>
             <ul className="mt-10 flex flex-col gap-4">

@@ -14,7 +14,7 @@ const steps = [
   {
     step: 1,
     icon: Building2,
-    title: 'Coloca a loja no sistema',
+    title: 'Coloca a barbearia no sistema',
     text: 'Nome da bancada, endereço, quem corta. Em poucos minutos você já entra como se fosse abrir a porta.',
   },
   {

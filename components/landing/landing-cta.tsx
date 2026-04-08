@@ -34,7 +34,7 @@ export function LandingCta() {
               Bora encher a grade e fechar o dia sabendo quanto sobrou?
             </h2>
             <p className="mx-auto mt-6 max-w-lg text-base leading-relaxed text-zinc-300 sm:text-lg">
-              Cadastro rápido. Em minutos você já vê a loja como quem olha a fila da manhã com calma — horário, cliente
+              Cadastro rápido. Em minutos você já vê a barbearia como quem olha a fila da manhã com calma — horário, cliente
               e Pix no mesmo lugar.
             </p>
             <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">

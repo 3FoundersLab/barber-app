@@ -81,7 +81,7 @@ export function LandingHero() {
       >
         <div className="animate-in fade-in slide-in-from-bottom-3 duration-700" style={{ animationFillMode: 'both' }}>
           <p className="mb-5 inline-flex items-center rounded-full border border-amber-200/90 bg-amber-50/90 px-4 py-1.5 text-xs font-semibold text-amber-950 shadow-sm dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-100">
-            Pra quem vive a loja — dono ou barbeiro na ponta da tesoura
+            Pra quem vive a barbearia — dono ou barbeiro na ponta da tesoura
           </p>
           <h1 className="text-balance text-4xl font-semibold tracking-tight text-zinc-950 sm:text-5xl sm:leading-[1.06] lg:text-[3.125rem] lg:leading-[1.04] dark:text-white">
             Pare de perder cliente por desorganização. Busque agenda cheia de novo — todos os dias.
@@ -119,7 +119,7 @@ export function LandingHero() {
             href={`#${LANDING_SECTIONS.funcionalidades}`}
             className="mt-5 inline-block text-sm font-semibold text-zinc-500 underline-offset-4 transition hover:text-zinc-800 hover:underline dark:text-zinc-400 dark:hover:text-zinc-200"
           >
-            Ver o que entra na prática na sua loja →
+            Ver o que entra na prática na sua barbearia →
           </Link>
           <p className="mt-5 text-sm font-medium text-zinc-500 dark:text-zinc-500">
             Fala a língua da barbearia · Menos correria entre corte e corte

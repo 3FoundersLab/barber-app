@@ -30,7 +30,7 @@ const quotes = [
 ]
 
 const trust = [
-  { icon: Lock, label: 'Teus dados fechados', sub: 'Loja com tranca, sem novela' },
+  { icon: Lock, label: 'Teus dados fechados', sub: 'Trancado direito, sem novela' },
   { icon: MessageCircle, label: 'Suporte em português', sub: 'Fala com gente, não com robô' },
   { icon: RefreshCw, label: 'Sempre melhorando', sub: 'Atualização que você sente no sábado cheio' },
 ]
