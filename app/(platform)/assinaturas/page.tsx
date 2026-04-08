@@ -388,14 +388,19 @@ export default function SuperAssinaturasPage() {
     setIsSaving(true)
     setError(null)
 
+    const fim = form.fim_em.trim()
+    const hoje = new Date().toLocaleDateString('en-CA')
+    const statusInsert =
+      form.status === 'ativa' && fim <= hoje ? 'pendente' : (form.status as AssinaturaStatus)
+
     const supabase = createClient()
     const { error: insertError } = await supabase.from('assinaturas').insert({
       barbearia_id: form.barbearia_id,
       plano_id: form.plano_id,
-      status: form.status as AssinaturaStatus,
+      status: statusInsert,
       periodicidade: form.periodicidade,
       inicio_em: form.inicio_em,
-      fim_em: form.fim_em.trim(),
+      fim_em: fim,
     })
 
     if (insertError) {
@@ -507,15 +512,19 @@ export default function SuperAssinaturasPage() {
     if (!editTarget || !editForm.plano_id || !editForm.inicio_em || !editForm.fim_em.trim()) return
     setEditSaving(true)
     setError(null)
+    const fim = editForm.fim_em.trim()
+    const hoje = new Date().toLocaleDateString('en-CA')
+    const statusSalvar =
+      editForm.status === 'ativa' && fim <= hoje ? 'pendente' : editForm.status
     const supabase = createClient()
     const { error: updateError } = await supabase
       .from('assinaturas')
       .update({
         plano_id: editForm.plano_id,
-        status: editForm.status,
+        status: statusSalvar,
         periodicidade: editForm.periodicidade,
         inicio_em: editForm.inicio_em,
-        fim_em: editForm.fim_em.trim(),
+        fim_em: fim,
       })
       .eq('id', editTarget.id)
 
