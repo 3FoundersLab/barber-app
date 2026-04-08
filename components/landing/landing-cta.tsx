@@ -1,22 +1,35 @@
+'use client'
+
 import Link from 'next/link'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { LANDING_CTA, LANDING_LINKS } from '@/components/landing/constants'
 import {
+  landingButtonLift,
   landingContainer,
   landingPrimaryCtaClass,
   landingSectionYCompact,
   landingTrialCtaClass,
 } from '@/components/landing/landing-classes'
+import { LANDING_EASE, LANDING_VIEWPORT } from '@/lib/landing-motion'
 import { cn } from '@/lib/utils'
 
 export function LandingCta() {
+  const reduceMotion = useReducedMotion() === true
+
   return (
     <section
       className={cn('bg-[#f7f7f8] dark:bg-zinc-950', landingSectionYCompact)}
       aria-labelledby="landing-cta-heading"
     >
       <div className={landingContainer}>
-        <div className="relative overflow-hidden rounded-[1.75rem] border-2 border-orange-500/40 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950 px-8 py-16 text-center shadow-[0_24px_48px_-12px_rgba(0,0,0,0.4)] sm:px-12 md:py-20 lg:rounded-3xl">
+        <motion.div
+          className="relative overflow-hidden rounded-[1.75rem] border-2 border-orange-500/40 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950 px-8 py-16 text-center shadow-[0_24px_48px_-12px_rgba(0,0,0,0.4)] transition-[transform,box-shadow,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:border-orange-400/55 hover:shadow-[0_32px_64px_-14px_rgba(0,0,0,0.5)] sm:px-12 md:py-20 lg:rounded-3xl"
+          initial={reduceMotion ? false : { opacity: 0, y: 28, scale: 0.99 }}
+          whileInView={reduceMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
+          viewport={LANDING_VIEWPORT}
+          transition={{ duration: 0.65, ease: LANDING_EASE }}
+        >
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.55]"
             style={{
@@ -42,7 +55,7 @@ export function LandingCta() {
                 asChild
                 variant="ghost"
                 size="lg"
-                className={cn('h-14 min-w-[220px] px-10 text-base', landingPrimaryCtaClass)}
+                className={cn('h-14 min-w-[220px] px-10 text-base', landingPrimaryCtaClass, landingButtonLift)}
               >
                 <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.primary}</Link>
               </Button>
@@ -53,6 +66,7 @@ export function LandingCta() {
                 className={cn(
                   'h-14 border-white/90 bg-transparent px-8 text-base text-white hover:bg-white/15 hover:text-white dark:border-white/90',
                   landingTrialCtaClass,
+                  landingButtonLift,
                 )}
               >
                 <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.trial}</Link>
@@ -62,12 +76,12 @@ export function LandingCta() {
             <Button
               asChild
               variant="link"
-              className="mt-2 h-auto p-0 text-sm font-semibold text-zinc-400 underline-offset-4 hover:text-white"
+              className="mt-2 h-auto p-0 text-sm font-semibold text-zinc-400 underline-offset-4 transition duration-300 hover:text-white"
             >
               <Link href={LANDING_LINKS.login}>Já tenho conta — entrar</Link>
             </Button>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   )

@@ -1,7 +1,10 @@
+'use client'
+
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { LANDING_CTA, LANDING_LINKS } from '@/components/landing/constants'
-import { landingContainer, landingPrimaryCtaClass } from '@/components/landing/landing-classes'
+import { landingButtonLift, landingContainer, landingPrimaryCtaClass } from '@/components/landing/landing-classes'
+import { LandingFadeIn } from '@/components/landing/landing-reveal'
 import { cn } from '@/lib/utils'
 
 type LandingCtaStripProps = {
@@ -17,7 +20,7 @@ export function LandingCtaStrip({ headline, className }: LandingCtaStripProps) {
         className,
       )}
     >
-      <div
+      <LandingFadeIn
         className={cn(
           landingContainer,
           'flex flex-col items-stretch justify-between gap-5 sm:flex-row sm:items-center',
@@ -31,7 +34,11 @@ export function LandingCtaStrip({ headline, className }: LandingCtaStripProps) {
             asChild
             variant="ghost"
             size="lg"
-            className={cn('h-14 w-full min-w-[min(100%,260px)] px-8 text-base sm:w-auto', landingPrimaryCtaClass)}
+            className={cn(
+              'h-14 w-full min-w-[min(100%,260px)] px-8 text-base sm:w-auto',
+              landingPrimaryCtaClass,
+              landingButtonLift,
+            )}
           >
             <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.primary}</Link>
           </Button>
@@ -39,7 +46,7 @@ export function LandingCtaStrip({ headline, className }: LandingCtaStripProps) {
             {LANDING_CTA.urgency}
           </span>
         </div>
-      </div>
+      </LandingFadeIn>
     </div>
   )
 }

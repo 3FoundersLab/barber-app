@@ -1,3 +1,6 @@
+'use client'
+
+import { motion, useReducedMotion } from 'framer-motion'
 import { Building2, Rocket, SlidersHorizontal } from 'lucide-react'
 import { LANDING_SECTIONS } from '@/components/landing/constants'
 import {
@@ -8,6 +11,8 @@ import {
   landingSectionTitle,
   landingSectionY,
 } from '@/components/landing/landing-classes'
+import { LandingFadeIn, LandingIconLift } from '@/components/landing/landing-reveal'
+import { LANDING_VIEWPORT, staggerContainer, staggerItem } from '@/lib/landing-motion'
 import { cn } from '@/lib/utils'
 
 const steps = [
@@ -32,26 +37,35 @@ const steps = [
 ]
 
 export function LandingHowItWorks() {
+  const reduceMotion = useReducedMotion() === true
+
   return (
     <section
       id={LANDING_SECTIONS.comoFunciona}
       className={cn('scroll-mt-24 bg-white dark:bg-zinc-950', landingSectionY)}
     >
       <div className={landingContainer}>
-        <div className="mx-auto max-w-2xl text-center">
+        <LandingFadeIn className="mx-auto max-w-2xl text-center">
           <p className={landingEyebrow}>Sem enrolação</p>
           <h2 className={landingSectionTitle}>Três passos e a bancada muda de patamar</h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
             Ninguém aqui vai te mandar fazer curso. É abrir, configurar e voltar pro que você faz melhor: cortar e
             receber bem.
           </p>
-        </div>
-        <ol className="mt-20 grid gap-6 md:grid-cols-3 md:gap-8">
+        </LandingFadeIn>
+        <motion.ol
+          className="mt-20 grid gap-6 md:grid-cols-3 md:gap-8"
+          variants={staggerContainer}
+          initial={reduceMotion ? 'visible' : 'hidden'}
+          whileInView={reduceMotion ? undefined : 'visible'}
+          viewport={LANDING_VIEWPORT}
+        >
           {steps.map(({ step, icon: Icon, title, text }) => (
-            <li
+            <motion.li
               key={step}
+              variants={staggerItem}
               className={cn(
-                landingCardClass(),
+                landingCardClass(true),
                 'flex flex-col items-center p-8 text-center sm:p-9',
                 'h-full min-h-[280px]',
               )}
@@ -59,14 +73,16 @@ export function LandingHowItWorks() {
               <span className="mb-6 flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-sm font-bold text-white shadow-md shadow-amber-500/20">
                 {step}
               </span>
-              <div className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100">
-                <Icon className="size-7" aria-hidden />
-              </div>
+              <LandingIconLift className="mb-5 flex">
+                <span className="flex size-14 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100">
+                  <Icon className="size-7" aria-hidden />
+                </span>
+              </LandingIconLift>
               <h3 className="text-lg font-semibold text-zinc-950 dark:text-white">{title}</h3>
               <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{text}</p>
-            </li>
+            </motion.li>
           ))}
-        </ol>
+        </motion.ol>
       </div>
     </section>
   )

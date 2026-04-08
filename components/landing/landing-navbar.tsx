@@ -7,7 +7,13 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { AppBrandLogo } from '@/components/shared/app-brand-logo'
 import { LANDING_CTA, LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
-import { landingContainer, landingPrimaryCtaClass, landingTrialCtaClass } from '@/components/landing/landing-classes'
+import {
+  landingButtonLift,
+  landingContainer,
+  landingNavLinkMicro,
+  landingPrimaryCtaClass,
+  landingTrialCtaClass,
+} from '@/components/landing/landing-classes'
 
 const links = [
   { href: `#${LANDING_SECTIONS.desafios}`, label: 'Na rotina' },
@@ -17,17 +23,21 @@ const links = [
 ] as const
 
 /** Navegação um pouco mais leve que os CTAs (hierarquia visual). */
-const navLinkClass =
-  'shrink-0 whitespace-nowrap text-sm font-semibold text-zinc-800 transition-colors hover:text-[#ea580c] dark:text-zinc-200 dark:hover:text-amber-400'
+const navLinkClass = cn(
+  'shrink-0 whitespace-nowrap text-sm font-semibold text-zinc-800 hover:text-[#ea580c] dark:text-zinc-200 dark:hover:text-amber-400',
+  landingNavLinkMicro,
+)
 
 const pillPrimaryClass = cn(
   landingPrimaryCtaClass,
-  'h-11 shrink-0 px-6 text-xs uppercase tracking-wide transition sm:px-7',
+  landingButtonLift,
+  'h-11 shrink-0 px-6 text-xs uppercase tracking-wide sm:px-7',
 )
 
 const pillSecondaryClass = cn(
   landingTrialCtaClass,
-  'h-11 shrink-0 px-5 text-xs uppercase tracking-wide transition sm:px-6',
+  landingButtonLift,
+  'h-11 shrink-0 px-5 text-xs uppercase tracking-wide sm:px-6',
 )
 
 export function LandingNavbar() {
@@ -106,7 +116,7 @@ export function LandingNavbar() {
             <Link
               key={href}
               href={href}
-              className="rounded-xl px-3 py-3.5 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
+              className="rounded-xl px-3 py-3.5 text-sm font-semibold text-zinc-900 transition-[transform,background-color] duration-200 hover:bg-zinc-100 active:scale-[0.99] dark:text-zinc-100 dark:hover:bg-zinc-800"
               onClick={() => setOpen(false)}
             >
               {label}

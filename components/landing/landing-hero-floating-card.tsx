@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export type HeroFloatingCardTier = 'all' | 'md' | 'lg'
+export type HeroFloatingCardTier = 'all' | 'sm' | 'md' | 'lg'
 
 export type LandingHeroFloatingCardProps = {
   icon: LucideIcon
@@ -17,10 +17,15 @@ export type LandingHeroFloatingCardProps = {
   /** Amplitude da flutuação em px. */
   floatRange?: number
   tier?: HeroFloatingCardTier
+  /** Direção do slide na entrada (mais orgânico ao redor da foto). */
+  slideFrom?: 'left' | 'right' | 'none'
+  /** Hero escuro: vidro mais contrastado e sombra com profundidade. */
+  onDarkSurface?: boolean
 }
 
 const tierVisibility: Record<HeroFloatingCardTier, string> = {
   all: '',
+  sm: 'hidden sm:block',
   md: 'hidden md:block',
   lg: 'hidden lg:block',
 }
@@ -34,17 +39,21 @@ export function LandingHeroFloatingCard({
   floatDuration = 5.5,
   floatRange = 5,
   tier = 'all',
+  slideFrom = 'none',
+  onDarkSurface = false,
 }: LandingHeroFloatingCardProps) {
   const reduceMotion = useReducedMotion() === true
+
+  const slideX = slideFrom === 'left' ? -14 : slideFrom === 'right' ? 14 : 0
 
   return (
     <div className={cn('absolute z-20', tierVisibility[tier], className)}>
       <motion.div
-        initial={{ opacity: 0, y: 18 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={reduceMotion ? false : { opacity: 0, y: 22, x: slideX }}
+        animate={{ opacity: 1, y: 0, x: 0 }}
         transition={{
-          duration: 0.55,
-          delay,
+          duration: reduceMotion ? 0 : 0.58,
+          delay: reduceMotion ? 0 : delay,
           ease: [0.22, 1, 0.36, 1],
         }}
       >
@@ -60,32 +69,43 @@ export function LandingHeroFloatingCard({
             duration: floatDuration,
             repeat: Infinity,
             ease: 'easeInOut',
-            delay: delay + 0.45,
+            delay: delay + 0.5,
           }}
-          className={cn(
-            'pointer-events-none max-w-[10.75rem] rounded-xl border border-zinc-200/95 bg-white/90 px-3 py-2.5 shadow-[0_18px_40px_-14px_rgba(24,24,27,0.14)] backdrop-blur-[8px] sm:max-w-[11.5rem] sm:px-3.5 sm:py-3 md:backdrop-blur-[12px]',
-            'ring-1 ring-zinc-950/[0.04]',
-            'dark:border-white/[0.12] dark:bg-zinc-950/65 dark:shadow-[0_18px_40px_-14px_rgba(0,0,0,0.65)] dark:ring-cyan-400/[0.12]',
-          )}
+          className="pointer-events-none md:pointer-events-auto"
         >
-          <div className="flex items-start gap-2.5">
-            <span
-              className={cn(
-                'flex size-8 shrink-0 items-center justify-center rounded-lg bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200/80',
-                'dark:bg-cyan-500/10 dark:text-cyan-300 dark:ring-cyan-400/20',
-              )}
-            >
-              <Icon className="size-4" aria-hidden />
-            </span>
-            <div className="min-w-0 pt-0.5">
-              <p className="text-[11px] font-semibold leading-tight tracking-tight text-zinc-950 sm:text-xs dark:text-white">
-                {title}
-              </p>
-              {subtitle ? (
-                <p className="mt-0.5 text-[10px] leading-snug text-zinc-500 sm:text-[11px] dark:text-zinc-400">
-                  {subtitle}
+          <div
+            className={cn(
+              'group/card max-w-[9.65rem] rounded-xl border px-2.5 py-2 backdrop-blur-[12px] sm:max-w-[11.25rem] sm:px-3.5 sm:py-3',
+              onDarkSurface
+                ? 'border-white/[0.14] bg-white/[0.78] shadow-[0_20px_48px_-16px_rgba(0,0,0,0.55)] ring-1 ring-cyan-400/[0.06]'
+                : 'border-white/55 bg-white/72 shadow-[0_14px_36px_-12px_rgba(15,23,42,0.18)] ring-1 ring-zinc-950/[0.05]',
+              !onDarkSurface &&
+                'dark:border-white/[0.14] dark:bg-zinc-950/58 dark:shadow-[0_18px_44px_-14px_rgba(0,0,0,0.55)] dark:ring-white/[0.06]',
+              'md:transition-[transform,box-shadow,border-color,ring-color] md:duration-300 md:ease-[cubic-bezier(0.22,1,0.36,1)]',
+              onDarkSurface
+                ? 'md:hover:scale-[1.025] md:hover:border-cyan-200/25 md:hover:shadow-[0_28px_60px_-14px_rgba(0,0,0,0.52),0_0_48px_-12px_rgba(34,211,238,0.12)] md:hover:ring-cyan-400/15'
+                : 'md:hover:scale-[1.025] md:hover:shadow-[0_22px_48px_-14px_rgba(15,23,42,0.22)] dark:md:hover:shadow-[0_22px_48px_-14px_rgba(0,0,0,0.65)]',
+            )}
+          >
+            <div className="flex items-start gap-2.5">
+              <span
+                className={cn(
+                  'flex size-8 shrink-0 items-center justify-center rounded-lg bg-cyan-500/12 text-cyan-700 ring-1 ring-cyan-500/20 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] md:group-hover/card:scale-110 md:group-hover/card:-rotate-6',
+                  'dark:bg-cyan-400/12 dark:text-cyan-300 dark:ring-cyan-400/25',
+                )}
+              >
+                <Icon className="size-4" aria-hidden />
+              </span>
+              <div className="min-w-0 pt-0.5">
+                <p className="text-[11px] font-semibold leading-tight tracking-tight text-zinc-950 sm:text-xs dark:text-white">
+                  {title}
                 </p>
-              ) : null}
+                {subtitle ? (
+                  <p className="mt-0.5 text-[10px] leading-snug text-zinc-600 sm:text-[11px] dark:text-zinc-400">
+                    {subtitle}
+                  </p>
+                ) : null}
+              </div>
             </div>
           </div>
         </motion.div>

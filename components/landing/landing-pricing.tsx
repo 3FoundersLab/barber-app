@@ -1,8 +1,12 @@
+'use client'
+
 import Link from 'next/link'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LANDING_CTA, LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
 import {
+  landingButtonLift,
   landingCardClass,
   landingContainer,
   landingEyebrow,
@@ -12,6 +16,8 @@ import {
   landingSectionTitle,
   landingSectionY,
 } from '@/components/landing/landing-classes'
+import { LandingFadeIn } from '@/components/landing/landing-reveal'
+import { LANDING_VIEWPORT, staggerContainer, staggerItem } from '@/lib/landing-motion'
 import { cn } from '@/lib/utils'
 
 type Tier = {
@@ -73,6 +79,8 @@ const tiers: Tier[] = [
 ]
 
 export function LandingPricing() {
+  const reduceMotion = useReducedMotion() === true
+
   return (
     <section
       id={LANDING_SECTIONS.planos}
@@ -82,19 +90,26 @@ export function LandingPricing() {
       )}
     >
       <div className={landingContainer}>
-        <div className="mx-auto max-w-2xl text-center">
+        <LandingFadeIn className="mx-auto max-w-2xl text-center">
           <p className={landingEyebrow}>Mensalidade</p>
           <h2 className={landingSectionTitle}>Paga pelo tamanho da sua bancada</h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
             Valores de exemplo — no cadastro você escolhe o pacote certo. Sem letras miúdas escondidas na fatura.
           </p>
-        </div>
-        <div className="mt-20 grid gap-8 lg:grid-cols-3 lg:gap-6 xl:gap-8">
+        </LandingFadeIn>
+        <motion.div
+          className="mt-20 grid gap-8 lg:grid-cols-3 lg:gap-6 xl:gap-8"
+          variants={staggerContainer}
+          initial={reduceMotion ? 'visible' : 'hidden'}
+          whileInView={reduceMotion ? undefined : 'visible'}
+          viewport={LANDING_VIEWPORT}
+        >
           {tiers.map((tier) => (
-            <div
+            <motion.div
               key={tier.name}
+              variants={staggerItem}
               className={cn(
-                landingCardClass(),
+                landingCardClass(true),
                 'relative flex flex-col p-8 sm:p-9',
                 tier.highlighted &&
                   'border-amber-400/90 shadow-md ring-2 ring-amber-500/25 dark:border-amber-500/40 dark:ring-amber-500/20',
@@ -127,7 +142,8 @@ export function LandingPricing() {
                 asChild
                 variant={tier.name === 'Empresarial' ? 'outline' : 'ghost'}
                 className={cn(
-                  'mt-10 h-12 w-full text-sm font-bold transition hover:scale-[1.01] active:scale-[0.99]',
+                  'mt-10 h-12 w-full text-sm font-bold',
+                  landingButtonLift,
                   tier.name === 'Essencial' && landingPrimaryCtaClass,
                   tier.name === 'Profissional' && landingTrialCtaClass,
                   tier.name === 'Empresarial' &&
@@ -136,12 +152,14 @@ export function LandingPricing() {
               >
                 <Link href={tier.href}>{tier.cta}</Link>
               </Button>
-            </div>
+            </motion.div>
           ))}
-        </div>
-        <p className="mt-12 text-center text-sm font-medium text-zinc-600 dark:text-zinc-400">
-          {LANDING_CTA.urgency} · {LANDING_CTA.urgencyBanner}
-        </p>
+        </motion.div>
+        <LandingFadeIn delay={0.12} className="mt-12 text-center">
+          <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+            {LANDING_CTA.urgency} · {LANDING_CTA.urgencyBanner}
+          </p>
+        </LandingFadeIn>
       </div>
     </section>
   )
