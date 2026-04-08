@@ -13,7 +13,7 @@ import { LandingFooter } from '@/components/landing/landing-footer'
 export function LandingMarketing() {
   return (
     <LandingSmoothScroll>
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="min-h-screen bg-[#f7f7f8] text-foreground antialiased dark:bg-zinc-950">
         <LandingNavbar />
         <main>
           <LandingHero />

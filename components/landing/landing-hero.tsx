@@ -1,33 +1,34 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
+import { landingContainer } from '@/components/landing/landing-classes'
 
 function DashboardMockup() {
   return (
     <div className="relative mx-auto w-full max-w-lg lg:max-w-none">
       <div
-        className="animate-in fade-in slide-in-from-bottom-4 relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-2xl shadow-zinc-900/10 duration-700 dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-black/40"
+        className="animate-in fade-in slide-in-from-bottom-4 relative overflow-hidden rounded-3xl border border-zinc-200/95 bg-white shadow-[0_24px_48px_-12px_rgba(24,24,27,0.12),0_12px_24px_-8px_rgba(24,24,27,0.08)] ring-1 ring-zinc-950/[0.04] duration-700 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.45)] dark:ring-white/[0.06]"
         style={{ animationFillMode: 'both' }}
       >
-        <div className="flex h-10 items-center gap-2 border-b border-zinc-100 bg-zinc-50/80 px-3 dark:border-zinc-800 dark:bg-zinc-800/50">
+        <div className="flex h-11 items-center gap-2 border-b border-zinc-100 bg-zinc-50/90 px-4 dark:border-zinc-800 dark:bg-zinc-900/80">
           <div className="flex gap-1.5">
             <span className="size-2.5 rounded-full bg-red-400/90" />
             <span className="size-2.5 rounded-full bg-amber-400/90" />
             <span className="size-2.5 rounded-full bg-emerald-400/90" />
           </div>
-          <span className="ml-2 font-mono text-[11px] text-zinc-400">app.barbearia.com/dashboard</span>
+          <span className="ml-2 font-mono text-[11px] text-zinc-500 dark:text-zinc-500">app.barbearia.com/dashboard</span>
         </div>
-        <div className="flex min-h-[240px] sm:min-h-[300px]">
-          <aside className="hidden w-14 shrink-0 border-r border-zinc-100 bg-zinc-50/50 sm:block dark:border-zinc-800 dark:bg-zinc-800/30" />
-          <div className="flex flex-1 flex-col gap-5 p-4 sm:p-6">
+        <div className="flex min-h-[248px] sm:min-h-[308px]">
+          <aside className="hidden w-[3.25rem] shrink-0 border-r border-zinc-100 bg-zinc-50/60 sm:block dark:border-zinc-800 dark:bg-zinc-900/50" />
+          <div className="flex flex-1 flex-col gap-6 p-5 sm:p-7">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                   Painel · sua barbearia
                 </p>
-                <p className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">Hoje na unidade</p>
+                <p className="mt-1 text-xl font-semibold tracking-tight text-zinc-950 dark:text-white">Hoje na unidade</p>
               </div>
-              <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+              <span className="rounded-full bg-emerald-600/10 px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-400">
                 Faturamento +12%
               </span>
             </div>
@@ -39,25 +40,29 @@ function DashboardMockup() {
               ].map((bar, i) => (
                 <div
                   key={i}
-                  className={`rounded-lg bg-gradient-to-t ${bar.c} ${bar.h} opacity-90 transition-transform duration-300 hover:scale-[1.02]`}
+                  className={`rounded-xl bg-gradient-to-t ${bar.c} ${bar.h} opacity-90 transition-transform duration-300 hover:scale-[1.02]`}
                 />
               ))}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 p-3.5 dark:border-zinc-700 dark:bg-zinc-800/50">
-                <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Agendamentos</p>
-                <p className="mt-1 text-2xl font-bold tabular-nums text-zinc-900 dark:text-white">48</p>
+              <div className="rounded-xl border border-zinc-100 bg-zinc-50/90 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Agendamentos</p>
+                <p className="mt-1.5 text-2xl font-semibold tabular-nums tracking-tight text-zinc-950 dark:text-white">
+                  48
+                </p>
               </div>
-              <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 p-3.5 dark:border-zinc-700 dark:bg-zinc-800/50">
-                <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Clientes ativos</p>
-                <p className="mt-1 text-2xl font-bold tabular-nums text-zinc-900 dark:text-white">312</p>
+              <div className="rounded-xl border border-zinc-100 bg-zinc-50/90 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Clientes ativos</p>
+                <p className="mt-1.5 text-2xl font-semibold tabular-nums tracking-tight text-zinc-950 dark:text-white">
+                  312
+                </p>
               </div>
             </div>
           </div>
         </div>
       </div>
       <div
-        className="pointer-events-none absolute -right-8 -bottom-8 -z-10 size-56 rounded-full bg-amber-400/20 blur-3xl dark:bg-amber-500/10"
+        className="pointer-events-none absolute -right-10 -bottom-10 -z-10 size-64 rounded-full bg-gradient-to-tr from-amber-400/25 to-orange-500/15 blur-3xl dark:from-amber-500/15 dark:to-orange-600/10"
         aria-hidden
       />
     </div>
@@ -68,26 +73,28 @@ export function LandingHero() {
   return (
     <section
       id={LANDING_SECTIONS.top}
-      className="scroll-mt-24 bg-gradient-to-b from-zinc-50 via-white to-white pt-28 pb-20 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900 md:pb-28"
+      className="scroll-mt-24 bg-gradient-to-b from-zinc-100/80 via-[#f7f7f8] to-[#f7f7f8] pt-32 pb-24 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-950 md:pb-32 lg:pt-36 lg:pb-36"
     >
-      <div className="mx-auto grid max-w-6xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-[1fr_minmax(0,1.05fr)] lg:gap-20 lg:px-8">
+      <div
+        className={`${landingContainer} grid items-center gap-16 lg:grid-cols-[1fr_minmax(0,1.06fr)] lg:gap-20 xl:gap-24`}
+      >
         <div className="animate-in fade-in slide-in-from-bottom-3 duration-700" style={{ animationFillMode: 'both' }}>
-          <p className="mb-4 inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-3.5 py-1.5 text-xs font-semibold text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          <p className="mb-5 inline-flex items-center rounded-full border border-amber-200/90 bg-amber-50/90 px-4 py-1.5 text-xs font-semibold text-amber-950 shadow-sm dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-100">
             Para donos e gestores de barbearia
           </p>
-          <h1 className="text-balance text-4xl font-bold tracking-tight text-zinc-900 sm:text-5xl sm:leading-[1.06] lg:text-[3.25rem] lg:leading-[1.05] dark:text-white">
+          <h1 className="text-balance text-4xl font-semibold tracking-tight text-zinc-950 sm:text-5xl sm:leading-[1.06] lg:text-[3.125rem] lg:leading-[1.04] dark:text-white">
             Controle sua barbearia e aumente seu faturamento em poucos cliques
           </h1>
-          <p className="mt-5 max-w-xl text-pretty text-base leading-snug text-zinc-600 sm:text-lg dark:text-zinc-400">
-            <span className="font-semibold text-zinc-900 dark:text-zinc-100">BarberApp</span> é software na web: você
+          <p className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-zinc-600 sm:text-lg dark:text-zinc-400">
+            <span className="font-semibold text-zinc-950 dark:text-zinc-100">BarberApp</span> é software na web: você
             cadastra a unidade e administra agenda da equipe, clientes e caixa no mesmo painel, em tempo real — sem
             planilha e sem depender só do WhatsApp para organizar o dia.
           </p>
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <Button
               asChild
               size="lg"
-              className="h-12 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-8 text-base font-semibold text-white shadow-lg shadow-amber-500/30 transition hover:scale-[1.02] hover:from-amber-600 hover:to-orange-700 hover:text-white active:scale-[0.98]"
+              className="h-12 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-8 text-base font-semibold text-white shadow-lg shadow-amber-500/25 transition hover:scale-[1.02] hover:from-amber-600 hover:to-orange-700 hover:text-white active:scale-[0.98]"
             >
               <Link href={LANDING_LINKS.cadastro}>Começar grátis</Link>
             </Button>
@@ -95,12 +102,12 @@ export function LandingHero() {
               asChild
               variant="outline"
               size="lg"
-              className="h-12 rounded-xl border-zinc-300 bg-white/80 text-base font-medium text-zinc-800 backdrop-blur hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900/80 dark:text-zinc-100 dark:hover:bg-zinc-800"
+              className="h-12 rounded-xl border-zinc-300/90 bg-white/90 text-base font-medium text-zinc-800 shadow-sm backdrop-blur hover:bg-white dark:border-zinc-600 dark:bg-zinc-900/90 dark:text-zinc-100 dark:hover:bg-zinc-900"
             >
               <Link href={`#${LANDING_SECTIONS.funcionalidades}`}>O que o sistema faz</Link>
             </Button>
           </div>
-          <p className="mt-5 text-sm text-zinc-500 dark:text-zinc-500">
+          <p className="mt-6 text-sm font-medium text-zinc-500 dark:text-zinc-500">
             Cadastro rápido · Tudo em português · Menos caos na operação
           </p>
         </div>

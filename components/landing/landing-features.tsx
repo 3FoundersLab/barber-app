@@ -1,5 +1,14 @@
 import { CalendarRange, CreditCard, Users, Wallet } from 'lucide-react'
 import { LANDING_SECTIONS } from '@/components/landing/constants'
+import {
+  landingCardClass,
+  landingContainer,
+  landingEyebrow,
+  landingSectionLead,
+  landingSectionTitle,
+  landingSectionY,
+} from '@/components/landing/landing-classes'
+import { cn } from '@/lib/utils'
 
 const cards = [
   {
@@ -28,32 +37,32 @@ export function LandingFeatures() {
   return (
     <section
       id={LANDING_SECTIONS.funcionalidades}
-      className="scroll-mt-24 bg-white py-20 dark:bg-zinc-950 md:py-28"
+      className={cn('scroll-mt-24 bg-white dark:bg-zinc-950', landingSectionY)}
     >
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className={landingContainer}>
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-            Funcionalidades
-          </p>
-          <h2 className="mt-3 text-balance text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">
-            Tudo integrado no mesmo fluxo
-          </h2>
-          <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
+          <p className={landingEyebrow}>Funcionalidades</p>
+          <h2 className={landingSectionTitle}>Tudo integrado no mesmo fluxo</h2>
+          <p className={cn(landingSectionLead, 'mx-auto')}>
             Módulos que conversam entre si — da reserva ao pagamento, sem soluções paralelas.
           </p>
         </div>
-        <ul className="mt-16 grid gap-6 sm:grid-cols-2">
+        <ul className="mt-20 grid gap-6 sm:grid-cols-2 lg:gap-8">
           {cards.map(({ icon: Icon, title, description }) => (
             <li
               key={title}
-              className="flex gap-5 rounded-2xl border border-zinc-200/80 bg-zinc-50/30 p-6 transition-all duration-300 hover:border-amber-200/70 hover:bg-white hover:shadow-lg dark:border-zinc-800 dark:bg-zinc-900/40 dark:hover:border-amber-500/25 dark:hover:bg-zinc-900 sm:p-8"
+              className={cn(
+                landingCardClass(true),
+                'flex gap-6 p-7 sm:gap-7 sm:p-9',
+                'hover:border-amber-200/70 dark:hover:border-amber-500/20',
+              )}
             >
-              <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/[0.12] text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
                 <Icon className="size-6" aria-hidden />
               </span>
-              <div>
-                <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 sm:text-base">
+              <div className="min-w-0 pt-0.5">
+                <h3 className="text-lg font-semibold text-zinc-950 dark:text-white">{title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-zinc-600 sm:text-[0.9375rem] dark:text-zinc-400">
                   {description}
                 </p>
               </div>
