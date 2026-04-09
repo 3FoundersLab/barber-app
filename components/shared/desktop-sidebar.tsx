@@ -79,12 +79,14 @@ export function DesktopSidebar({
   const widthClass = wide ? 'md:w-64' : 'md:w-[4.5rem]'
 
   const headerBarClass = isSuper ? superShellHeaderBarClass : APP_PAGE_HEADER_BAR_CLASS
+  const sidebarHeaderExtras = cn('border-b-0', isSuper && 'shadow-none')
 
   const header = appBrand ? (
     <div
       className={cn(
         'flex items-center overflow-hidden',
         headerBarClass,
+        sidebarHeaderExtras,
         wide ? 'flex-row gap-2' : 'flex-row justify-center gap-1 px-1.5',
       )}
     >
@@ -124,7 +126,7 @@ export function DesktopSidebar({
       ) : null}
     </div>
   ) : (
-    <div className={cn('flex items-center overflow-hidden', headerBarClass)}>
+    <div className={cn('flex items-center overflow-hidden', headerBarClass, sidebarHeaderExtras)}>
       <p className="truncate text-sm font-semibold">{title}</p>
     </div>
   )
