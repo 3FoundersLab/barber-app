@@ -175,7 +175,7 @@ export function LandingPremiumCarousel({
           </div>
         </div>
 
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-2 sm:mt-12" role="group" aria-label="Indicadores do carrossel">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2 sm:mt-10" role="group" aria-label="Indicadores do carrossel">
           {Array.from({ length: snapCount }, (_, i) => (
             <button
               key={i}

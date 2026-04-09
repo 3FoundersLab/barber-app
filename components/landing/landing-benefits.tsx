@@ -229,7 +229,10 @@ function BenefitSlide({
       </div>
 
       <motion.div
-        className={cn('flex flex-col justify-center', imageLeft ? 'lg:col-start-2' : 'lg:col-start-1 lg:row-start-1')}
+        className={cn(
+          'flex min-h-0 flex-col justify-center pb-1 lg:pb-0',
+          imageLeft ? 'lg:col-start-2' : 'lg:col-start-1 lg:row-start-1',
+        )}
         initial={false}
         animate={
           reduceMotion
@@ -242,7 +245,7 @@ function BenefitSlide({
       >
         <h3 className="text-2xl font-semibold tracking-tight text-white sm:text-[1.65rem] sm:leading-snug">{block.title}</h3>
         <p className="mt-4 text-pretty text-base leading-relaxed text-zinc-400 sm:text-lg">{block.lead}</p>
-        <ul className="mt-8 space-y-3.5" role="list">
+        <ul className="mt-6 space-y-3 sm:mt-7 sm:space-y-3.5" role="list">
           {block.bullets.map((item) => (
             <li key={item} className="flex gap-3 text-sm leading-relaxed text-zinc-300 sm:text-[0.9375rem]">
               <span
@@ -255,21 +258,6 @@ function BenefitSlide({
             </li>
           ))}
         </ul>
-        <div className="mt-9">
-          <Button
-            asChild
-            variant="ghost"
-            size="lg"
-            className={cn(
-              'h-12 rounded-full border-2 border-white/18 bg-white/[0.06] px-7 text-sm font-semibold text-white backdrop-blur-sm',
-              'transition-[border-color,background-color,box-shadow,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
-              'hover:border-white/28 hover:bg-white/12 hover:text-white hover:shadow-lg hover:shadow-black/25',
-              landingButtonLift,
-            )}
-          >
-            <Link href={`#${LANDING_SECTIONS.funcionalidades}`}>Saiba mais</Link>
-          </Button>
-        </div>
       </motion.div>
     </article>
   )
@@ -311,7 +299,7 @@ export function LandingBenefits() {
           </p>
         </motion.header>
 
-        <div className="mt-16 sm:mt-20">
+        <div className="mt-14 sm:mt-16">
           <LandingPremiumCarousel theme="dark" loop={false} scrollDuration={34} labelledBy="landing-beneficios-heading">
             {blocks.map((block, index) => (
               <BenefitSlide key={block.title} block={block} slideIndex={index} reduceMotion={reduceMotion} />
@@ -320,7 +308,7 @@ export function LandingBenefits() {
         </div>
 
         <motion.div
-          className="mx-auto mt-16 max-w-xl text-center sm:mt-20"
+          className="mx-auto mt-12 max-w-xl text-center sm:mt-14"
           initial={reduceMotion ? false : { opacity: 0, y: 20 }}
           whileInView={
             reduceMotion
