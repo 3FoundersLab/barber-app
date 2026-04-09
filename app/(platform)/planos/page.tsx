@@ -29,6 +29,7 @@ import { PlanoPeriodicidadeToggle } from '@/components/shared/plano-periodicidad
 import { formatCurrency } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import { logSistemaAcao } from '@/lib/log-sistema-acao'
 import { linhasBeneficiosPlano, parsePlanoBeneficios } from '@/lib/plano-beneficios'
 import {
   mesesPorPeriodicidade,
@@ -59,6 +60,16 @@ const emptyForm = {
   preco_mensal: '',
   beneficios: [] as BeneficioFormRow[],
   ativo: true,
+}
+
+function snapshotPlanoParaLog(plano: Plano) {
+  return {
+    id: plano.id,
+    nome: plano.nome,
+    preco_mensal: plano.preco_mensal,
+    beneficios: plano.beneficios ?? null,
+    ativo: plano.ativo,
+  }
 }
 
 export default function SuperPlanosPage() {
@@ -150,18 +161,51 @@ export default function SuperPlanosPage() {
     }
 
     if (editingPlano) {
+      const antes = snapshotPlanoParaLog(editingPlano)
       const { error: updateError } = await supabase.from('planos').update(payload).eq('id', editingPlano.id)
       if (updateError) {
         setError('Não foi possível atualizar o plano')
         setIsSaving(false)
         return
       }
+      const depois = { ...antes, ...payload }
+      await logSistemaAcao(supabase, {
+        tipo_acao: 'edicao',
+        entidade: 'plano',
+        entidade_id: editingPlano.id,
+        entidade_nome: payload.nome,
+        resumo_acao: 'Editou plano',
+        descricao: `Alterações em “${payload.nome}”.`,
+        payload_antes: antes,
+        payload_depois: depois,
+      })
     } else {
-      const { error: insertError } = await supabase.from('planos').insert(payload)
+      const { data: created, error: insertError } = await supabase
+        .from('planos')
+        .insert(payload)
+        .select('id, nome, preco_mensal, beneficios, ativo')
+        .single()
       if (insertError) {
         setError('Não foi possível criar o plano')
         setIsSaving(false)
         return
+      }
+      if (created) {
+        await logSistemaAcao(supabase, {
+          tipo_acao: 'criacao',
+          entidade: 'plano',
+          entidade_id: created.id,
+          entidade_nome: created.nome,
+          resumo_acao: 'Criou plano',
+          descricao: `Plano “${created.nome}” cadastrado.`,
+          payload_depois: {
+            id: created.id,
+            nome: created.nome,
+            preco_mensal: created.preco_mensal,
+            beneficios: created.beneficios ?? null,
+            ativo: created.ativo,
+          },
+        })
       }
     }
 
@@ -177,6 +221,7 @@ export default function SuperPlanosPage() {
     setIsDeleting(true)
     setError(null)
     const supabase = createClient()
+    const antes = snapshotPlanoParaLog(deleteTarget)
     const { error: deleteError } = await supabase.from('planos').delete().eq('id', deleteTarget.id)
     setIsDeleting(false)
     if (deleteError) {
@@ -188,6 +233,15 @@ export default function SuperPlanosPage() {
       setDeleteTarget(null)
       return
     }
+    await logSistemaAcao(supabase, {
+      tipo_acao: 'exclusao',
+      entidade: 'plano',
+      entidade_id: deleteTarget.id,
+      entidade_nome: deleteTarget.nome,
+      resumo_acao: 'Excluiu plano',
+      descricao: `Removido o plano “${deleteTarget.nome}”.`,
+      payload_antes: antes,
+    })
     setDeleteTarget(null)
     loadPlanos()
   }

@@ -9,6 +9,7 @@ export const PLATFORM_PATHS = {
   financeiro: '/financeiro',
   assinaturas: '/assinaturas',
   logsPoliticas: '/logs/politicas',
+  logsAcoes: '/logs/acoes',
   conta: '/conta',
   contaEditar: '/conta/editar',
 } as const

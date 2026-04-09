@@ -2,18 +2,47 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { ChevronUp } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 
-export interface TabItem {
+export interface TabSubItem {
+  label: string
+  href: string
+}
+
+export interface TabItemLeaf {
   label: string
   href: string
   icon: React.ComponentType<{ className?: string }>
+}
+
+export interface TabItemGroup {
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  children: TabSubItem[]
+}
+
+export type TabItem = TabItemLeaf | TabItemGroup
+
+export function isTabGroup(item: TabItem): item is TabItemGroup {
+  return 'children' in item && Array.isArray(item.children)
 }
 
 interface BottomTabsProps {
   tabs: TabItem[]
   basePath?: string
   appearance?: 'default' | 'super'
+}
+
+function childPathActive(pathname: string, basePath: string, childHref: string) {
+  const full = basePath + childHref
+  return pathname === full || pathname.startsWith(`${full}/`)
 }
 
 export function BottomTabs({ tabs, basePath = '', appearance = 'default' }: BottomTabsProps) {
@@ -31,8 +60,57 @@ export function BottomTabs({ tabs, basePath = '', appearance = 'default' }: Bott
     >
       <div className="flex h-16 items-center justify-around">
         {tabs.map((tab) => {
+          if (isTabGroup(tab)) {
+            const groupActive = tab.children.some((c) => childPathActive(pathname, basePath, c.href))
+            const Icon = tab.icon
+
+            return (
+              <DropdownMenu key={`group:${tab.label}`}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      'flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs transition-all duration-200',
+                      'text-muted-foreground hover:text-foreground',
+                      isSuper && 'hover:bg-zinc-100/80 dark:hover:bg-white/[0.06]',
+                      groupActive && 'text-primary',
+                      isSuper && groupActive && 'bg-primary/10 dark:bg-primary/15',
+                    )}
+                    aria-expanded={undefined}
+                    aria-haspopup="menu"
+                  >
+                    <Icon
+                      className={cn(
+                        'h-5 w-5 transition-transform duration-200',
+                        groupActive && 'text-primary',
+                        isSuper && groupActive && 'scale-105',
+                      )}
+                    />
+                    <span className="flex items-center gap-0.5 font-medium">
+                      {tab.label}
+                      <ChevronUp className="size-3 opacity-70" aria-hidden />
+                    </span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" side="top" className="min-w-[10rem]">
+                  {tab.children.map((child) => {
+                    const fullHref = basePath + child.href
+                    const active = childPathActive(pathname, basePath, child.href)
+                    return (
+                      <DropdownMenuItem key={child.href} asChild className={cn(active && 'bg-accent')}>
+                        <Link href={fullHref} className="cursor-pointer">
+                          {child.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    )
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )
+          }
+
           const fullHref = basePath + tab.href
-          const isActive = pathname === fullHref || pathname.startsWith(fullHref + '/')
+          const isActive = pathname === fullHref || pathname.startsWith(`${fullHref}/`)
           const Icon = tab.icon
 
           return (
@@ -41,9 +119,7 @@ export function BottomTabs({ tabs, basePath = '', appearance = 'default' }: Bott
               href={fullHref}
               className={cn(
                 'flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs transition-all duration-200',
-                isActive
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground',
+                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
                 isSuper && !isActive && 'hover:bg-zinc-100/80 dark:hover:bg-white/[0.06]',
                 isSuper && isActive && 'bg-primary/10 dark:bg-primary/15',
               )}
@@ -55,12 +131,7 @@ export function BottomTabs({ tabs, basePath = '', appearance = 'default' }: Bott
                   isSuper && isActive && 'scale-105',
                 )}
               />
-              <span className={cn(
-                'font-medium',
-                isActive && 'text-primary'
-              )}>
-                {tab.label}
-              </span>
+              <span className={cn('font-medium', isActive && 'text-primary')}>{tab.label}</span>
             </Link>
           )
         })}

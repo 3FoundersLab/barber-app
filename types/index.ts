@@ -176,6 +176,26 @@ export interface PoliticaSistemaLog {
   actor_profile?: Pick<Profile, 'id' | 'nome' | 'email'> | null
 }
 
+/** Tipo de ação registrada em sistema_acoes_log. */
+export type SistemaAcaoTipo = 'criacao' | 'edicao' | 'exclusao'
+
+/** Linha de auditoria de ações manuais (super admin). */
+export interface SistemaAcaoLog {
+  id: string
+  created_at: string
+  actor_user_id: string | null
+  tipo_acao: SistemaAcaoTipo
+  entidade: string
+  entidade_id: string | null
+  entidade_nome: string | null
+  resumo_acao: string
+  descricao: string | null
+  payload_antes: Record<string, unknown> | null
+  payload_depois: Record<string, unknown> | null
+  metadata: Record<string, unknown> | null
+  actor_profile?: Pick<Profile, 'id' | 'nome' | 'email'> | null
+}
+
 // Auth Context
 export interface AuthUser {
   id: string

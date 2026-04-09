@@ -2,8 +2,23 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Building2, CreditCard, DollarSign, LayoutDashboard, Menu, ScrollText, Ticket, Users } from 'lucide-react'
+import {
+  Building2,
+  CreditCard,
+  ChevronDown,
+  DollarSign,
+  LayoutDashboard,
+  Menu,
+  ScrollText,
+  Ticket,
+  Users,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { AppBrandLogo } from '@/components/shared/app-brand-logo'
@@ -18,11 +33,25 @@ const superLinks = [
   { label: 'Planos', href: PLATFORM_PATHS.planos, icon: Ticket },
   { label: 'Financeiro', href: PLATFORM_PATHS.financeiro, icon: DollarSign },
   { label: 'Assinaturas', href: PLATFORM_PATHS.assinaturas, icon: CreditCard },
-  { label: 'Logs', href: PLATFORM_PATHS.logsPoliticas, icon: ScrollText },
-]
+] as const
+
+const superLogsGroup = {
+  label: 'Logs',
+  icon: ScrollText,
+  children: [
+    { label: 'Políticas', href: PLATFORM_PATHS.logsPoliticas },
+    { label: 'Ações', href: PLATFORM_PATHS.logsAcoes },
+  ],
+} as const
+
+function pathActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
 
 export function SuperDrawer() {
   const pathname = usePathname()
+  const logsOpenDefault = superLogsGroup.children.some((c) => pathActive(pathname, c.href))
+  const LogsGroupIcon = superLogsGroup.icon
 
   return (
     <Sheet>
@@ -55,7 +84,7 @@ export function SuperDrawer() {
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {superLinks.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+            const isActive = pathActive(pathname, item.href)
             const Icon = item.icon
 
             return (
@@ -74,6 +103,41 @@ export function SuperDrawer() {
               </Link>
             )
           })}
+
+          <Collapsible defaultOpen={logsOpenDefault} className="space-y-1">
+            <CollapsibleTrigger
+              type="button"
+              className={cn(
+                'group flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-all duration-200',
+                logsOpenDefault
+                  ? 'bg-zinc-200/80 text-foreground dark:bg-white/[0.08]'
+                  : 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]',
+              )}
+            >
+              <LogsGroupIcon className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 flex-1 truncate text-left font-medium">{superLogsGroup.label}</span>
+              <ChevronDown className="size-4 shrink-0 opacity-60 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-0.5 pl-1">
+              {superLogsGroup.children.map((child) => {
+                const active = pathActive(pathname, child.href)
+                return (
+                  <Link
+                    key={child.href}
+                    href={child.href}
+                    className={cn(
+                      'block rounded-md py-2 pl-8 pr-3 text-sm transition-all duration-200',
+                      active
+                        ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                        : 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]',
+                    )}
+                  >
+                    {child.label}
+                  </Link>
+                )
+              })}
+            </CollapsibleContent>
+          </Collapsible>
         </nav>
 
         <div className="mt-auto space-y-3 border-t border-zinc-200/80 p-3 dark:border-zinc-800">
