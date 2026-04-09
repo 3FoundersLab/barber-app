@@ -83,12 +83,17 @@ export function DesktopSidebar({
   const header = appBrand ? (
     <div
       className={cn(
-        'flex items-center gap-2 overflow-hidden',
+        'flex items-center overflow-hidden',
         headerBarClass,
-        wide ? 'flex-row' : 'flex-col justify-center gap-0.5 px-2',
+        wide ? 'flex-row gap-2' : 'flex-row justify-center gap-1 px-1.5',
       )}
     >
-      <div className={cn('min-w-0 flex-1', wide ? '' : 'flex w-full flex-none justify-center')}>
+      <div
+        className={cn(
+          'min-w-0',
+          wide ? 'flex-1' : 'flex shrink-0 items-center justify-center',
+        )}
+      >
         <AppBrandLogo
           href={appBrand.href}
           variant={wide ? 'full' : 'icon'}
@@ -104,7 +109,7 @@ export function DesktopSidebar({
           size="icon"
           className={cn(
             'shrink-0 text-muted-foreground',
-            wide ? 'h-8 w-8' : 'mx-auto h-6 w-6',
+            wide ? 'h-8 w-8' : 'h-6 w-6',
           )}
           aria-expanded={wide}
           aria-label={wide ? 'Recolher menu lateral' : 'Expandir menu lateral'}
