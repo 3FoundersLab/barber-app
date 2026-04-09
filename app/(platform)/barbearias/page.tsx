@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, ChevronLeft, ChevronRight, LogIn, Pencil, Plus, Search, Ticket } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CreditCard, LogIn, Pencil, Plus, Search, XCircle } from 'lucide-react'
 import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { superPageContainerClass, superPremiumAppHeaderClass } from '@/components/super/super-ui'
@@ -83,6 +83,11 @@ export default function SuperBarbeariasPage() {
   const [planoFilter, setPlanoFilter] = useState<BarbeariasPlanoFilter>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const listagemRef = useRef<HTMLElement>(null)
+
+  function scrollToListagem() {
+    listagemRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   useEffect(() => {
     loadBarbearias()
@@ -253,32 +258,32 @@ export default function SuperBarbeariasPage() {
           </Button>
         </div>
 
-        {isLoading ? (
-          <SuperBarbeariasCadastroMensalChartSkeleton />
-        ) : (
-          <SuperBarbeariasCadastroMensalChart
-            barbearias={barbearias}
-            assinaturas={assinaturasResumo}
-          />
-        )}
-
         {!isLoading ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
               type="button"
               aria-pressed={planoFilter === 'com'}
-              aria-label={`Filtrar por barbearias com plano ativo, ${countComPlano}. Ativar ou desativar o filtro.`}
-              onClick={() => setPlanoFilter((f) => (f === 'com' ? null : 'com'))}
+              aria-label={`Filtrar por barbearias com plano ativo, ${countComPlano}. Ativa ou desativa o filtro e leva à listagem abaixo.`}
+              onClick={() => {
+                setPlanoFilter((f) => (f === 'com' ? null : 'com'))
+                scrollToListagem()
+              }}
               className={cn(
-                'rounded-xl border bg-card text-left shadow-sm transition outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                'cursor-pointer rounded-xl border bg-card text-left shadow-sm transition outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 planoFilter === 'com'
-                  ? 'border-emerald-500 ring-2 ring-emerald-500/25'
+                  ? 'border-[var(--chart-2)] ring-2 ring-[color-mix(in_oklch,var(--chart-2)_28%,transparent)]'
                   : 'border-border/80 hover:bg-muted/35',
               )}
             >
               <div className="flex items-center gap-4 p-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400">
-                  <CheckCircle2 className="h-6 w-6" />
+                <div
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full ring-1 ring-black/5 dark:ring-white/10"
+                  style={{
+                    background: 'color-mix(in oklch, var(--chart-2) 22%, transparent)',
+                    color: 'var(--chart-2)',
+                  }}
+                >
+                  <CreditCard className="h-6 w-6" strokeWidth={1.75} />
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">Com plano ativo</p>
@@ -290,18 +295,27 @@ export default function SuperBarbeariasPage() {
             <button
               type="button"
               aria-pressed={planoFilter === 'sem'}
-              aria-label={`Filtrar por barbearias sem plano ativo, ${countSemPlano}. Ativar ou desativar o filtro.`}
-              onClick={() => setPlanoFilter((f) => (f === 'sem' ? null : 'sem'))}
+              aria-label={`Filtrar por barbearias sem plano ativo, ${countSemPlano}. Ativa ou desativa o filtro e leva à listagem abaixo.`}
+              onClick={() => {
+                setPlanoFilter((f) => (f === 'sem' ? null : 'sem'))
+                scrollToListagem()
+              }}
               className={cn(
-                'rounded-xl border bg-card text-left shadow-sm transition outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                'cursor-pointer rounded-xl border bg-card text-left shadow-sm transition outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 planoFilter === 'sem'
-                  ? 'border-amber-500 ring-2 ring-amber-500/25'
+                  ? 'border-[var(--chart-4)] ring-2 ring-[color-mix(in_oklch,var(--chart-4)_28%,transparent)]'
                   : 'border-border/80 hover:bg-muted/35',
               )}
             >
               <div className="flex items-center gap-4 p-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300">
-                  <Ticket className="h-6 w-6" />
+                <div
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full ring-1 ring-black/5 dark:ring-white/10"
+                  style={{
+                    background: 'color-mix(in oklch, var(--chart-4) 22%, transparent)',
+                    color: 'var(--chart-4)',
+                  }}
+                >
+                  <XCircle className="h-6 w-6" strokeWidth={1.75} />
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">Sem plano ativo</p>
@@ -313,6 +327,22 @@ export default function SuperBarbeariasPage() {
           </div>
         ) : null}
 
+        {isLoading ? (
+          <SuperBarbeariasCadastroMensalChartSkeleton />
+        ) : (
+          <SuperBarbeariasCadastroMensalChart
+            barbearias={barbearias}
+            assinaturas={assinaturasResumo}
+          />
+        )}
+
+        <section
+          ref={listagemRef}
+          id="barbearias-listagem"
+          aria-label="Listagem de barbearias"
+          tabIndex={-1}
+          className="scroll-mt-6 space-y-4 outline-none"
+        >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -550,6 +580,7 @@ export default function SuperBarbeariasPage() {
             </Pagination>
           </div>
         ) : null}
+        </section>
       </PageContent>
     </PageContainer>
   )
