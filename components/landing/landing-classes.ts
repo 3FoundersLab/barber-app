@@ -3,11 +3,11 @@ import { cn } from '@/lib/utils'
 /** Largura e padding horizontais alinhados em toda a landing. */
 export const landingContainer = 'mx-auto w-full max-w-6xl px-5 sm:px-8 lg:px-12'
 
-/** Espaço vertical generoso entre seções (padrão SaaS premium). */
-export const landingSectionY = 'py-28 md:py-36 lg:py-40'
+/** Escala de seção: mobile/tablet mais fluido, desktop preservado. */
+export const landingSectionY = 'py-12 md:py-16 lg:py-40'
 
-/** Seções um pouco mais compactas (ex.: CTA final). */
-export const landingSectionYCompact = 'py-20 md:py-28 lg:py-32'
+/** Seções compactas: mantém ritmo sem criar "buracos". */
+export const landingSectionYCompact = 'py-10 md:py-14 lg:py-32'
 
 export const landingEyebrow =
   'text-[11px] font-semibold uppercase tracking-[0.22em] text-primary sm:text-xs'

@@ -44,7 +44,7 @@ export function LandingHero() {
     <section
       ref={sectionRef}
       id={LANDING_SECTIONS.top}
-      className="relative scroll-mt-24 overflow-hidden bg-zinc-950 pt-[7.5rem] pb-24 text-white md:pb-32 lg:pt-36 lg:pb-36"
+      className="relative scroll-mt-24 overflow-hidden bg-zinc-950 pt-[6.25rem] pb-14 text-white md:pt-28 md:pb-20 lg:pt-36 lg:pb-36"
       aria-labelledby="landing-hero-heading"
     >
       <div className="pointer-events-none absolute inset-0 bg-zinc-950" aria-hidden />

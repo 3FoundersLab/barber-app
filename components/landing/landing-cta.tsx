@@ -93,7 +93,7 @@ export function LandingCta() {
     <section
       ref={sectionRef}
       className={cn(
-        'relative scroll-mt-24 overflow-hidden bg-zinc-950 py-24 text-white md:py-32 lg:py-36',
+        'relative scroll-mt-24 overflow-hidden bg-zinc-950 py-14 text-white md:py-20 lg:py-36',
       )}
       aria-labelledby="landing-cta-heading"
     >

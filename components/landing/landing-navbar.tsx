@@ -49,6 +49,29 @@ export function LandingNavbar() {
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!open) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open])
+
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = originalOverflow
+    }
+    return () => {
+      document.body.style.overflow = originalOverflow
+    }
+  }, [open])
+
+  useEffect(() => {
     const applyHash = () => {
       const id = window.location.hash.replace(/^#/, '')
       if (id && navSectionIds.includes(id)) {
@@ -162,49 +185,68 @@ export function LandingNavbar() {
       </div>
 
       <div
+        className={cn(
+          'fixed inset-0 z-[70] bg-zinc-950/62 backdrop-blur-[2px] transition-opacity duration-300 ease-in-out lg:hidden',
+          open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
+        )}
+        aria-hidden={!open}
+        onClick={() => setOpen(false)}
+      />
+      <aside
         id="landing-mobile-menu"
         className={cn(
-          'max-h-[min(75vh,calc(100dvh-4.75rem))] overflow-y-auto border-t border-zinc-200 bg-white px-5 py-6 dark:border-zinc-800 dark:bg-zinc-950 lg:hidden',
-          !open && 'hidden',
+          'fixed top-0 right-0 z-[80] flex h-dvh w-[min(80vw,400px)] max-w-[400px] flex-col border-l border-white/12 bg-zinc-950/98 shadow-[-22px_0_50px_rgba(0,0,0,0.45)] ring-1 ring-cyan-500/10 backdrop-blur-xl transition-transform duration-300 ease-in-out lg:hidden',
+          open ? 'translate-x-0' : 'translate-x-full',
         )}
       >
-        <div className="flex flex-col gap-2">
-          {links.map(({ href, label }) => {
-            const id = href.replace(/^#/, '')
-            const isActive = activeSectionId === id
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  'rounded-xl px-3 py-3.5 text-sm font-semibold text-zinc-900 transition-[color,transform,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.99] dark:text-zinc-100',
-                  'hover:bg-primary/10 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary',
-                  isActive && 'bg-primary/10 text-primary dark:bg-primary/10 dark:text-primary',
-                )}
-                aria-current={isActive ? 'location' : undefined}
-                onClick={() => setOpen(false)}
-              >
-                {label}
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-5 sm:px-6">
+          <AppBrandLogo
+            href={`#${LANDING_SECTIONS.top}`}
+            textClassName="text-white"
+            onClick={() => setOpen(false)}
+          />
+          <button
+            type="button"
+            className="inline-flex size-10 items-center justify-center rounded-full border border-zinc-700/85 bg-zinc-900 text-zinc-100 transition-colors duration-200 hover:border-zinc-500 hover:bg-zinc-800"
+            aria-label="Fechar menu"
+            onClick={() => setOpen(false)}
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+
+        <div className="flex flex-1 flex-col justify-between overflow-y-auto px-5 py-6 sm:px-6">
+          <nav className="flex flex-col gap-2.5" aria-label="Menu mobile da landing">
+            {links.map(({ href, label }) => {
+              const id = href.replace(/^#/, '')
+              const isActive = activeSectionId === id
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    'rounded-xl px-4 py-3.5 text-base font-semibold text-zinc-100 transition-[color,background-color,transform] duration-200 ease-in-out',
+                    'hover:bg-white/8 hover:text-primary active:scale-[0.99]',
+                    isActive && 'bg-white/10 text-primary',
+                  )}
+                  aria-current={isActive ? 'location' : undefined}
+                  onClick={() => setOpen(false)}
+                >
+                  {label}
+                </Link>
+              )
+            })}
+          </nav>
+
+          <div className="mt-8 border-t border-white/10 pt-5">
+            <Button asChild variant="ghost" className={cn(pillPrimaryClass, 'h-12 w-full text-sm')}>
+              <Link href={LANDING_LINKS.cadastro} onClick={() => setOpen(false)}>
+                {LANDING_CTA.primary}
               </Link>
-            )
-          })}
-          <div className="mt-4 flex flex-col gap-3 border-t border-zinc-100 pt-5 dark:border-zinc-800">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                Aparência
-              </span>
-              <ThemeToggle inline variant="landing" />
-            </div>
-            <Link
-              href={LANDING_LINKS.login}
-              className="rounded-full border-2 border-zinc-900 py-3.5 text-center text-xs font-bold uppercase tracking-wide text-zinc-900 dark:border-zinc-100 dark:text-zinc-100"
-              onClick={() => setOpen(false)}
-            >
-              {LANDING_CTA.navSecondary}
-            </Link>
+            </Button>
           </div>
         </div>
-      </div>
+      </aside>
     </header>
   )
 }
