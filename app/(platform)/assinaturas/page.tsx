@@ -69,6 +69,7 @@ import {
   PlanoBadge,
   statusBadgeClass,
 } from '@/components/super/super-assinatura-badges'
+import { SuperAssinaturasPeriodicidadeChart } from '@/components/super/super-assinaturas-periodicidade-chart'
 import { PlanoPeriodicidadeToggle } from '@/components/shared/plano-periodicidade-toggle'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -757,6 +758,8 @@ export default function SuperAssinaturasPage() {
                 </div>
               </button>
             </div>
+
+            <SuperAssinaturasPeriodicidadeChart assinaturas={assinaturas} />
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative min-w-0 flex-1">
