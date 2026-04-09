@@ -80,7 +80,7 @@ export function LandingSocialProof() {
                   variants={staggerItem}
                   className={cn(landingCardClass(true), 'px-4 py-6 text-center sm:px-5 sm:py-7')}
                 >
-                  <p className="text-2xl font-semibold tracking-tight text-amber-700 tabular-nums dark:text-amber-400 sm:text-3xl">
+                  <p className="text-2xl font-semibold tracking-tight text-primary tabular-nums sm:text-3xl">
                     {value}
                   </p>
                   <p className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 sm:text-xs">
@@ -99,7 +99,7 @@ export function LandingSocialProof() {
               {trust.map(({ icon: Icon, label, sub }) => (
                 <motion.li key={label} variants={staggerItem} className={cn(landingCardClass(true), 'flex gap-3 p-4 sm:flex-col sm:p-5')}>
                   <LandingIconLift className="mt-0.5 inline-flex shrink-0">
-                    <Icon className="size-5 text-amber-600 dark:text-amber-400" aria-hidden />
+                    <Icon className="size-5 text-primary" aria-hidden />
                   </LandingIconLift>
                   <div>
                     <p className="text-sm font-semibold text-zinc-950 dark:text-white">{label}</p>
@@ -118,7 +118,7 @@ export function LandingSocialProof() {
           >
             {quotes.map((q) => (
               <motion.li key={q.name} variants={staggerItem} className={cn(landingCardClass(true), 'p-7 sm:p-8')}>
-                <Quote className="size-8 text-amber-500/30 dark:text-amber-500/20" aria-hidden />
+                <Quote className="size-8 text-primary/25 dark:text-primary/20" aria-hidden />
                 <blockquote className="mt-4 text-base leading-relaxed text-zinc-700 dark:text-zinc-300">
                   &ldquo;{q.text}&rdquo;
                 </blockquote>

@@ -44,7 +44,7 @@ const alertVariants = cva(
         purple:
           'border-purple-300 bg-purple-50 text-purple-950 *:data-[slot=alert-description]:text-purple-900/80 dark:border-purple-700 dark:bg-purple-950/35 dark:text-purple-50 dark:*:data-[slot=alert-description]:text-purple-200/85',
         warning:
-          'border-amber-300 bg-amber-50 text-amber-950 *:data-[slot=alert-description]:text-amber-900/80 dark:border-amber-700 dark:bg-amber-950/35 dark:text-amber-50 dark:*:data-[slot=alert-description]:text-amber-200/85',
+          'border-primary/25 bg-primary/[0.06] text-foreground *:data-[slot=alert-description]:text-muted-foreground dark:border-primary/35 dark:bg-primary/[0.12] dark:text-foreground dark:*:data-[slot=alert-description]:text-muted-foreground',
         danger:
           'border-red-300 bg-red-50 text-red-950 *:data-[slot=alert-description]:text-red-900/80 dark:border-red-800 dark:bg-red-950/35 dark:text-red-50 dark:*:data-[slot=alert-description]:text-red-200/85',
         destructive:
@@ -67,7 +67,7 @@ const alertIconVariants = cva('size-5 shrink-0 translate-y-0.5', {
       info: 'text-sky-500 dark:text-sky-400',
       success: 'text-emerald-500 dark:text-emerald-400',
       purple: 'text-purple-500 dark:text-purple-400',
-      warning: 'text-amber-500 dark:text-amber-400',
+      warning: 'text-primary',
       danger: 'text-red-500 dark:text-red-400',
       destructive: 'text-red-500 dark:text-red-400',
       dark: 'text-slate-600 dark:text-slate-300',

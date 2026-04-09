@@ -10,7 +10,7 @@ export function LandingMobileCtaBar() {
   return (
     <div
       className={cn(
-        'fixed inset-x-0 bottom-0 z-40 border-t border-orange-200/80 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur-md lg:hidden dark:border-amber-900/50 dark:bg-zinc-950/95',
+        'fixed inset-x-0 bottom-0 z-40 border-t border-orange-200/80 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur-md lg:hidden dark:border-zinc-800 dark:bg-zinc-950/95',
       )}
     >
       <Button

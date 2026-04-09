@@ -46,9 +46,9 @@ export function LandingScrollToTop() {
             'fixed z-[38] flex size-12 items-center justify-center rounded-full',
             'border border-orange-200/80 bg-white/85 text-[#ea580c] shadow-lg shadow-orange-500/10',
             'backdrop-blur-md ring-1 ring-zinc-950/[0.04]',
-            'dark:border-amber-500/25 dark:bg-zinc-950/85 dark:text-amber-400 dark:shadow-black/40 dark:ring-white/10',
+            'dark:border-primary/30 dark:bg-zinc-950/85 dark:text-primary dark:shadow-black/40 dark:ring-white/10',
             'bottom-[5.75rem] right-4 transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:bottom-8 sm:right-6 lg:bottom-8',
-            'hover:-translate-y-0.5 hover:scale-105 hover:shadow-xl hover:shadow-orange-500/20 active:translate-y-0 active:scale-100 dark:hover:shadow-amber-500/15',
+            'hover:-translate-y-0.5 hover:scale-105 hover:shadow-xl hover:shadow-orange-500/20 active:translate-y-0 active:scale-100 dark:hover:shadow-primary/20',
           )}
         >
           <ArrowUp className="size-5" aria-hidden strokeWidth={2.25} />

@@ -117,11 +117,11 @@ export function LandingPricing() {
                 landingCardClass(true),
                 'relative flex flex-col p-8 sm:p-9',
                 tier.highlighted &&
-                  'border-amber-400/90 shadow-md ring-2 ring-amber-500/25 dark:border-amber-500/40 dark:ring-amber-500/20',
+                  'border-primary/45 shadow-md ring-2 ring-primary/20 dark:border-primary/50 dark:ring-primary/25',
               )}
             >
               {tier.highlighted ? (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 px-3.5 py-1 text-xs font-semibold text-white shadow-md">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3.5 py-1 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/25">
                   Recomendado
                 </span>
               ) : null}
@@ -162,7 +162,8 @@ export function LandingPricing() {
         </motion.div>
         <LandingFadeIn delay={0.12} className="mt-12 text-center">
           <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-            {LANDING_CTA.urgency}, {LANDING_CTA.urgencyBanner}
+            {LANDING_CTA.urgency}{' '}
+            <span className="text-primary">{LANDING_CTA.urgencyBanner}</span>
           </p>
         </LandingFadeIn>
       </div>

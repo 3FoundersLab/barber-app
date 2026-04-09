@@ -627,7 +627,7 @@ export default function SuperAssinaturasPage() {
   function renderCadastroHint(assinatura: Assinatura) {
     if (assinatura.barbearia?.status_cadastro !== 'pagamento_pendente') return null
     return (
-      <p className="text-xs text-amber-700 dark:text-amber-500">
+      <p className="text-xs text-primary">
         Cadastro da barbearia: pagamento pendente
       </p>
     )
@@ -691,12 +691,12 @@ export default function SuperAssinaturasPage() {
                 className={cn(
                   'rounded-xl border bg-card text-left shadow-sm transition outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   kpiFilter === 'pendente'
-                    ? 'border-amber-500 ring-2 ring-amber-500/25'
+                    ? 'border-primary ring-2 ring-primary/25'
                     : 'border-border/80 hover:bg-muted/35',
                 )}
               >
                 <div className="flex items-center gap-4 p-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-400">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary dark:bg-primary/18">
                     <Clock className="h-6 w-6" />
                   </div>
                   <div className="min-w-0">

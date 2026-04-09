@@ -51,7 +51,7 @@ export function LandingSolution() {
 
         <motion.div
           className={cn(
-            'mx-auto mt-16 max-w-2xl rounded-3xl border border-amber-200/70 bg-gradient-to-br from-amber-500/[0.08] via-white to-orange-500/[0.06] p-8 shadow-sm ring-1 ring-amber-500/[0.08] dark:border-amber-500/20 dark:from-amber-500/[0.12] dark:via-zinc-950 dark:to-orange-500/[0.06] dark:ring-amber-500/10 sm:p-10 lg:p-11',
+            'mx-auto mt-16 max-w-2xl rounded-3xl border border-primary/15 bg-gradient-to-br from-primary/[0.05] via-white to-primary/[0.04] p-8 shadow-sm ring-1 ring-primary/[0.06] dark:border-primary/20 dark:from-primary/[0.07] dark:via-zinc-950 dark:to-primary/[0.05] dark:ring-primary/10 sm:p-10 lg:p-11',
             landingPanelGlowHover,
           )}
           initial={reduceMotion ? false : { opacity: 0, y: 24 }}

@@ -476,7 +476,7 @@ export default function CadastroBarbeariaPage() {
             transition={{ duration: 0.55, ease: LANDING_EASE, delay: reduceMotion ? 0 : 0.05 }}
           >
             <div className="text-center lg:text-left">
-              <p className={cn(landingEyebrow, 'text-amber-400/95')}>Onboarding BarberApp</p>
+              <p className={landingEyebrow}>Onboarding BarberApp</p>
               <h1 className="mt-3 text-balance text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                 Cadastre sua barbearia
               </h1>

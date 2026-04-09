@@ -749,7 +749,8 @@ export default function SuperUsuariosPage() {
                           variant={p.role === 'super_admin' ? 'default' : 'secondary'}
                           className={cn(
                             'shrink-0 text-[10px] px-1.5 py-0',
-                            p.role === 'super_admin' && 'bg-amber-600 hover:bg-amber-600',
+                            p.role === 'super_admin' &&
+                              'bg-primary text-primary-foreground hover:bg-primary/90',
                           )}
                         >
                           {ROLE_LABELS[p.role]}
@@ -872,19 +873,19 @@ export default function SuperUsuariosPage() {
                         <div
                           className={cn(
                             'flex gap-2 rounded-md border px-2.5 py-2',
-                            'border-amber-500/40 bg-amber-500/12 text-amber-950',
-                            'dark:border-amber-500/35 dark:bg-amber-500/15 dark:text-amber-50',
+                            'border-primary/35 bg-primary/[0.08] text-foreground',
+                            'dark:border-primary/40 dark:bg-primary/[0.12] dark:text-foreground',
                           )}
                         >
                           <Shield
-                            className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400"
+                            className="mt-0.5 h-4 w-4 shrink-0 text-primary"
                             aria-hidden
                           />
                           <div className="min-w-0 space-y-0.5">
                             <p className="text-xs font-semibold leading-tight">
                               Acesso a todas as barbearias
                             </p>
-                            <p className="text-[11px] leading-snug text-amber-900/90 dark:text-amber-100/85">
+                            <p className="text-[11px] leading-snug text-muted-foreground">
                               Super Admin não utiliza vínculos por barbearia: o acesso é global à
                               plataforma.
                             </p>

@@ -16,7 +16,7 @@ export function LandingCtaStrip({ headline, className }: LandingCtaStripProps) {
   return (
     <div
       className={cn(
-        'border-y border-orange-200/60 bg-gradient-to-r from-amber-50 via-white to-orange-50/90 py-8 dark:border-amber-900/50 dark:from-amber-950/30 dark:via-zinc-950 dark:to-amber-950/25',
+        'border-y border-orange-200/50 bg-gradient-to-r from-orange-50/70 via-white to-orange-50/80 py-8 dark:border-zinc-800 dark:from-zinc-900/40 dark:via-zinc-950 dark:to-zinc-900/35',
         className,
       )}
     >
@@ -42,7 +42,7 @@ export function LandingCtaStrip({ headline, className }: LandingCtaStripProps) {
           >
             <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.primary}</Link>
           </Button>
-          <span className="mt-0.5 text-center text-[11px] font-semibold uppercase leading-snug tracking-wide text-orange-900/80 dark:text-amber-200/90 sm:text-right">
+          <span className="mt-0.5 text-center text-[11px] font-semibold uppercase leading-snug tracking-wide text-orange-900/75 dark:text-orange-200/85 sm:text-right">
             {LANDING_CTA.urgency}
           </span>
         </div>

@@ -25,7 +25,7 @@ const links = [
 
 /** Navegação um pouco mais leve que os CTAs (hierarquia visual). */
 const navLinkClass = cn(
-  'shrink-0 whitespace-nowrap text-sm font-semibold text-zinc-800 hover:text-[#ea580c] dark:text-zinc-200 dark:hover:text-amber-400',
+  'shrink-0 whitespace-nowrap text-sm font-semibold text-zinc-800 hover:text-sky-600 dark:text-zinc-200 dark:hover:text-sky-400',
   landingNavLinkMicro,
 )
 

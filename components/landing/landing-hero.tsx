@@ -171,7 +171,7 @@ export function LandingHero() {
             </Button>
           </motion.div>
           <motion.p
-            className="mt-6 text-center text-[11px] font-bold uppercase tracking-wide leading-relaxed text-amber-300/90 sm:text-left"
+            className="mt-6 text-center text-[11px] font-bold uppercase tracking-wide leading-relaxed text-primary sm:text-left"
             variants={heroStaggerItem}
           >
             {LANDING_CTA.urgencyBanner}

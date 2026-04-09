@@ -72,11 +72,11 @@ export function LandingFeatures() {
               className={cn(
                 landingCardClass(true),
                 'group flex gap-6 p-7 sm:gap-7 sm:p-9',
-                'hover:border-amber-200/70 dark:hover:border-amber-500/20',
+                'hover:border-primary/25 dark:hover:border-primary/35',
               )}
             >
               <LandingIconLift className="flex shrink-0">
-                <span className="flex size-12 items-center justify-center rounded-xl bg-amber-500/[0.12] text-amber-700 transition-[box-shadow,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:shadow-md dark:bg-amber-500/15 dark:text-amber-400">
+                <span className="flex size-12 items-center justify-center rounded-xl bg-primary/[0.1] text-primary transition-[box-shadow,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:shadow-md group-hover:shadow-primary/10 dark:bg-primary/15">
                   <Icon className="size-6" aria-hidden />
                 </span>
               </LandingIconLift>

@@ -10,7 +10,7 @@ export const landingSectionY = 'py-28 md:py-36 lg:py-40'
 export const landingSectionYCompact = 'py-20 md:py-28 lg:py-32'
 
 export const landingEyebrow =
-  'text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-600 dark:text-amber-400 sm:text-xs'
+  'text-[11px] font-semibold uppercase tracking-[0.22em] text-primary sm:text-xs'
 
 export const landingSectionTitle =
   'mt-4 text-balance text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl lg:text-[2.625rem] lg:leading-[1.1] dark:text-white'
@@ -33,15 +33,15 @@ export function landingCardClass(interactive = false) {
 }
 
 /**
- * CTA principal: mesmo padrão do header (laranja sólido #ea580c, pílula, sem gradiente).
+ * CTA principal: laranja da marca (`primary`), pílula, brilho suave no hover.
  * Combine com h-11 | h-12 | h-14 e text-xs | text-sm conforme o bloco.
  */
 export const landingPrimaryCtaClass = cn(
-  'rounded-full border-0 bg-[#ea580c] font-bold text-white shadow-sm',
+  'rounded-full border-0 bg-primary font-bold text-primary-foreground shadow-sm',
   'transition-[transform,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
-  'hover:bg-[#d94e08] hover:text-white hover:shadow-lg hover:shadow-orange-600/30',
+  'hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25',
   'active:scale-[0.98] active:shadow-md',
-  'dark:bg-orange-600 dark:hover:bg-orange-500 dark:hover:shadow-orange-500/25',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
 )
 
 /** CTA secundário: pílula com borda escura (alinhado ao “Já sou cliente” do header). */
@@ -66,13 +66,13 @@ export const landingButtonLift = cn(
 export const landingNavLinkMicro = cn(
   'relative inline-block py-1 transition-[color,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
   'hover:-translate-y-px',
-  "after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:origin-left after:scale-x-0 after:rounded-full after:bg-[#ea580c] after:transition-transform after:duration-300 after:ease-[cubic-bezier(0.22,1,0.36,1)] hover:after:scale-x-100",
-  'dark:after:bg-amber-400',
+  'after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:origin-left after:scale-x-0 after:rounded-full after:bg-sky-500 after:transition-transform after:duration-300 after:ease-[cubic-bezier(0.22,1,0.36,1)] hover:after:scale-x-100',
+  'dark:after:bg-sky-400',
 )
 
 /** Painel em destaque (ex.: coluna “Com BarberApp”): brilho no hover. */
 export const landingPanelGlowHover = cn(
   'transition-[transform,box-shadow,border-color,ring-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
-  'hover:-translate-y-0.5 hover:border-amber-300/90 hover:shadow-xl hover:shadow-amber-500/10 hover:ring-2 hover:ring-amber-400/25',
-  'dark:hover:border-amber-500/40 dark:hover:shadow-amber-950/25 dark:hover:ring-amber-500/25',
+  'hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-xl hover:shadow-primary/10 hover:ring-2 hover:ring-primary/20',
+  'dark:hover:border-primary/45 dark:hover:shadow-primary/15 dark:hover:ring-primary/25',
 )

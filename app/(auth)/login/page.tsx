@@ -200,7 +200,7 @@ function LoginPageContent() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, ease: LANDING_EASE }}
             >
-              <p className={cn(landingEyebrow, 'text-amber-400/95')}>Acesso à plataforma</p>
+              <p className={landingEyebrow}>Acesso à plataforma</p>
               <h1 className="mt-4 max-w-xl text-balance text-4xl font-semibold tracking-tight text-white xl:text-[2.5rem] xl:leading-[1.12]">
                 Entre e retome a operação da sua barbearia
               </h1>
@@ -291,7 +291,7 @@ function LoginPageContent() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: LANDING_EASE }}
               >
-                <p className={cn(landingEyebrow, 'text-amber-400/95')}>Acesso à plataforma</p>
+                <p className={landingEyebrow}>Acesso à plataforma</p>
                 <h1 className="mt-3 text-balance text-2xl font-semibold tracking-tight text-white sm:text-3xl">
                   Bem-vindo de volta
                 </h1>
@@ -317,7 +317,7 @@ function LoginPageContent() {
                   )}
                 >
                   {inactiveRedirect ? (
-                    <p className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-4 py-3 text-sm text-amber-100/95">
+                    <p className="mb-4 rounded-xl border border-primary/25 bg-primary/[0.08] px-4 py-3 text-sm text-foreground/95">
                       Sua sessão foi encerrada porque esta conta está desativada.
                     </p>
                   ) : null}

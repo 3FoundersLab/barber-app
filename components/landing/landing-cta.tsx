@@ -113,7 +113,7 @@ export function LandingCta() {
               aria-hidden
             />
             <motion.p
-              className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-400/95 sm:text-xs"
+              className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary sm:text-xs"
               variants={heroStaggerItem}
             >
               {LANDING_CTA.urgencyBanner}

@@ -20,7 +20,7 @@ const PLANO_BADGE_PALETTE = [
   'rounded-full border-transparent bg-violet-100 text-violet-950 dark:bg-violet-950/50 dark:text-violet-100',
   'rounded-full border-transparent bg-rose-100 text-rose-950 dark:bg-rose-950/50 dark:text-rose-100',
   'rounded-full border-transparent bg-cyan-100 text-cyan-950 dark:bg-cyan-950/50 dark:text-cyan-100',
-  'rounded-full border-transparent bg-amber-100 text-amber-950 dark:bg-amber-950/50 dark:text-amber-100',
+  'rounded-full border-transparent bg-primary/12 text-primary dark:bg-primary/18 dark:text-primary',
   'rounded-full border-transparent bg-emerald-100 text-emerald-950 dark:bg-emerald-950/50 dark:text-emerald-100',
 ] as const
 
@@ -66,7 +66,7 @@ export function PlanoBadge({ plano }: { plano?: Pick<Plano, 'nome'> | Plano | nu
 export function statusBadgeClass(status: AssinaturaStatus) {
   switch (status) {
     case 'pendente':
-      return 'rounded-full border-transparent bg-amber-100 text-amber-950 dark:bg-amber-950/50 dark:text-amber-100'
+      return 'rounded-full border-transparent bg-primary/12 text-primary dark:bg-primary/18 dark:text-primary'
     case 'ativa':
       return 'rounded-full border-transparent bg-emerald-100 text-emerald-950 dark:bg-emerald-950/50 dark:text-emerald-100'
     case 'inadimplente':

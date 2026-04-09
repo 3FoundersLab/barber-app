@@ -73,7 +73,7 @@ export function LandingHowItWorks() {
                 'h-full min-h-[280px]',
               )}
             >
-              <span className="mb-6 flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-sm font-bold text-white shadow-md shadow-amber-500/20">
+              <span className="mb-6 flex size-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground shadow-md shadow-primary/25">
                 {step}
               </span>
               <LandingIconLift className="mb-5 flex">
