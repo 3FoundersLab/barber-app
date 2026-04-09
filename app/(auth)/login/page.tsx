@@ -45,15 +45,28 @@ const LOGIN_HERO_IMAGE =
   'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=960&q=82'
 
 const inputPremiumClass = cn(
-  'h-11 rounded-xl border border-input bg-background text-foreground shadow-none placeholder:text-muted-foreground',
-  'transition-[border-color,box-shadow] duration-200',
+  'h-11 rounded-xl border text-foreground placeholder:text-muted-foreground',
+  'transition-[border-color,box-shadow,background-color] duration-200',
   'focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:outline-none',
-  'hover:border-primary/25 dark:hover:border-primary/30',
+  'border-zinc-200/90 bg-white/95 shadow-[inset_0_1px_2px_rgba(24,24,27,0.04)]',
+  'hover:border-zinc-300/90 hover:bg-white',
+  'focus-visible:bg-white',
+  'dark:border-input dark:bg-background dark:shadow-none dark:hover:border-primary/30',
 )
 
 const loginFormCardClass = cn(
-  'rounded-2xl border border-border/80 bg-card/95 p-6 shadow-[0_24px_64px_-28px_rgba(0,0,0,0.08)] backdrop-blur-md sm:p-8',
-  'ring-1 ring-border/40 dark:border-white/10 dark:bg-gradient-to-b dark:from-white/[0.07] dark:to-white/[0.025] dark:shadow-[0_24px_64px_-28px_rgba(0,0,0,0.55)] dark:ring-white/[0.04]',
+  'rounded-2xl p-6 backdrop-blur-xl sm:p-8',
+  'border border-white/75 bg-white/72',
+  'shadow-[0_1px_0_0_rgba(255,255,255,0.92)_inset,0_28px_56px_-22px_rgba(15,23,42,0.12),0_0_0_1px_rgba(24,24,27,0.055),0_18px_48px_-26px_rgba(14,165,233,0.1),0_26px_56px_-34px_rgba(249,115,22,0.055)]',
+  'ring-1 ring-zinc-950/[0.035]',
+  // Dark: vidro escuro — sobrescreve bg-white/72 (evita card cinza-claro no tema escuro)
+  'dark:border-white/10 dark:bg-zinc-950/70 dark:shadow-[0_24px_64px_-28px_rgba(0,0,0,0.55)] dark:ring-white/[0.04]',
+)
+
+const loginDemoCardClass = cn(
+  'mt-6 rounded-xl border border-white/65 bg-white/48 px-4 py-4 backdrop-blur-md',
+  'shadow-[0_1px_0_0_rgba(255,255,255,0.8)_inset,0_14px_36px_-22px_rgba(15,23,42,0.1),0_0_0_1px_rgba(24,24,27,0.045)] ring-1 ring-zinc-950/[0.028]',
+  'dark:border-white/10 dark:bg-zinc-950/55 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] dark:ring-white/[0.03]',
 )
 
 const loginSubmitClass = cn(
@@ -530,7 +543,7 @@ function LoginPageContent() {
                   </Link>
                 </p>
 
-                <div className="mt-6 rounded-xl border border-border/80 bg-muted/40 px-4 py-4 ring-1 ring-border/30 dark:border-white/10 dark:bg-zinc-950/50 dark:ring-white/[0.03]">
+                <div className={loginDemoCardClass}>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     Ambiente demo
                   </p>
