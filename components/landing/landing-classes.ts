@@ -38,8 +38,9 @@ export function landingCardClass(interactive = false) {
  */
 export const landingPrimaryCtaClass = cn(
   'rounded-full border-0 bg-primary font-bold text-primary-foreground shadow-sm',
-  'transition-[transform,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
-  'hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25',
+  'transition-[transform,box-shadow,background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
+  // Sobrescreve `ghost` (`hover:text-accent-foreground`): texto permanece claro no hover.
+  'hover:bg-primary/90 hover:text-primary-foreground hover:shadow-lg hover:shadow-primary/25',
   'active:scale-[0.98] active:shadow-md',
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
 )
