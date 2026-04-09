@@ -147,9 +147,6 @@ export function LandingNavbar() {
 
           <div className="flex items-center gap-2 lg:hidden">
             <ThemeToggle inline variant="landing" />
-            <Button asChild variant="ghost" className={cn(pillPrimaryClass, 'h-9 px-4 text-[10px]')}>
-              <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.navPrimary}</Link>
-            </Button>
             <button
               type="button"
               className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-zinc-900 bg-white text-zinc-900 dark:border-zinc-100 dark:bg-zinc-950 dark:text-white"
@@ -205,11 +202,6 @@ export function LandingNavbar() {
             >
               {LANDING_CTA.navSecondary}
             </Link>
-            <Button asChild variant="ghost" className={cn(pillPrimaryClass, 'w-full')}>
-              <Link href={LANDING_LINKS.cadastro} onClick={() => setOpen(false)}>
-                {LANDING_CTA.navPrimary}
-              </Link>
-            </Button>
           </div>
         </div>
       </div>

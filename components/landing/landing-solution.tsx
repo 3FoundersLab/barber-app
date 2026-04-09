@@ -96,7 +96,12 @@ export function LandingSolution() {
             >
               <Link href={LANDING_LINKS.cadastro}>Quero ver na minha barbearia</Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className={cn('h-12 border-2 font-bold', landingButtonLift)}>
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className={cn('hidden h-12 border-2 font-bold sm:inline-flex', landingButtonLift)}
+            >
               <Link href={`#${LANDING_SECTIONS.funcionalidades}`}>Ver funcionalidades</Link>
             </Button>
           </div>

@@ -11,7 +11,6 @@ import { LandingHowItWorks } from '@/components/landing/landing-how-it-works'
 import { LandingPricing } from '@/components/landing/landing-pricing'
 import { LandingCta } from '@/components/landing/landing-cta'
 import { LandingFooter } from '@/components/landing/landing-footer'
-import { LandingMobileCtaBar } from '@/components/landing/landing-mobile-cta-bar'
 import { LandingScrollToTop } from '@/components/landing/landing-scroll-to-top'
 
 const jsonLd = {
@@ -38,7 +37,7 @@ export function LandingMarketing() {
       />
       <div className="min-h-screen bg-background text-foreground antialiased">
         <LandingNavbar />
-        <main className="pb-[5.5rem] lg:pb-0">
+        <main>
           <LandingHero />
           <LandingProblem />
           <LandingSolution />
@@ -50,7 +49,6 @@ export function LandingMarketing() {
           <LandingCta />
         </main>
         <LandingFooter />
-        <LandingMobileCtaBar />
         <LandingScrollToTop />
       </div>
     </LandingSmoothScroll>

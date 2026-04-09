@@ -146,19 +146,6 @@ export function LandingCta() {
               >
                 <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.primary}</Link>
               </Button>
-              <Button
-                asChild
-                variant="ghost"
-                size="lg"
-                className={cn(
-                  'h-14 border-2 border-white/20 bg-white/[0.06] px-8 text-base text-white backdrop-blur-sm',
-                  'transition-[border-color,background-color,box-shadow,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
-                  'hover:border-white/32 hover:bg-white/12 hover:text-white hover:shadow-lg hover:shadow-black/25',
-                  landingButtonLift,
-                )}
-              >
-                <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.trial}</Link>
-              </Button>
             </motion.div>
             <motion.div variants={heroStaggerItem}>
               <p className="mt-5 text-sm font-medium text-zinc-500">{LANDING_CTA.urgency}</p>
