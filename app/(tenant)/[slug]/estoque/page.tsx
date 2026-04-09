@@ -169,19 +169,19 @@ export default function TenantEstoquePage() {
                 <SelectItem value="todos">Todos</SelectItem>
                 <SelectItem value="normal">
                   <span className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" />
                     Normal (&gt; 10)
                   </span>
                 </SelectItem>
                 <SelectItem value="baixo">
                   <span className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-amber-400" />
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-amber-600 dark:bg-amber-400" />
                     Baixo (5–10)
                   </span>
                 </SelectItem>
                 <SelectItem value="critico">
                   <span className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-red-500" />
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-red-600 dark:bg-red-400" />
                     Crítico (&lt; 5)
                   </span>
                 </SelectItem>
@@ -194,7 +194,7 @@ export default function TenantEstoquePage() {
           Ordenação: quantidade do menor para o maior.
         </p>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 xl:grid-cols-4 xl:gap-6">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 md:gap-3.5 lg:grid-cols-4 lg:gap-4 xl:grid-cols-5 xl:gap-4 2xl:grid-cols-6">
           {filtradosOrdenados.length > 0 ? (
             filtradosOrdenados.map((p) => (
               <EstoqueProdutoCard
@@ -205,7 +205,7 @@ export default function TenantEstoquePage() {
               />
             ))
           ) : (
-            <Card className="border-dashed md:col-span-2 xl:col-span-4">
+            <Card className="border-dashed col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-5 2xl:col-span-6">
               <CardContent className="flex flex-col items-center justify-center py-10 text-center">
                 <p className="text-muted-foreground">Nenhum produto encontrado com os filtros atuais.</p>
                 <Button

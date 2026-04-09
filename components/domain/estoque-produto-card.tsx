@@ -19,22 +19,22 @@ interface EstoqueProdutoCardProps {
 function badgeNivelClass(nivel: ReturnType<typeof nivelEstoquePorQuantidade>) {
   switch (nivel) {
     case 'normal':
-      return 'border-success/30 bg-success/15 text-success-foreground'
+      return 'border-emerald-600/25 bg-emerald-500/12 text-emerald-900 dark:border-emerald-400/35 dark:bg-emerald-500/18 dark:text-emerald-50'
     case 'baixo':
-      return 'border-warning/40 bg-warning/25 text-warning-foreground'
+      return 'border-amber-600/30 bg-amber-500/14 text-amber-950 dark:border-amber-400/40 dark:bg-amber-500/16 dark:text-amber-50'
     case 'critico':
-      return 'border-destructive/40 bg-destructive/15 text-destructive'
+      return 'border-red-600/35 bg-red-500/12 text-red-900 dark:border-red-400/45 dark:bg-red-500/18 dark:text-red-50'
   }
 }
 
 function dotNivelClass(nivel: ReturnType<typeof nivelEstoquePorQuantidade>) {
   switch (nivel) {
     case 'normal':
-      return 'bg-emerald-500'
+      return 'bg-emerald-600 dark:bg-emerald-400'
     case 'baixo':
-      return 'bg-amber-400'
+      return 'bg-amber-600 dark:bg-amber-400'
     case 'critico':
-      return 'bg-red-500'
+      return 'bg-red-600 dark:bg-red-400'
   }
 }
 
@@ -56,82 +56,89 @@ export function EstoqueProdutoCard({
       )}
       onClick={() => onEdit(produto)}
     >
-      <CardContent className="relative flex flex-1 flex-col gap-3 p-4 pt-5">
-        <div className="absolute right-3 top-3">
+      <CardContent className="relative flex flex-1 flex-col gap-2 p-2.5 pt-3 sm:p-3">
+        <div className="absolute right-1.5 top-1.5 sm:right-2 sm:top-2">
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-primary"
+            className="h-7 w-7 text-muted-foreground hover:text-primary"
             aria-label="Editar produto"
             onClick={(e) => {
               e.stopPropagation()
               onEdit(produto)
             }}
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="h-3.5 w-3.5" />
           </Button>
         </div>
 
-        <div className="flex justify-center pt-1">
+        <div className="flex justify-center pt-0.5">
           <div
             className={cn(
-              'flex h-20 w-20 shrink-0 items-center justify-center rounded-full',
+              'flex h-14 w-14 shrink-0 items-center justify-center rounded-full sm:h-16 sm:w-16',
               circleBg,
             )}
           >
-            <Icon className="h-12 w-12 text-primary" strokeWidth={1.5} aria-hidden />
-          </div>
-        </div>
-
-        <div className="min-w-0 space-y-1 text-center">
-          <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
-            {produto.nome}
-          </h3>
-          <p className="text-xs text-muted-foreground">{produto.categoria}</p>
-        </div>
-
-        <div className="mt-auto space-y-3">
-          <div className="text-center">
-            <p className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
-              {produto.quantidade}
-            </p>
-            <p className="text-xs text-muted-foreground">unidades em estoque</p>
-          </div>
-
-          <div className="flex items-center justify-center gap-2">
-            <span
-              className={cn('h-2 w-2 shrink-0 rounded-full', dotNivelClass(nivel))}
+            <Icon
+              className="h-8 w-8 text-primary sm:h-9 sm:w-9"
+              strokeWidth={1.5}
               aria-hidden
             />
-            <Badge variant="outline" className={cn('font-medium', badgeNivelClass(nivel))}>
+          </div>
+        </div>
+
+        <div className="min-w-0 space-y-0.5 px-0.5 text-center">
+          <h3 className="line-clamp-2 text-xs font-semibold leading-tight text-foreground sm:text-[13px]">
+            {produto.nome}
+          </h3>
+          <p className="text-[10px] text-muted-foreground sm:text-xs">{produto.categoria}</p>
+        </div>
+
+        <div className="mt-auto space-y-2">
+          <div className="text-center">
+            <p className="text-xl font-bold tabular-nums tracking-tight text-foreground sm:text-2xl">
+              {produto.quantidade}
+            </p>
+            <p className="text-[10px] leading-tight text-muted-foreground sm:text-xs">un. em estoque</p>
+          </div>
+
+          <div className="flex items-center justify-center gap-1.5">
+            <span
+              className={cn('h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2', dotNivelClass(nivel))}
+              aria-hidden
+            />
+            <Badge
+              variant="outline"
+              className={cn('px-1.5 py-0 text-[10px] font-medium sm:text-xs', badgeNivelClass(nivel))}
+            >
               {labelNivelEstoque(nivel)}
             </Badge>
           </div>
 
           <div
-            className="flex items-center justify-center gap-2"
+            className="flex items-center justify-center gap-1.5"
             onClick={(e) => e.stopPropagation()}
           >
             <Button
               type="button"
               variant="outline"
               size="icon"
-              className="h-9 w-9 shrink-0 border-border/80"
+              className="h-8 w-8 shrink-0 border-border/80"
               aria-label="Remover uma unidade"
               onClick={() => onDeltaQuantidade(produto.id, -1)}
             >
-              <Minus className="h-4 w-4" />
+              <Minus className="h-3.5 w-3.5" />
             </Button>
             <Button
               type="button"
               variant="outline"
               size="icon"
-              className="h-9 w-9 shrink-0 border-border/80"
+              className="h-8 w-8 shrink-0 border-border/80"
               aria-label="Adicionar uma unidade"
               onClick={() => onDeltaQuantidade(produto.id, 1)}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
