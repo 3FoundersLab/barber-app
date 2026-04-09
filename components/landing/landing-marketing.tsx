@@ -1,15 +1,32 @@
+import dynamic from 'next/dynamic'
 import { LANDING_SEO } from '@/components/landing/constants'
 import { LandingSmoothScroll } from '@/components/landing/landing-smooth-scroll'
 import { LandingNavbar } from '@/components/landing/landing-navbar'
 import { LandingHero } from '@/components/landing/landing-hero'
-import { LandingBenefits } from '@/components/landing/landing-benefits'
-import { LandingDemo } from '@/components/landing/landing-demo'
-import { LandingHowItWorks } from '@/components/landing/landing-how-it-works'
-import { LandingPricing } from '@/components/landing/landing-pricing'
-import { LandingFaq } from '@/components/landing/landing-faq'
-import { LandingSocialProof } from '@/components/landing/landing-social-proof'
-import { LandingFooter } from '@/components/landing/landing-footer'
-import { LandingScrollToTop } from '@/components/landing/landing-scroll-to-top'
+import { LandingScrollToTopDeferred } from '@/components/landing/landing-scroll-to-top-deferred'
+
+/** Seções abaixo da dobra em chunks separados: menos JS inicial (LCP/FCP/TBT). */
+const LandingBenefits = dynamic(() =>
+  import('@/components/landing/landing-benefits').then((m) => ({ default: m.LandingBenefits })),
+)
+const LandingDemo = dynamic(() =>
+  import('@/components/landing/landing-demo').then((m) => ({ default: m.LandingDemo })),
+)
+const LandingHowItWorks = dynamic(() =>
+  import('@/components/landing/landing-how-it-works').then((m) => ({ default: m.LandingHowItWorks })),
+)
+const LandingSocialProof = dynamic(() =>
+  import('@/components/landing/landing-social-proof').then((m) => ({ default: m.LandingSocialProof })),
+)
+const LandingPricing = dynamic(() =>
+  import('@/components/landing/landing-pricing').then((m) => ({ default: m.LandingPricing })),
+)
+const LandingFaq = dynamic(() =>
+  import('@/components/landing/landing-faq').then((m) => ({ default: m.LandingFaq })),
+)
+const LandingFooter = dynamic(() =>
+  import('@/components/landing/landing-footer').then((m) => ({ default: m.LandingFooter })),
+)
 
 /** Ative `true` quando quiser exibir a seção de prova social novamente. */
 const showSocialProof = false
@@ -48,7 +65,7 @@ export function LandingMarketing() {
           <LandingFaq />
         </main>
         <LandingFooter />
-        <LandingScrollToTop />
+        <LandingScrollToTopDeferred />
       </div>
     </LandingSmoothScroll>
   )
