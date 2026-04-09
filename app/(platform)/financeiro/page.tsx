@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
+import { superPageContainerClass, superPremiumAppHeaderClass } from '@/components/super/super-ui'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -314,12 +315,13 @@ export default function SuperFinanceiroPage() {
   }, [historico])
 
   return (
-    <PageContainer>
+    <PageContainer className={superPageContainerClass}>
       <AppPageHeader
         title="Financeiro"
         subtitle="Indicadores de assinaturas e últimas atualizações"
         profileHref={PLATFORM_PATHS.contaEditar}
         avatarFallback="S"
+        className={superPremiumAppHeaderClass}
       />
 
       <PageContent className="space-y-4">

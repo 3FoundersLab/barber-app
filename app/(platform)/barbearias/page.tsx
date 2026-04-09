@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, LogIn, Pencil, Plus, Search } from 'lucide-react'
 import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
+import { superPageContainerClass, superPremiumAppHeaderClass } from '@/components/super/super-ui'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
@@ -197,8 +198,13 @@ export default function SuperBarbeariasPage() {
   )
 
   return (
-    <PageContainer>
-      <AppPageHeader greetingOnly profileHref="/conta/editar" avatarFallback="S" />
+    <PageContainer className={superPageContainerClass}>
+      <AppPageHeader
+        greetingOnly
+        profileHref="/conta/editar"
+        avatarFallback="S"
+        className={superPremiumAppHeaderClass}
+      />
 
       <PageContent className="space-y-4 pb-20 md:pb-6">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">

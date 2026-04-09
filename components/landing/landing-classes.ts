@@ -66,8 +66,7 @@ export const landingButtonLift = cn(
 export const landingNavLinkMicro = cn(
   'relative inline-block py-1 transition-[color,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
   'hover:-translate-y-px',
-  'after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:origin-left after:scale-x-0 after:rounded-full after:bg-sky-500 after:transition-transform after:duration-300 after:ease-[cubic-bezier(0.22,1,0.36,1)] hover:after:scale-x-100',
-  'dark:after:bg-sky-400',
+  'after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:origin-left after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform after:duration-300 after:ease-[cubic-bezier(0.22,1,0.36,1)] hover:after:scale-x-100',
 )
 
 /** Painel em destaque (ex.: coluna “Com BarberApp”): brilho no hover. */

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
+import { superPageContainerClass, superPremiumAppHeaderClass } from '@/components/super/super-ui'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -563,8 +564,13 @@ export default function SuperUsuariosPage() {
   )
 
   return (
-    <PageContainer>
-      <AppPageHeader greetingOnly profileHref="/conta/editar" avatarFallback="S" />
+    <PageContainer className={superPageContainerClass}>
+      <AppPageHeader
+        greetingOnly
+        profileHref="/conta/editar"
+        avatarFallback="S"
+        className={superPremiumAppHeaderClass}
+      />
 
       <PageContent className="space-y-4 pb-20 md:pb-6">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">

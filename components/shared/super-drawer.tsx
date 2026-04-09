@@ -28,14 +28,24 @@ export function SuperDrawer() {
         <Button
           variant="outline"
           size="icon"
-          className="fixed left-4 top-4 z-50 h-9 w-9 shadow-sm md:hidden"
+          className={cn(
+            'fixed left-4 top-4 z-50 h-9 w-9 shadow-md md:hidden',
+            'border-zinc-200/90 bg-white/90 backdrop-blur-md dark:border-zinc-700 dark:bg-zinc-950/90',
+            'transition-[border-color,background-color,box-shadow] duration-200 hover:bg-zinc-50 dark:hover:bg-zinc-900/90',
+          )}
         >
           <Menu className="h-4 w-4" />
           <span className="sr-only">Abrir menu super admin</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[280px] gap-0 p-0">
-        <SheetHeader className="border-b px-4 py-4">
+      <SheetContent
+        side="left"
+        className={cn(
+          'w-[280px] gap-0 p-0',
+          'border-zinc-200/80 bg-white/95 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95',
+        )}
+      >
+        <SheetHeader className="border-b border-zinc-200/80 px-4 py-4 dark:border-zinc-800">
           <SheetTitle asChild className="text-left">
             <AppBrandLogo href={PLATFORM_PATHS.dashboard} />
           </SheetTitle>
@@ -51,10 +61,10 @@ export function SuperDrawer() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors',
+                  'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-all duration-200',
                   isActive
-                  ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                    : 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]',
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -64,7 +74,7 @@ export function SuperDrawer() {
           })}
         </nav>
 
-        <div className="mt-auto border-t p-3">
+        <div className="mt-auto border-t border-zinc-200/80 p-3 dark:border-zinc-800">
           <SuperLogoutButton variant="nav" />
         </div>
       </SheetContent>

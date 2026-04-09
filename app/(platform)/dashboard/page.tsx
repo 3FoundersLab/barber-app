@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Building2, CreditCard, DollarSign } from 'lucide-react'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
+import { superPageContainerClass, superPremiumAppHeaderClass } from '@/components/super/super-ui'
 import {
   Alert,
   AlertDescription,
@@ -24,6 +26,7 @@ interface SuperStats {
 }
 
 export default function SuperDashboardPage() {
+  const reduceMotion = useReducedMotion() === true
   const [stats, setStats] = useState<SuperStats>({
     totalBarbearias: 0,
     assinaturasAtivas: 0,
@@ -64,19 +67,27 @@ export default function SuperDashboardPage() {
   }, [])
 
   return (
-    <PageContainer>
+    <PageContainer className={superPageContainerClass} hasBottomNav>
       <AppPageHeader
         greetingOnly
         profileHref="/conta/editar"
         avatarFallback="S"
+        className={superPremiumAppHeaderClass}
       />
 
-      <PageContent className="space-y-4">
+      <PageContent className="relative flex-1">
+        <motion.div
+          initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="relative w-full space-y-4"
+        >
         {error && (
           <Alert
             variant="danger"
             onClose={() => setError(null)}
             autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+            className="border-destructive/40 bg-destructive/10 dark:border-red-500/35 dark:bg-red-950/35"
           >
             <AlertTitle>{error}</AlertTitle>
             <AlertDescription>
@@ -130,6 +141,7 @@ export default function SuperDashboardPage() {
         </div>
 
         <SuperDashboardChartsSection />
+        </motion.div>
       </PageContent>
     </PageContainer>
   )

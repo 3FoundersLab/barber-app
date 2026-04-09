@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { Building2, ChevronLeft, Save } from 'lucide-react'
 import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
+import { superPageContainerClass, superPremiumAppHeaderClass } from '@/components/super/super-ui'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
@@ -44,8 +45,13 @@ export default function SuperBarbeariaNovaPage() {
   }
 
   return (
-    <PageContainer>
-      <AppPageHeader greetingOnly profileHref="/conta/editar" avatarFallback="S" />
+    <PageContainer className={superPageContainerClass}>
+      <AppPageHeader
+        greetingOnly
+        profileHref="/conta/editar"
+        avatarFallback="S"
+        className={superPremiumAppHeaderClass}
+      />
       <PageContent className="space-y-4 pb-20 md:pb-6">
         <div className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-2">
           <Button variant="ghost" size="icon" className="size-9 shrink-0" asChild>

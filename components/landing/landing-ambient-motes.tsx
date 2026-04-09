@@ -1,6 +1,7 @@
 'use client'
 
 import { motion, useReducedMotion } from 'framer-motion'
+import { cn } from '@/lib/utils'
 
 type Mote = { x: string; y: string; size: number; duration: number; delay: number; blur: number }
 
@@ -31,7 +32,14 @@ const LOGIN_MOTES: Mote[] = [
 /**
  * Pontos de luz mínimos (só opacity + leve scale): custo baixo, efeito premium.
  */
-export function LandingAmbientMotes({ preset }: { preset: 'cta' | 'footer' | 'login' }) {
+export function LandingAmbientMotes({
+  preset,
+  particleClassName = 'bg-cyan-300/30',
+}: {
+  preset: 'cta' | 'footer' | 'login'
+  /** Cor dos pontos (ex.: tema claro vs escuro no painel Super). */
+  particleClassName?: string
+}) {
   const reduceMotion = useReducedMotion() === true
   const motes =
     preset === 'cta' ? CTA_MOTES : preset === 'footer' ? FOOTER_MOTES : LOGIN_MOTES
@@ -41,7 +49,7 @@ export function LandingAmbientMotes({ preset }: { preset: 'cta' | 'footer' | 'lo
       {motes.map((m, i) => (
         <motion.div
           key={`${preset}-${i}`}
-          className="absolute rounded-full bg-cyan-300/30"
+          className={cn('absolute rounded-full', particleClassName)}
           style={{
             left: m.x,
             top: m.y,

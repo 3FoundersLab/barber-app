@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { AppBrandLogo } from '@/components/shared/app-brand-logo'
 import type { TabItem } from '@/components/shared/bottom-tabs'
 import { APP_PAGE_HEADER_BAR_CLASS } from '@/components/shared/page-container'
+import { superShellHeaderBarClass } from '@/components/super/super-ui'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -19,6 +20,8 @@ interface DesktopSidebarProps {
   appBrand?: { href: string; collapsible?: boolean }
   tabs: TabItem[]
   footer?: DesktopSidebarFooter
+  /** Super Admin: vidro e navegação alinhados à landing. */
+  appearance?: 'default' | 'super'
 }
 
 function resolveFooter(footer: DesktopSidebarFooter | undefined, collapsed: boolean) {
@@ -27,8 +30,15 @@ function resolveFooter(footer: DesktopSidebarFooter | undefined, collapsed: bool
   return footer
 }
 
-export function DesktopSidebar({ title, appBrand, tabs, footer }: DesktopSidebarProps) {
+export function DesktopSidebar({
+  title,
+  appBrand,
+  tabs,
+  footer,
+  appearance = 'default',
+}: DesktopSidebarProps) {
   const pathname = usePathname()
+  const isSuper = appearance === 'super'
   const collapsible = Boolean(appBrand?.collapsible)
   const [collapsed, setCollapsed] = useState(false)
 
@@ -53,11 +63,13 @@ export function DesktopSidebar({ title, appBrand, tabs, footer }: DesktopSidebar
   const wide = !collapsible || !collapsed
   const widthClass = wide ? 'md:w-64' : 'md:w-[4.5rem]'
 
+  const headerBarClass = isSuper ? superShellHeaderBarClass : APP_PAGE_HEADER_BAR_CLASS
+
   const header = appBrand ? (
     <div
       className={cn(
         'flex items-center gap-2 overflow-hidden',
-        APP_PAGE_HEADER_BAR_CLASS,
+        headerBarClass,
         wide ? 'flex-row' : 'flex-col justify-center gap-0.5 px-2',
       )}
     >
@@ -92,7 +104,7 @@ export function DesktopSidebar({ title, appBrand, tabs, footer }: DesktopSidebar
       ) : null}
     </div>
   ) : (
-    <div className={cn('flex items-center overflow-hidden', APP_PAGE_HEADER_BAR_CLASS)}>
+    <div className={cn('flex items-center overflow-hidden', headerBarClass)}>
       <p className="truncate text-sm font-semibold">{title}</p>
     </div>
   )
@@ -101,7 +113,10 @@ export function DesktopSidebar({ title, appBrand, tabs, footer }: DesktopSidebar
     <>
       <aside
         className={cn(
-          'hidden md:fixed md:inset-y-0 md:left-0 md:z-40 md:flex md:flex-col md:border-r md:bg-background md:transition-[width] md:duration-200 md:ease-out',
+          'hidden md:fixed md:inset-y-0 md:left-0 md:z-40 md:flex md:flex-col md:border-r md:transition-[width] md:duration-200 md:ease-out',
+          isSuper
+            ? 'md:border-zinc-200/80 md:bg-white/75 md:backdrop-blur-xl dark:md:border-zinc-800/80 dark:md:bg-zinc-950/72'
+            : 'md:bg-background',
           widthClass,
         )}
       >
@@ -122,11 +137,15 @@ export function DesktopSidebar({ title, appBrand, tabs, footer }: DesktopSidebar
                 href={item.href}
                 title={!wide ? item.label : undefined}
                 className={cn(
-                  'flex items-center gap-2 rounded-md text-sm transition-colors',
+                  'flex items-center gap-2 rounded-md text-sm transition-all duration-200',
                   wide ? 'px-3 py-2' : 'justify-center px-2 py-2.5',
                   isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    ? isSuper
+                      ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                      : 'bg-primary text-primary-foreground'
+                    : isSuper
+                      ? 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
@@ -136,7 +155,16 @@ export function DesktopSidebar({ title, appBrand, tabs, footer }: DesktopSidebar
           })}
         </nav>
 
-        {footer ? <div className="border-t p-3">{resolveFooter(footer, !wide)}</div> : null}
+        {footer ? (
+          <div
+            className={cn(
+              'border-t p-3',
+              isSuper && 'border-zinc-200/80 dark:border-zinc-800',
+            )}
+          >
+            {resolveFooter(footer, !wide)}
+          </div>
+        ) : null}
       </aside>
       <div className={cn('hidden shrink-0 md:block', widthClass)} aria-hidden />
     </>

@@ -6,6 +6,7 @@ import { SuperDrawer } from '@/components/shared/super-drawer'
 import { DesktopSidebar } from '@/components/shared/desktop-sidebar'
 import { SuperLogoutButton } from '@/components/shared/super-logout-button'
 import { AppPageHeadingProvider } from '@/components/shared/app-page-heading-context'
+import { SuperPremiumBackdrop } from '@/components/super/super-premium-backdrop'
 import { PLATFORM_PATHS } from '@/lib/routes'
 
 const superTabs: TabItem[] = [
@@ -24,20 +25,24 @@ export default function SuperLayout({
 }) {
   return (
     <>
-      <SuperDrawer />
-      <div className="md:flex md:min-h-screen md:bg-muted/20">
+      <div className="relative min-h-screen md:flex" data-super-shell>
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden>
+          <SuperPremiumBackdrop />
+        </div>
+        <SuperDrawer />
         <DesktopSidebar
+          appearance="super"
           appBrand={{ href: PLATFORM_PATHS.dashboard, collapsible: true }}
           tabs={superTabs}
           footer={({ collapsed }) =>
             collapsed ? <SuperLogoutButton variant="nav" compact /> : <SuperLogoutButton />
           }
         />
-        <div className="min-w-0 flex-1">
+        <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col">
           <AppPageHeadingProvider>{children}</AppPageHeadingProvider>
         </div>
       </div>
-      <BottomTabs tabs={superTabs} />
+      <BottomTabs appearance="super" tabs={superTabs} />
     </>
   )
 }

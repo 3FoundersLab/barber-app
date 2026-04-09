@@ -19,6 +19,9 @@ const social = [
 const footerContainer =
   'relative z-10 mx-auto w-full max-w-7xl px-5 sm:px-8 lg:px-14 xl:px-16 2xl:px-20'
 
+const footerLegalLinkClass =
+  'rounded-sm text-[13px] font-medium leading-snug text-zinc-400 transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950'
+
 function FooterSectionTitle({ children, align = 'start' }: { children: ReactNode; align?: 'start' | 'end' }) {
   if (align === 'end') {
     return (
@@ -88,7 +91,7 @@ export function LandingFooter() {
         </h2>
 
         <motion.div
-          className="grid gap-8 pt-12 pb-6 sm:gap-y-9 sm:pt-14 sm:pb-7 md:pt-16 md:pb-7 lg:grid-cols-2 lg:items-start lg:gap-x-12 lg:gap-y-0 lg:pt-[3.75rem] lg:pb-8 xl:gap-x-16"
+          className="grid gap-8 pt-12 pb-6 sm:gap-y-9 sm:pt-14 sm:pb-7 md:pt-16 md:pb-7 lg:grid-cols-3 lg:items-start lg:gap-x-8 lg:gap-y-0 lg:pt-[3.75rem] lg:pb-8 xl:gap-x-12 2xl:gap-x-16"
           variants={staggerContainer}
           initial={reduceMotion ? 'visible' : 'hidden'}
           whileInView={reduceMotion ? undefined : 'visible'}
@@ -112,26 +115,6 @@ export function LandingFooter() {
               bancada e mais corte pago no fechamento.
             </p>
 
-            <nav className="mt-4 sm:mt-[1.125rem]" aria-label="Informações legais">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-left text-[11px] font-medium leading-snug text-zinc-500 sm:text-[12px]">
-                <Link
-                  href="#"
-                  className="rounded-sm transition-colors duration-300 hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/35 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
-                >
-                  Termos de uso
-                </Link>
-                <span className="select-none text-zinc-600/70" aria-hidden>
-                  {', '}
-                </span>
-                <Link
-                  href="#"
-                  className="rounded-sm transition-colors duration-300 hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/35 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
-                >
-                  Política de privacidade
-                </Link>
-              </div>
-            </nav>
-
             <div className="mt-3.5 w-full min-w-0 sm:mt-4 sm:w-fit sm:shrink-0">
               <span className="inline-flex w-full max-w-full items-start gap-2 rounded-full border border-white/[0.07] bg-white/[0.03] px-3.5 py-2 text-left text-[11px] font-medium leading-[1.5] text-zinc-400 shadow-sm transition-[border-color,background-color,box-shadow] duration-300 hover:border-cyan-400/20 hover:bg-cyan-500/[0.04] sm:w-auto sm:items-center sm:gap-2.5 sm:px-4 sm:py-2 sm:text-xs sm:leading-snug md:whitespace-nowrap">
                 <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-cyan-400/85 sm:mt-0 sm:size-4" aria-hidden />
@@ -141,6 +124,26 @@ export function LandingFooter() {
               </span>
             </div>
           </motion.div>
+
+          <motion.nav
+            variants={staggerItem}
+            className="flex min-w-0 flex-col items-stretch"
+            aria-label="Informações legais"
+          >
+            <FooterSectionTitle align="start">Informações legais</FooterSectionTitle>
+            <ul className="mt-1 flex flex-col gap-2.5 sm:gap-3">
+              <li>
+                <Link href="/termos-de-uso" className={footerLegalLinkClass}>
+                  Termos de uso
+                </Link>
+              </li>
+              <li>
+                <Link href="/politica-de-privacidade" className={footerLegalLinkClass}>
+                  Política de privacidade
+                </Link>
+              </li>
+            </ul>
+          </motion.nav>
 
           <motion.div
             variants={staggerItem}

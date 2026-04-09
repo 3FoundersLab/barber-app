@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -23,9 +23,11 @@ const links = [
   { href: `#${LANDING_SECTIONS.planos}`, label: 'Planos' },
 ] as const
 
+const navSectionIds = links.map((l) => l.href.replace(/^#/, ''))
+
 /** Navegação um pouco mais leve que os CTAs (hierarquia visual). */
-const navLinkClass = cn(
-  'shrink-0 whitespace-nowrap text-sm font-semibold text-zinc-800 hover:text-sky-600 dark:text-zinc-200 dark:hover:text-sky-400',
+const navLinkBaseClass = cn(
+  'shrink-0 whitespace-nowrap text-sm font-semibold text-zinc-800 transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-primary dark:text-zinc-200 dark:hover:text-primary',
   landingNavLinkMicro,
 )
 
@@ -43,6 +45,48 @@ const pillSecondaryClass = cn(
 
 export function LandingNavbar() {
   const [open, setOpen] = useState(false)
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const applyHash = () => {
+      const id = window.location.hash.replace(/^#/, '')
+      if (id && navSectionIds.includes(id)) {
+        setActiveSectionId(id)
+      }
+    }
+    applyHash()
+    window.addEventListener('hashchange', applyHash)
+
+    const elements = navSectionIds
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el != null)
+
+    if (elements.length === 0) {
+      return () => window.removeEventListener('hashchange', applyHash)
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting)
+        if (visible.length === 0) return
+        visible.sort(
+          (a, b) => a.target.getBoundingClientRect().top - b.target.getBoundingClientRect().top,
+        )
+        const id = visible[0].target.id
+        if (navSectionIds.includes(id)) {
+          setActiveSectionId(id)
+        }
+      },
+      { root: null, rootMargin: '-72px 0px -48% 0px', threshold: 0 },
+    )
+
+    elements.forEach((el) => observer.observe(el))
+
+    return () => {
+      window.removeEventListener('hashchange', applyHash)
+      observer.disconnect()
+    }
+  }, [])
 
   return (
     <header className="fixed top-0 z-50 w-full border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
@@ -65,11 +109,23 @@ export function LandingNavbar() {
           className="mx-1 hidden min-h-0 min-w-0 flex-1 flex-wrap items-center justify-center gap-x-4 gap-y-1 lg:flex xl:gap-x-6 2xl:gap-x-8"
           aria-label="Principal"
         >
-          {links.map(({ href, label }) => (
-            <Link key={href} href={href} className={navLinkClass}>
-              {label}
-            </Link>
-          ))}
+          {links.map(({ href, label }) => {
+            const id = href.replace(/^#/, '')
+            const isActive = activeSectionId === id
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  navLinkBaseClass,
+                  isActive && 'text-primary dark:text-primary after:scale-x-100',
+                )}
+                aria-current={isActive ? 'location' : undefined}
+              >
+                {label}
+              </Link>
+            )
+          })}
         </nav>
 
         <div
@@ -113,16 +169,25 @@ export function LandingNavbar() {
         )}
       >
         <div className="flex flex-col gap-2">
-          {links.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className="rounded-xl px-3 py-3.5 text-sm font-semibold text-zinc-900 transition-[transform,background-color] duration-200 hover:bg-zinc-100 active:scale-[0.99] dark:text-zinc-100 dark:hover:bg-zinc-800"
-              onClick={() => setOpen(false)}
-            >
-              {label}
-            </Link>
-          ))}
+          {links.map(({ href, label }) => {
+            const id = href.replace(/^#/, '')
+            const isActive = activeSectionId === id
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  'rounded-xl px-3 py-3.5 text-sm font-semibold text-zinc-900 transition-[color,transform,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.99] dark:text-zinc-100',
+                  'hover:bg-primary/10 hover:text-primary dark:hover:bg-primary/10 dark:hover:text-primary',
+                  isActive && 'bg-primary/10 text-primary dark:bg-primary/10 dark:text-primary',
+                )}
+                aria-current={isActive ? 'location' : undefined}
+                onClick={() => setOpen(false)}
+              >
+                {label}
+              </Link>
+            )
+          })}
           <div className="mt-4 flex flex-col gap-3 border-t border-zinc-100 pt-5 dark:border-zinc-800">
             <Link
               href={LANDING_LINKS.login}

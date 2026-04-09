@@ -161,6 +161,25 @@
   }
 }
 
+@layer components {
+  /*
+   * Super Admin (data-super-shell): cards premium alinhados à landing.
+   * Exclui placeholders tracejados e cartões totalmente transparentes.
+   */
+  [data-super-shell] [data-slot='card']:not([class*='border-dashed']):not([class*='bg-transparent']) {
+    background-color: rgb(255 255 255 / 0.88);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-color: rgb(228 228 231 / 0.95);
+    box-shadow: 0 12px 40px -28px rgb(0 0 0 / 0.14);
+  }
+  .dark [data-super-shell] [data-slot='card']:not([class*='border-dashed']):not([class*='bg-transparent']) {
+    background-color: rgb(255 255 255 / 0.06);
+    border-color: rgb(255 255 255 / 0.1);
+    box-shadow: 0 20px 50px -32px rgb(0 0 0 / 0.55);
+  }
+}
+
 @keyframes alert-auto-close-bar {
   from {
     transform: scaleX(1);
