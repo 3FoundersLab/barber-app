@@ -3,29 +3,53 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion'
-import {
-  Banknote,
-  CalendarPlus,
-  CheckCircle2,
-  Package,
-  Percent,
-  UserCheck,
-} from 'lucide-react'
+import { Banknote, CalendarPlus, Package, Percent, Sparkles, UserCheck } from 'lucide-react'
 import { useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { LANDING_CTA, LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
+import { LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
 import { landingButtonLift, landingContainer, landingPrimaryCtaClass } from '@/components/landing/landing-classes'
 import { LandingHeroFloatingCard } from '@/components/landing/landing-hero-floating-card'
-import {
-  heroImageReveal,
-  heroStaggerContainer,
-  heroStaggerItem,
-} from '@/lib/landing-motion'
+import { LANDING_EASE, heroStaggerContainer } from '@/lib/landing-motion'
 import { cn } from '@/lib/utils'
 
 /** Foto editorial: profissional em contexto de barbearia (Unsplash). */
 const HERO_IMAGE =
   'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=960&q=82'
+
+const heroCopyStaggerItem = {
+  hidden: { opacity: 0, y: 28, x: -14 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    x: 0,
+    transition: { duration: 0.66, ease: LANDING_EASE },
+  },
+} as const
+
+const heroCtaPrimaryClass = cn(
+  landingPrimaryCtaClass,
+  landingButtonLift,
+  'h-14 min-h-[3.5rem] px-7 text-sm font-bold leading-tight sm:px-9 sm:text-base',
+  'shadow-[0_0_32px_-6px_rgba(249,115,22,0.5)] hover:shadow-[0_0_48px_-4px_rgba(249,115,22,0.55)] hover:shadow-primary/35',
+)
+
+const heroCtaSecondaryClass = cn(
+  landingButtonLift,
+  'h-14 min-h-[3.5rem] rounded-full border-2 border-white/22 bg-white/[0.06] px-7 text-sm font-bold text-white shadow-sm backdrop-blur-sm sm:px-9 sm:text-base',
+  'transition-[transform,box-shadow,background-color,border-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
+  'hover:border-cyan-400/50 hover:bg-cyan-500/[0.12] hover:text-white hover:shadow-[0_0_36px_-10px_rgba(34,211,238,0.35)]',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
+)
+
+const heroVisualReveal = {
+  hidden: { opacity: 0, scale: 0.97, x: 22 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    x: 0,
+    transition: { duration: 0.78, ease: LANDING_EASE, delay: 0.1 },
+  },
+} as const
 
 export function LandingHero() {
   const sectionRef = useRef<HTMLElement>(null)
@@ -44,7 +68,7 @@ export function LandingHero() {
     <section
       ref={sectionRef}
       id={LANDING_SECTIONS.top}
-      className="relative scroll-mt-24 overflow-hidden bg-zinc-950 pt-[6.25rem] pb-14 text-white md:pt-28 md:pb-20 lg:pt-36 lg:pb-36"
+      className="relative scroll-mt-24 overflow-hidden bg-zinc-950 pt-[6.25rem] pb-10 text-white md:pt-28 md:pb-14 lg:pt-36 lg:pb-20"
       aria-labelledby="landing-hero-heading"
     >
       <div className="pointer-events-none absolute inset-0 bg-zinc-950" aria-hidden />
@@ -110,6 +134,19 @@ export function LandingHero() {
         }
         transition={{ duration: 13, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }}
       />
+      <motion.div
+        className="pointer-events-none absolute left-[-8%] top-[42%] h-[min(48vw,320px)] w-[min(48vw,320px)] rounded-full bg-primary/[0.09] blur-[80px] md:left-[2%] md:top-[38%]"
+        aria-hidden
+        animate={
+          reduceMotion
+            ? undefined
+            : {
+                opacity: [0.2, 0.38, 0.2],
+                scale: [1, 1.04, 1],
+              }
+        }
+        transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+      />
 
       <div
         className={`${landingContainer} relative z-10 grid items-center gap-14 md:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] md:gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-16 xl:gap-20`}
@@ -122,59 +159,37 @@ export function LandingHero() {
           animate={reduceMotion ? undefined : 'visible'}
         >
           <motion.p
-            className="mb-5 inline-flex items-center rounded-full border border-cyan-400/25 bg-cyan-500/[0.09] px-4 py-1.5 text-xs font-semibold text-cyan-100/95 shadow-[0_0_28px_-10px_rgba(34,211,238,0.22)]"
-            variants={heroStaggerItem}
+            className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-gradient-to-r from-primary/[0.14] via-orange-500/[0.08] to-cyan-500/[0.1] px-4 py-1.5 text-xs font-semibold text-orange-50 shadow-[0_0_32px_-12px_rgba(249,115,22,0.45)] backdrop-blur-sm"
+            variants={heroCopyStaggerItem}
           >
-            Software para barbearia: agenda, equipe e caixa
+            <Sparkles className="size-3.5 shrink-0 text-primary" aria-hidden />
+            Operação em tempo real — agenda, equipe e caixa
           </motion.p>
           <motion.h1
             id="landing-hero-heading"
-            className="text-balance text-4xl font-semibold tracking-tight text-white sm:text-5xl sm:leading-[1.06] lg:text-[3.125rem] lg:leading-[1.04]"
-            variants={heroStaggerItem}
+            className="text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl sm:leading-[1.05] lg:text-[3.25rem] lg:leading-[1.03]"
+            variants={heroCopyStaggerItem}
           >
-            Software para barbearia que enche a agenda e organiza o caixa
+            Sua barbearia cheia, agenda organizada e caixa fechado no mesmo lugar
           </motion.h1>
           <motion.p
             className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-zinc-400 sm:text-lg"
-            variants={heroStaggerItem}
+            variants={heroCopyStaggerItem}
           >
-            <span className="font-semibold text-zinc-100">BarberTool</span> é o sistema de gestão e{' '}
-            <span className="text-zinc-300">agendamento para barbearia</span> na palma da mão: uma grade só, cliente com
-            histórico e fechamento do dia claro, sem depender do grupo do Zap.
+            Pare de perder clientes no WhatsApp, horários no improviso e dinheiro sem controle. Com{' '}
+            <span className="font-semibold text-zinc-100">BarberTool</span>, você organiza agenda, equipe e financeiro em
+            minutos.
           </motion.p>
           <motion.div
-            className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"
-            variants={heroStaggerItem}
+            className="mt-10 mb-7 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:flex-wrap sm:items-stretch sm:gap-3"
+            variants={heroCopyStaggerItem}
           >
-            <Button
-              asChild
-              variant="ghost"
-              size="lg"
-              className={cn(
-                'h-14 px-8 text-sm leading-tight sm:px-10 sm:text-base',
-                landingPrimaryCtaClass,
-                landingButtonLift,
-              )}
-            >
-              <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.primary}</Link>
+            <Button asChild variant="ghost" size="lg" className={heroCtaPrimaryClass}>
+              <Link href={LANDING_LINKS.cadastro}>Quero encher minha agenda</Link>
             </Button>
-          </motion.div>
-          <motion.p
-            className="mt-7 text-center text-[11px] font-bold uppercase tracking-wide leading-relaxed text-primary sm:text-left"
-            variants={heroStaggerItem}
-          >
-            {LANDING_CTA.urgencyBanner}
-          </motion.p>
-          <motion.div variants={heroStaggerItem}>
-            <Link
-              href={`#${LANDING_SECTIONS.funcionalidades}`}
-              className="mt-5 inline-block text-sm font-semibold text-cyan-400/85 underline-offset-4 transition duration-300 hover:text-cyan-300 hover:underline"
-            >
-              Ver funcionalidades do sistema →
-            </Link>
-            <p className="mt-5 text-sm font-medium text-zinc-500">
-              Feito para quem vive a bancada: tom profissional, zero enrolação
-            </p>
+            <Button asChild variant="ghost" size="lg" className={heroCtaSecondaryClass}>
+              <Link href={LANDING_LINKS.cadastro}>Testar 7 dias grátis</Link>
+            </Button>
           </motion.div>
         </motion.div>
 
@@ -186,36 +201,48 @@ export function LandingHero() {
           <div className="relative mx-auto w-full max-w-[min(100%,380px)] sm:max-w-md md:ml-auto md:mr-0 md:max-w-md lg:max-w-lg">
           <motion.div
             className="group relative w-full"
-            variants={heroImageReveal}
+            variants={heroVisualReveal}
             initial={reduceMotion ? 'visible' : 'hidden'}
             animate={reduceMotion ? undefined : 'visible'}
           >
             {/* Glow localizado atrás da foto; apoia a composição */}
             <motion.div
               aria-hidden
-              className="pointer-events-none absolute left-1/2 top-1/2 z-[5] h-[108%] w-[91%] -translate-x-1/2 -translate-y-1/2 rounded-[2rem] bg-gradient-to-b from-cyan-500/[0.2] via-teal-600/[0.1] to-indigo-950/[0.32] blur-[48px] md:blur-[58px]"
+              className="pointer-events-none absolute left-1/2 top-1/2 z-[5] h-[108%] w-[91%] -translate-x-1/2 -translate-y-1/2 rounded-[2rem] bg-gradient-to-b from-primary/[0.22] via-cyan-500/[0.14] to-indigo-950/[0.34] blur-[48px] md:blur-[58px]"
               animate={
                 reduceMotion
                   ? undefined
                   : {
-                      opacity: [0.55, 0.72, 0.55],
+                      opacity: [0.52, 0.78, 0.52],
                     }
               }
               transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
             />
             <motion.div
               aria-hidden
-              className="pointer-events-none absolute left-1/2 top-[38%] z-[6] h-[42%] w-[58%] -translate-x-1/2 rounded-full bg-cyan-400/[0.1] blur-[36px]"
+              className="pointer-events-none absolute left-1/2 top-[38%] z-[6] h-[42%] w-[58%] -translate-x-1/2 rounded-full bg-cyan-400/[0.12] blur-[36px]"
               animate={
                 reduceMotion
                   ? undefined
                   : {
-                      opacity: [0.4, 0.55, 0.4],
+                      opacity: [0.38, 0.58, 0.38],
                     }
               }
               transition={{ duration: 7.5, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
             />
-            <div className="relative z-10 aspect-[3/4] overflow-hidden rounded-[1.75rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.65),0_0_0_1px_rgba(255,255,255,0.06)] ring-1 ring-white/[0.08] transition-[transform,box-shadow,ring-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] md:group-hover:-translate-y-1 md:group-hover:scale-[1.01] md:group-hover:shadow-[0_44px_88px_-18px_rgba(0,0,0,0.58)] md:group-hover:ring-white/14">
+            <motion.div
+              aria-hidden
+              className="pointer-events-none absolute left-1/2 top-[62%] z-[6] h-[28%] w-[48%] -translate-x-1/2 rounded-full bg-primary/[0.14] blur-[40px]"
+              animate={
+                reduceMotion
+                  ? undefined
+                  : {
+                      opacity: [0.25, 0.42, 0.25],
+                    }
+              }
+              transition={{ duration: 8.2, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
+            />
+            <div className="relative z-10 aspect-[3/4] overflow-hidden rounded-[1.75rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.65),0_0_0_1px_rgba(255,255,255,0.06),0_0_60px_-20px_rgba(249,115,22,0.12)] ring-1 ring-white/[0.08] transition-[transform,box-shadow,ring-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] md:group-hover:-translate-y-1 md:group-hover:scale-[1.01] md:group-hover:shadow-[0_44px_88px_-18px_rgba(0,0,0,0.58),0_0_72px_-16px_rgba(249,115,22,0.2)] md:group-hover:ring-primary/20">
               <Image
                 src={HERO_IMAGE}
                 alt="Profissional em atendimento na barbearia"
@@ -243,73 +270,66 @@ export function LandingHero() {
             <LandingHeroFloatingCard
               icon={CalendarPlus}
               title="Novo agendamento"
-              subtitle="Hoje, 14:30, corte + barba"
+              subtitle="Hoje 14:30"
               delay={0.1}
               floatDuration={5.6}
-              floatRange={4}
+              floatRange={5}
               tier="all"
               slideFrom="left"
               onDarkSurface
+              premiumHero
               className="left-0 top-[4%] sm:left-[-4%] sm:top-[7%]"
             />
             <LandingHeroFloatingCard
               icon={UserCheck}
               title="Cliente confirmado"
-              subtitle="Lembrete lido, há 2 min"
-              delay={0.24}
-              floatDuration={6.3}
+              subtitle="Lembrete enviado"
+              delay={0.22}
+              floatDuration={6.2}
               floatRange={5}
               tier="all"
               slideFrom="right"
               onDarkSurface
+              premiumHero
               className="right-0 top-[11%] sm:right-[-5%] sm:top-[15%]"
             />
             <LandingHeroFloatingCard
               icon={Banknote}
               title="Pagamento recebido"
-              subtitle="Pix, R$ 65,00"
-              delay={0.36}
-              floatDuration={5.1}
+              subtitle="Pix R$ 65"
+              delay={0.34}
+              floatDuration={5.3}
               floatRange={4}
               tier="sm"
               slideFrom="left"
               onDarkSurface
+              premiumHero
               className="bottom-[11%] left-0 sm:left-[-3%] sm:bottom-[13%]"
-            />
-            <LandingHeroFloatingCard
-              icon={CheckCircle2}
-              title="Serviço realizado"
-              subtitle="Corte máquina, check-out"
-              delay={0.42}
-              floatDuration={6}
-              floatRange={5}
-              tier="md"
-              slideFrom="left"
-              onDarkSurface
-              className="left-[-6%] top-[38%] md:left-[-9%] md:top-[40%]"
             />
             <LandingHeroFloatingCard
               icon={Package}
               title="Produto recomendado"
-              subtitle="Pomada, cliente aceitou"
-              delay={0.5}
-              floatDuration={5.4}
+              subtitle="Pomada premium"
+              delay={0.44}
+              floatDuration={5.8}
               floatRange={6}
               tier="md"
               slideFrom="right"
               onDarkSurface
-              className="right-[-6%] top-[43%] md:right-[-9%]"
+              premiumHero
+              className="right-[-6%] top-[40%] md:right-[-9%] md:top-[42%]"
             />
             <LandingHeroFloatingCard
               icon={Percent}
               title="Comissão liberada"
-              subtitle="Hoje, R$ 142,80"
-              delay={0.58}
-              floatDuration={6.6}
+              subtitle="R$ 142"
+              delay={0.54}
+              floatDuration={6.5}
               floatRange={4}
               tier="lg"
               slideFrom="right"
               onDarkSurface
+              premiumHero
               className="bottom-[12%] right-0 lg:right-[-5%] lg:bottom-[14%]"
             />
           </div>
