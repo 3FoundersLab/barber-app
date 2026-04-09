@@ -2,16 +2,17 @@ import { LANDING_SEO } from '@/components/landing/constants'
 import { LandingSmoothScroll } from '@/components/landing/landing-smooth-scroll'
 import { LandingNavbar } from '@/components/landing/landing-navbar'
 import { LandingHero } from '@/components/landing/landing-hero'
-import { LandingProblem } from '@/components/landing/landing-problem'
-import { LandingSolution } from '@/components/landing/landing-solution'
 import { LandingBenefits } from '@/components/landing/landing-benefits'
-import { LandingFeatures } from '@/components/landing/landing-features'
-import { LandingSocialProof } from '@/components/landing/landing-social-proof'
+import { LandingDemo } from '@/components/landing/landing-demo'
 import { LandingHowItWorks } from '@/components/landing/landing-how-it-works'
 import { LandingPricing } from '@/components/landing/landing-pricing'
-import { LandingCta } from '@/components/landing/landing-cta'
+import { LandingFaq } from '@/components/landing/landing-faq'
+import { LandingSocialProof } from '@/components/landing/landing-social-proof'
 import { LandingFooter } from '@/components/landing/landing-footer'
 import { LandingScrollToTop } from '@/components/landing/landing-scroll-to-top'
+
+/** Ative `true` quando quiser exibir a seção de prova social novamente. */
+const showSocialProof = false
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -35,18 +36,16 @@ export function LandingMarketing() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="min-h-screen bg-background text-foreground antialiased">
+      <div className="min-h-screen bg-background text-zinc-950 antialiased dark:text-foreground">
         <LandingNavbar />
         <main>
           <LandingHero />
-          <LandingProblem />
-          <LandingSolution />
           <LandingBenefits />
-          <LandingFeatures />
-          <LandingSocialProof />
+          <LandingDemo />
           <LandingHowItWorks />
+          {showSocialProof ? <LandingSocialProof /> : null}
           <LandingPricing />
-          <LandingCta />
+          <LandingFaq />
         </main>
         <LandingFooter />
         <LandingScrollToTop />

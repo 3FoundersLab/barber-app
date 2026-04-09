@@ -6,8 +6,10 @@ export const LANDING_SECTIONS = {
   beneficios: 'beneficios',
   funcionalidades: 'funcionalidades',
   provaSocial: 'prova-social',
+  demonstracao: 'demonstracao',
   comoFunciona: 'como-funciona',
   planos: 'planos',
+  faq: 'faq',
 } as const
 
 export const LANDING_LINKS = {
