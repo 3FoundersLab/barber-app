@@ -36,17 +36,17 @@ export function ServiceCard({
   return (
     <Card
       className={cn(
-        'overflow-hidden transition-colors',
+        'flex h-full flex-col overflow-hidden transition-colors',
         onClick && 'cursor-pointer hover:bg-accent/50',
         selected && 'border-primary bg-primary/5',
         !service.ativo && 'opacity-60',
-        className
+        className,
       )}
       onClick={() => onClick?.(service)}
     >
-      <CardContent className="flex items-center justify-between p-4">
-        <div className="flex-1 space-y-1">
-          <div className="flex items-center gap-2">
+      <CardContent className="flex flex-1 flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{service.nome}</span>
             {!service.ativo && (
               <Badge variant="secondary" className="text-xs">
@@ -54,23 +54,28 @@ export function ServiceCard({
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          {service.descricao ? (
+            <p className="hidden text-sm leading-snug text-muted-foreground md:block md:line-clamp-2 xl:line-clamp-3">
+              {service.descricao}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
+              <Clock className="h-3.5 w-3.5 shrink-0" />
               {formatDuration(service.duracao)}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-primary">
+        <div className="flex shrink-0 items-center justify-between gap-3 sm:flex-col sm:items-end sm:justify-start sm:gap-2">
+          <span className="text-base font-semibold tabular-nums text-primary sm:text-lg sm:text-right">
             {formatCurrency(service.preco)}
           </span>
           
           {showActions && (onEdit || onDelete) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <Button variant="ghost" size="sm" className="h-8 w-8 shrink-0 p-0">
                   <MoreVertical className="h-4 w-4" />
                   <span className="sr-only">Menu</span>
                 </Button>

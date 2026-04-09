@@ -17,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ClientCardListSkeleton } from '@/components/shared/loading-skeleton'
+import { ClientCardSkeleton } from '@/components/shared/loading-skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
@@ -151,9 +151,9 @@ export default function AdminClientesPage() {
     <TenantPanelPageContainer>
       <TenantPanelPageHeader title="Clientes" profileHref={`${base}/configuracoes`} avatarFallback="A" />
 
-      <PageContent className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <div className="relative min-w-0 flex-1">
+      <PageContent className="space-y-4 md:space-y-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 lg:gap-6">
+          <div className="relative min-w-0 flex-1 lg:max-w-2xl xl:max-w-3xl">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar cliente..."
@@ -168,9 +168,17 @@ export default function AdminClientesPage() {
           </Button>
         </div>
 
-        <div className="space-y-3">
+        <div
+          className={
+            isLoading || clientes.length > 0
+              ? 'grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3 xl:gap-5'
+              : undefined
+          }
+        >
           {isLoading ? (
-            <ClientCardListSkeleton count={5} />
+            Array.from({ length: 6 }).map((_, i) => (
+              <ClientCardSkeleton key={i} className="h-full min-h-[4.5rem]" />
+            ))
           ) : filteredClientes.length > 0 ? (
             filteredClientes.map((cliente) => (
               <ClienteCard
@@ -181,7 +189,7 @@ export default function AdminClientesPage() {
               />
             ))
           ) : (
-            <Card className="border-dashed">
+            <Card className="border-dashed md:col-span-2 xl:col-span-3">
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                 <p className="text-muted-foreground">
                   {searchTerm ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
@@ -200,15 +208,15 @@ export default function AdminClientesPage() {
 
       {/* Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg lg:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {editingCliente ? 'Editar Cliente' : 'Novo Cliente'}
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <div className="space-y-2">
+          <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-x-4 lg:gap-y-4 lg:space-y-0">
+            <div className="space-y-2 lg:col-span-2">
               <Label htmlFor="nome">Nome</Label>
               <Input
                 id="nome"
@@ -247,13 +255,14 @@ export default function AdminClientesPage() {
               />
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-2 lg:col-span-2">
               <Label htmlFor="notas">Notas (opcional)</Label>
               <Textarea
                 id="notas"
                 value={formData.notas}
                 onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
                 placeholder="Observações sobre o cliente"
+                className="min-h-[100px] lg:min-h-[120px]"
               />
             </div>
           </div>

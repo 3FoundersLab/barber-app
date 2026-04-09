@@ -168,7 +168,7 @@ export default function AdminFinanceiroPage() {
 
       <PageContent className="space-y-4">
         {!isLoading && !error && agendamentos.length > 0 ? (
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3 lg:gap-4">
             <Card>
               <CardHeader className="pb-2 pt-4">
                 <CardTitle className="text-xs font-medium text-muted-foreground">Recebido (lista)</CardTitle>
@@ -199,7 +199,7 @@ export default function AdminFinanceiroPage() {
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:max-w-3xl lg:gap-4">
           <Tabs
             value={atendimentoFilter}
             onValueChange={(value) => setAtendimentoFilter(value as AtendimentoFilter)}
@@ -234,15 +234,17 @@ export default function AdminFinanceiroPage() {
             <AlertTitle>{error}</AlertTitle>
           </Alert>
         ) : isLoading ? (
-          <AppointmentListSkeleton count={4} />
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3 xl:gap-5">
+            <AppointmentListSkeleton count={6} className="contents" />
+          </div>
         ) : agendamentos.length > 0 ? (
-          <div className="space-y-6">
+          <div className="space-y-6 md:space-y-8">
             {groupedByDate.map(({ dateKey, items }) => (
               <section key={dateKey} className="space-y-3">
-                <h2 className="border-b pb-1 text-sm font-semibold capitalize text-foreground">
+                <h2 className="border-b pb-1 text-sm font-semibold capitalize text-foreground md:text-base">
                   {formatDateHeading(dateKey)}
                 </h2>
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3 xl:gap-5">
                   {items.map((agendamento) => (
                     <AppointmentCard
                       key={agendamento.id}

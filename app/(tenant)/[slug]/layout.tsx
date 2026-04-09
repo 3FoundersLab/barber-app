@@ -109,7 +109,7 @@ export default function AdminSlugLayout({ children }: { children: React.ReactNod
             )
           }
         />
-        <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col w-full">
           <AppPageHeadingProvider>{children}</AppPageHeadingProvider>
         </div>
       </div>

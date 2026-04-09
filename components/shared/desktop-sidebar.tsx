@@ -76,7 +76,8 @@ export function DesktopSidebar({
   }, [collapsed, collapsible])
 
   const wide = !collapsible || !collapsed
-  const widthClass = wide ? 'md:w-64' : 'md:w-[4.5rem]'
+  /** Tablet: 16rem; desktop largo: mais espaço para labels e seções sem mudar o mobile. */
+  const widthClass = wide ? 'md:w-64 lg:w-72' : 'md:w-[4.5rem]'
 
   const headerBarClass = isSuper ? superShellHeaderBarClass : APP_PAGE_HEADER_BAR_CLASS
   const sidebarHeaderExtras = cn('border-b-0', isSuper && 'shadow-none')
@@ -146,7 +147,7 @@ export function DesktopSidebar({
                 type="button"
                 title={item.label}
                 className={cn(
-                  'flex w-full items-center justify-center rounded-md px-2 py-2.5 text-sm transition-all duration-200',
+                  'flex w-full items-center justify-center rounded-md px-2 py-2 md:py-2.5 text-sm transition-all duration-200',
                   groupActive
                     ? isSuper
                       ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
@@ -186,7 +187,7 @@ export function DesktopSidebar({
             type="button"
             className={cn(
               'group flex w-full items-center gap-2 rounded-md text-sm transition-all duration-200',
-              'px-3 py-2 text-left',
+              'px-2.5 py-1.5 text-left md:px-3 md:py-2',
               groupActive && !isSuper && 'bg-muted/80 text-foreground',
               groupActive && isSuper && 'bg-zinc-200/80 text-foreground dark:bg-white/[0.08]',
               !groupActive &&
@@ -199,7 +200,7 @@ export function DesktopSidebar({
             <span className="min-w-0 flex-1 truncate font-medium">{item.label}</span>
             <ChevronDown className="size-4 shrink-0 opacity-60 transition-transform duration-200 group-data-[state=open]:rotate-180" />
           </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-0.5 pl-2">
+          <CollapsibleContent className="space-y-px pl-1.5 md:space-y-0.5 md:pl-2">
             {item.children.map((child) => {
               const active = pathActive(pathname, child.href)
               return (
@@ -207,7 +208,7 @@ export function DesktopSidebar({
                   key={child.href}
                   href={child.href}
                   className={cn(
-                    'block truncate rounded-md py-2 pl-7 pr-3 text-sm transition-all duration-200',
+                    'block truncate rounded-md py-1.5 pl-6 pr-2 text-sm transition-all duration-200 md:py-2 md:pl-7 md:pr-3',
                     active
                       ? isSuper
                         ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
@@ -236,7 +237,7 @@ export function DesktopSidebar({
         title={!wide ? item.label : undefined}
         className={cn(
           'flex items-center gap-2 rounded-md text-sm transition-all duration-200',
-          wide ? 'px-3 py-2' : 'justify-center px-2 py-2.5',
+          wide ? 'px-2.5 py-1.5 md:px-3 md:py-2' : 'justify-center px-2 py-2 md:py-2.5',
           isActive
             ? isSuper
               ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
@@ -267,25 +268,25 @@ export function DesktopSidebar({
 
         <nav
           id="desktop-sidebar-nav"
-          className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden p-3"
+          className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden px-2.5 py-2 md:space-y-1 md:px-3 md:py-3 lg:py-4"
           aria-label="Navegação principal"
         >
           {navGroups.map((group, groupIndex) => (
             <div
               key={group.label ?? `default-${groupIndex}`}
               className={cn(
-                'space-y-1',
+                'space-y-0.5 md:space-y-1',
                 groupIndex > 0 &&
                   (isSuper
-                    ? 'border-t border-zinc-200/80 pt-3 dark:border-zinc-800/80'
-                    : 'border-t border-border/70 pt-3'),
+                    ? 'border-t border-zinc-200/80 pt-2.5 dark:border-zinc-800/80 md:pt-3 lg:pt-3.5'
+                    : 'border-t border-border/70 pt-2.5 md:pt-3 lg:pt-3.5'),
               )}
             >
               {group.label ? (
                 wide ? (
                   <p
                     className={cn(
-                      'px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground',
+                      'px-2.5 pb-0.5 pt-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground md:px-3 md:pb-1 md:text-xs',
                       isSuper && 'text-zinc-500 dark:text-zinc-400',
                     )}
                   >
@@ -310,7 +311,7 @@ export function DesktopSidebar({
         {footer ? (
           <div
             className={cn(
-              'border-t p-3',
+              'border-t px-2.5 py-2.5 md:px-3 md:py-3',
               isSuper && 'border-zinc-200/80 dark:border-zinc-800',
             )}
           >

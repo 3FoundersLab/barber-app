@@ -1,14 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Plus, Phone, Mail, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Plus, Search } from 'lucide-react'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { PageContent } from '@/components/shared/page-container'
+import { TeamMemberCard } from '@/components/domain/team-member-card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -19,14 +18,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { TeamMemberListSkeleton } from '@/components/shared/loading-skeleton'
+import { TeamMemberCardSkeleton } from '@/components/shared/loading-skeleton'
 import { Spinner } from '@/components/ui/spinner'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
@@ -37,6 +30,7 @@ export default function TenantEquipePage() {
   const { slug, base } = useTenantAdminBase()
 
   const [barbeiros, setBarbeiros] = useState<Barbeiro[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
   const [barbeariaId, setBarbeariaId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -54,6 +48,17 @@ export default function TenantEquipePage() {
   useEffect(() => {
     loadBarbeiros()
   }, [slug])
+
+  const filteredBarbeiros = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase()
+    if (!q) return barbeiros
+    return barbeiros.filter(
+      (b) =>
+        b.nome.toLowerCase().includes(q) ||
+        (b.telefone?.includes(searchTerm.trim()) ?? false) ||
+        (b.email?.toLowerCase().includes(q) ?? false),
+    )
+  }, [searchTerm, barbeiros])
 
   async function loadBarbeiros() {
     const supabase = createClient()
@@ -173,9 +178,18 @@ export default function TenantEquipePage() {
     <TenantPanelPageContainer>
       <TenantPanelPageHeader title="Equipe" profileHref={`${base}/configuracoes`} avatarFallback="A" />
 
-      <PageContent className="space-y-3">
-        <div className="flex justify-end">
-          <Button size="sm" onClick={handleOpenNew}>
+      <PageContent className="space-y-4 md:space-y-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 lg:gap-6">
+          <div className="relative min-w-0 flex-1 lg:max-w-2xl xl:max-w-3xl">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, telefone ou e-mail..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button className="w-full shrink-0 sm:w-auto" size="sm" onClick={handleOpenNew}>
             <Plus className="mr-1 h-4 w-4" />
             Novo
           </Button>
@@ -189,84 +203,52 @@ export default function TenantEquipePage() {
           >
             <AlertTitle>{error}</AlertTitle>
           </Alert>
-        ) : isLoading ? (
-          <TeamMemberListSkeleton count={3} />
-        ) : barbeiros.length > 0 ? (
-          barbeiros.map((barbeiro) => (
-            <Card key={barbeiro.id} className={!barbeiro.ativo ? 'opacity-60' : ''}>
-              <CardContent className="flex items-center gap-3 p-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={barbeiro.avatar} />
-                  <AvatarFallback>{barbeiro.nome.charAt(0).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate font-medium">{barbeiro.nome}</span>
-                    {!barbeiro.ativo && (
-                      <Badge variant="secondary" className="text-xs">
-                        Inativo
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-                    {barbeiro.telefone && (
-                      <span className="flex items-center gap-1">
-                        <Phone className="h-3 w-3" />
-                        {barbeiro.telefone}
-                      </span>
-                    )}
-                    {barbeiro.email && (
-                      <span className="flex items-center gap-1 truncate">
-                        <Mail className="h-3 w-3" />
-                        {barbeiro.email}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleEdit(barbeiro)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={() => handleDelete(barbeiro.id)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Excluir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+        ) : null}
+
+        <div
+          className={
+            isLoading || barbeiros.length > 0
+              ? 'grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3 xl:gap-5'
+              : undefined
+          }
+        >
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, i) => <TeamMemberCardSkeleton key={i} />)
+          ) : filteredBarbeiros.length > 0 ? (
+            filteredBarbeiros.map((barbeiro) => (
+              <TeamMemberCard
+                key={barbeiro.id}
+                barbeiro={barbeiro}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            ))
+          ) : (
+            <Card className="border-dashed md:col-span-2 xl:col-span-3">
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <p className="text-muted-foreground">
+                  {searchTerm.trim() ? 'Nenhum profissional encontrado' : 'Nenhum barbeiro cadastrado'}
+                </p>
+                {!searchTerm.trim() && (
+                  <Button size="sm" className="mt-3" onClick={handleOpenNew}>
+                    <Plus className="mr-1 h-4 w-4" />
+                    Adicionar barbeiro
+                  </Button>
+                )}
               </CardContent>
             </Card>
-          ))
-        ) : (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-muted-foreground">Nenhum barbeiro cadastrado</p>
-              <Button size="sm" className="mt-3" onClick={handleOpenNew}>
-                <Plus className="mr-1 h-4 w-4" />
-                Adicionar barbeiro
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+          )}
+        </div>
       </PageContent>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg lg:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingBarbeiro ? 'Editar barbeiro' : 'Novo barbeiro'}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
+          <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-x-4 lg:gap-y-4 lg:space-y-0">
+            <div className="space-y-2 lg:col-span-2">
               <Label htmlFor="nome">Nome</Label>
               <Input
                 id="nome"
@@ -301,8 +283,10 @@ export default function TenantEquipePage() {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="ativo">Barbeiro ativo</Label>
+            <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-3 lg:col-span-2">
+              <Label htmlFor="ativo" className="cursor-pointer">
+                Barbeiro ativo
+              </Label>
               <Switch
                 id="ativo"
                 checked={formData.ativo}

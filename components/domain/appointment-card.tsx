@@ -32,8 +32,8 @@ export function AppointmentCard({
   const hasPendingActions = Boolean(onComplete || onCancel || onNoShow)
 
   return (
-    <Card className={cn('overflow-hidden', className)}>
-      <CardContent className="p-4">
+    <Card className={cn('flex h-full flex-col overflow-hidden', className)}>
+      <CardContent className="flex flex-1 flex-col p-4">
         <div className="flex items-start justify-between gap-3">
           {/* Time and Info */}
           <div className="flex items-start gap-3">

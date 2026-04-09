@@ -32,7 +32,9 @@ export function PageContainer({
  * Faixa superior do app: altura fixa para o `border-b` do header da página e do topo do sidebar
  * ficarem na mesma linha (sem “degrau” entre colunas).
  */
-export const APP_PAGE_HEADER_BAR_CLASS = 'h-16 shrink-0 border-b bg-background px-4 md:px-6'
+/** Mobile-first; em `lg+` alinha com `PageContent` para aproveitar melhor a largura no desktop. */
+export const APP_PAGE_HEADER_BAR_CLASS =
+  'h-16 shrink-0 border-b bg-background px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-12'
 
 interface PageHeaderProps {
   children: React.ReactNode
@@ -76,9 +78,14 @@ export function PageContent({ children, className }: PageContentProps) {
   const heading = headingCtx?.heading ?? null
 
   return (
-    <div className={cn('flex-1 p-4 md:p-6', className)}>
+    <div
+      className={cn(
+        'flex-1 p-4 md:p-6 lg:px-8 lg:py-6 xl:px-10 xl:py-7 2xl:px-12 2xl:py-8',
+        className,
+      )}
+    >
       {heading ? (
-        <div className="mb-4 space-y-1 md:mb-6">
+        <div className="mb-4 space-y-1 md:mb-6 lg:mb-8">
           <PageTitle>{heading.title}</PageTitle>
           {heading.subtitle != null &&
             (typeof heading.subtitle === 'string' ? (

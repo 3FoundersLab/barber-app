@@ -211,8 +211,8 @@ export function ClientCardListSkeleton({ count = 5, className }: ListSkeletonPro
 /** Card da equipe (avatar + nome + menu) */
 export function TeamMemberCardSkeleton({ className }: { className?: string }) {
   return (
-    <Card className={className}>
-      <CardContent className="flex items-center gap-3 p-4">
+    <Card className={cn('flex h-full flex-col', className)}>
+      <CardContent className="flex flex-1 items-center gap-3 p-4">
         <Skeleton className="h-12 w-12 shrink-0 rounded-full" />
         <div className="min-w-0 flex-1 space-y-2">
           <Skeleton className="h-4 w-40" />

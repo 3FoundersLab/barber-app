@@ -291,8 +291,14 @@ export default function AdminAgendamentosPage() {
           </Card>
         )}
 
-        {/* Appointments */}
-        <div className="space-y-3">
+        {/* Appointments (lista em grade no desktop; calendário inalterado) */}
+        <div
+          className={
+            viewMode === 'list' && !error && (isLoading || appointmentsOfSelectedDate.length > 0)
+              ? 'grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3 xl:gap-5'
+              : 'space-y-3'
+          }
+        >
           {error ? (
             <Alert
               variant="danger"
@@ -302,7 +308,10 @@ export default function AdminAgendamentosPage() {
               <AlertTitle>{error}</AlertTitle>
             </Alert>
           ) : isLoading ? (
-            <AppointmentListSkeleton count={4} />
+            <AppointmentListSkeleton
+              count={viewMode === 'list' ? 6 : 4}
+              className={viewMode === 'list' ? 'contents' : undefined}
+            />
           ) : appointmentsOfSelectedDate.length > 0 ? (
             appointmentsOfSelectedDate.map((agendamento) => (
               <AppointmentCard

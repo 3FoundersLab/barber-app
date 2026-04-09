@@ -255,9 +255,9 @@ export default function SuperPlanosPage() {
         className={superPremiumAppHeaderClass}
       />
 
-      <PageContent className="space-y-4 pb-20 md:pb-6">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-          <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
+      <PageContent className="space-y-4 pb-20 md:space-y-5 md:pb-6">
+        <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-4">
+          <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2 lg:min-w-[12rem] lg:flex-none">
             <Button
               type="button"
               variant="ghost"
@@ -270,24 +270,19 @@ export default function SuperPlanosPage() {
             </Button>
             <PageTitle className="min-w-0 truncate">Planos</PageTitle>
           </div>
-          <Button
-            type="button"
-            className="w-full shrink-0 sm:w-auto"
-            onClick={openCreate}
-          >
+          <div className="relative min-w-0 flex-1 lg:max-w-xl xl:max-w-2xl">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome ou benefício..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button type="button" className="w-full shrink-0 lg:w-auto" onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" />
             Novo plano
           </Button>
-        </div>
-
-        <div className="relative min-w-0">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
         </div>
 
         {error && (
@@ -301,25 +296,29 @@ export default function SuperPlanosPage() {
         )}
 
         {!isLoading && planos.length > 0 ? (
-          <div className="space-y-2 rounded-xl border border-border/80 bg-muted/20 p-4">
-            <Label className="text-foreground">Visualizar preço por período</Label>
-            <p className="text-xs text-muted-foreground">
-              O cadastro do plano continua com o valor mensal de referência; abaixo os valores são calculados para o
-              período escolhido.
-            </p>
-            <PlanoPeriodicidadeToggle
-              idPrefix="super-planos-intervalo"
-              value={intervaloPreco}
-              onChange={setIntervaloPreco}
-              disabled={isSaving || isDeleting}
-            />
+          <div className="space-y-3 rounded-xl border border-border/80 bg-muted/20 p-4 md:flex md:flex-wrap md:items-end md:justify-between md:gap-4 lg:p-5">
+            <div className="min-w-0 space-y-2 md:max-w-xl md:flex-1">
+              <Label className="text-foreground">Visualizar preço por período</Label>
+              <p className="text-xs text-muted-foreground md:text-sm">
+                O cadastro do plano continua com o valor mensal de referência; abaixo os valores são calculados para o
+                período escolhido.
+              </p>
+            </div>
+            <div className="shrink-0 md:min-w-[min(100%,20rem)]">
+              <PlanoPeriodicidadeToggle
+                idPrefix="super-planos-intervalo"
+                value={intervaloPreco}
+                onChange={setIntervaloPreco}
+                disabled={isSaving || isDeleting}
+              />
+            </div>
           </div>
         ) : null}
 
         {isLoading ? (
           <SuperGridEntityListSkeleton
             count={6}
-            listClassName="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+            listClassName="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-5"
           />
         ) : planos.length === 0 ? (
           <Card className="border-dashed border-border/60 bg-transparent shadow-none">
@@ -334,7 +333,7 @@ export default function SuperPlanosPage() {
             </CardContent>
           </Card>
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <ul className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-5">
             {filtered.map((plano) => (
               <li key={plano.id}>
                 <article
@@ -423,34 +422,46 @@ export default function SuperPlanosPage() {
       </PageContent>
 
       <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="flex max-h-[90vh] flex-col rounded-2xl sm:max-w-lg">
+        <DialogContent className="flex max-h-[90vh] flex-col rounded-2xl sm:max-w-lg lg:max-w-4xl">
           <DialogHeader>
             <DialogTitle>{editingPlano ? 'Editar plano' : 'Novo plano'}</DialogTitle>
           </DialogHeader>
 
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-            <div className="space-y-1">
-              <Label htmlFor="nome">Nome</Label>
-              <Input
-                id="nome"
-                value={form.nome}
-                onChange={(e) => setForm((p) => ({ ...p, nome: e.target.value }))}
-                className="rounded-lg"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="preco">Preço mensal</Label>
-              <Input
-                id="preco"
-                type="number"
-                step="0.01"
-                value={form.preco_mensal}
-                onChange={(e) => setForm((p) => ({ ...p, preco_mensal: e.target.value }))}
-                className="rounded-lg"
-              />
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0">
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="nome">Nome</Label>
+                <Input
+                  id="nome"
+                  value={form.nome}
+                  onChange={(e) => setForm((p) => ({ ...p, nome: e.target.value }))}
+                  className="rounded-lg"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="preco">Preço mensal</Label>
+                <Input
+                  id="preco"
+                  type="number"
+                  step="0.01"
+                  value={form.preco_mensal}
+                  onChange={(e) => setForm((p) => ({ ...p, preco_mensal: e.target.value }))}
+                  className="rounded-lg"
+                />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2.5">
+                <Label htmlFor="ativo" className="cursor-pointer">
+                  Plano ativo
+                </Label>
+                <Switch
+                  id="ativo"
+                  checked={form.ativo}
+                  onCheckedChange={(checked) => setForm((p) => ({ ...p, ativo: checked }))}
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
               <div className="flex flex-wrap items-end justify-between gap-2">
                 <Label className="text-foreground">Benefícios</Label>
                 <Button
@@ -527,17 +538,6 @@ export default function SuperPlanosPage() {
                   ))}
                 </ul>
               )}
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2.5">
-              <Label htmlFor="ativo" className="cursor-pointer">
-                Plano ativo
-              </Label>
-              <Switch
-                id="ativo"
-                checked={form.ativo}
-                onCheckedChange={(checked) => setForm((p) => ({ ...p, ativo: checked }))}
-              />
             </div>
           </div>
 
