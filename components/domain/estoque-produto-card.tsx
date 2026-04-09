@@ -1,6 +1,6 @@
 'use client'
 
-import { Minus, Pencil, Plus } from 'lucide-react'
+import { Minus, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,6 +12,7 @@ import type { EstoqueProduto } from '@/types/estoque-produto'
 interface EstoqueProdutoCardProps {
   produto: EstoqueProduto
   onEdit: (produto: EstoqueProduto) => void
+  onExcluir: (produto: EstoqueProduto) => void
   onDeltaQuantidade: (id: number, delta: number) => void
   className?: string
 }
@@ -41,6 +42,7 @@ function dotNivelClass(nivel: ReturnType<typeof nivelEstoquePorQuantidade>) {
 export function EstoqueProdutoCard({
   produto,
   onEdit,
+  onExcluir,
   onDeltaQuantidade,
   className,
 }: EstoqueProdutoCardProps) {
@@ -57,7 +59,7 @@ export function EstoqueProdutoCard({
       onClick={() => onEdit(produto)}
     >
       <CardContent className="relative flex flex-1 flex-col gap-2 p-2.5 pt-3 sm:p-3">
-        <div className="absolute right-1.5 top-1.5 sm:right-2 sm:top-2">
+        <div className="absolute right-1.5 top-1.5 flex gap-0.5 sm:right-2 sm:top-2">
           <Button
             type="button"
             variant="ghost"
@@ -70,6 +72,19 @@ export function EstoqueProdutoCard({
             }}
           >
             <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            aria-label="Excluir produto"
+            onClick={(e) => {
+              e.stopPropagation()
+              onExcluir(produto)
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
 

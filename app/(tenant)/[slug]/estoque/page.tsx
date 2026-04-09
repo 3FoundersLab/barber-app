@@ -1,10 +1,20 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { LayoutList, Search } from 'lucide-react'
+import { LayoutList, Plus, Search } from 'lucide-react'
 import { EstoqueProdutoCard } from '@/components/domain/estoque-produto-card'
 import { PageContent } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -40,6 +50,7 @@ export default function TenantEstoquePage() {
   const [statusFiltro, setStatusFiltro] = useState<EstoqueStatusFiltro>('todos')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editando, setEditando] = useState<EstoqueProduto | null>(null)
+  const [produtoParaExcluir, setProdutoParaExcluir] = useState<EstoqueProduto | null>(null)
   const [formNome, setFormNome] = useState('')
   const [formCategoria, setFormCategoria] = useState('')
   const [formQuantidade, setFormQuantidade] = useState('')
@@ -61,8 +72,20 @@ export default function TenantEstoquePage() {
     if (!open) setEditando(null)
   }
 
-  const aplicarEdicao = () => {
-    if (!editando) return
+  const abrirNovoProduto = () => {
+    setEditando(null)
+    setFormNome('')
+    setFormCategoria(ESTOQUE_CATEGORIAS_ORDEM[0])
+    setFormQuantidade('0')
+    setFormMinimo('0')
+    setFormPrecoCusto('')
+    setDialogOpen(true)
+  }
+
+  const salvarProduto = () => {
+    const nome = formNome.trim()
+    if (!nome || !formCategoria) return
+
     const q = Math.max(0, Math.floor(Number(formQuantidade) || 0))
     const m = Math.max(0, Math.floor(Number(formMinimo) || 0))
     const custoRaw = formPrecoCusto.trim()
@@ -71,24 +94,54 @@ export default function TenantEstoquePage() {
       precoCusto = undefined
     } else {
       const n = Number(custoRaw.replace(',', '.'))
-      precoCusto = Number.isFinite(n) ? Math.round(n * 100) / 100 : editando.precoCusto
+      if (Number.isFinite(n)) {
+        precoCusto = Math.round(n * 100) / 100
+      } else if (editando) {
+        precoCusto = editando.precoCusto
+      } else {
+        precoCusto = undefined
+      }
     }
 
-    setProdutos((prev) =>
-      prev.map((p) =>
-        p.id === editando.id
-          ? {
-              ...p,
-              nome: formNome.trim() || p.nome,
-              categoria: formCategoria,
-              quantidade: q,
-              minimo: m,
-              precoCusto,
-            }
-          : p,
-      ),
-    )
+    if (editando) {
+      setProdutos((prev) =>
+        prev.map((p) =>
+          p.id === editando.id
+            ? {
+                ...p,
+                nome,
+                categoria: formCategoria,
+                quantidade: q,
+                minimo: m,
+                precoCusto,
+              }
+            : p,
+        ),
+      )
+    } else {
+      setProdutos((prev) => {
+        const nextId = prev.reduce((max, p) => Math.max(max, p.id), 0) + 1
+        return [
+          ...prev,
+          {
+            id: nextId,
+            nome,
+            categoria: formCategoria,
+            quantidade: q,
+            minimo: m,
+            precoCusto,
+          },
+        ]
+      })
+    }
     fecharDialog(false)
+  }
+
+  const confirmarExclusao = () => {
+    if (!produtoParaExcluir) return
+    const id = produtoParaExcluir.id
+    setProdutos((prev) => prev.filter((p) => p.id !== id))
+    setProdutoParaExcluir(null)
   }
 
   const deltaQuantidade = (id: number, delta: number) => {
@@ -118,17 +171,24 @@ export default function TenantEstoquePage() {
       <TenantPanelPageHeader title="Estoque" profileHref={`${base}/configuracoes`} avatarFallback="A" />
 
       <PageContent className="space-y-4 md:space-y-5">
-        <div className="grid gap-3 sm:gap-4 lg:grid-cols-4 lg:items-end">
-          <div className="relative min-w-0 lg:col-span-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 lg:gap-6">
+          <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar por nome do produto..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="pl-9"
+              className="w-full pl-9"
               aria-label="Buscar produto"
             />
           </div>
+          <Button type="button" className="w-full shrink-0 sm:w-auto" size="sm" onClick={abrirNovoProduto}>
+            <Plus className="mr-1 h-4 w-4" />
+            Novo produto
+          </Button>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:items-end">
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Categoria</Label>
             <Select value={categoriaFiltro} onValueChange={setCategoriaFiltro}>
@@ -201,6 +261,7 @@ export default function TenantEstoquePage() {
                 key={p.id}
                 produto={p}
                 onEdit={abrirEdicao}
+                onExcluir={setProdutoParaExcluir}
                 onDeltaQuantidade={deltaQuantidade}
               />
             ))
@@ -230,7 +291,7 @@ export default function TenantEstoquePage() {
       <Dialog open={dialogOpen} onOpenChange={fecharDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Editar produto</DialogTitle>
+            <DialogTitle>{editando ? 'Editar produto' : 'Novo produto'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="space-y-2">
@@ -305,7 +366,7 @@ export default function TenantEstoquePage() {
             </Button>
             <Button
               type="button"
-              onClick={aplicarEdicao}
+              onClick={salvarProduto}
               disabled={!formNome.trim() || !formCategoria}
             >
               Salvar
@@ -313,6 +374,33 @@ export default function TenantEstoquePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={produtoParaExcluir != null}
+        onOpenChange={(open) => {
+          if (!open) setProdutoParaExcluir(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir produto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {produtoParaExcluir
+                ? `“${produtoParaExcluir.nome}” será removido do estoque. Esta ação não pode ser desfeita.`
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmarExclusao}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TenantPanelPageContainer>
   )
 }
