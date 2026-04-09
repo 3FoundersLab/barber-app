@@ -117,7 +117,7 @@ export function LandingNavbar() {
       <div
         className={cn(
           landingContainer,
-          'flex h-[4.75rem] w-full max-w-full min-w-0 items-center gap-3 lg:h-[5rem] lg:gap-4 xl:gap-6',
+          'flex h-[4.75rem] w-full max-w-full min-w-0 items-center gap-3 xl:h-[5rem] xl:gap-6',
         )}
       >
         <div className="shrink-0">
@@ -130,7 +130,7 @@ export function LandingNavbar() {
 
         {/* flex-1 + min-w-0: ocupa só o espaço entre logo e botões, sem invadir os CTAs */}
         <nav
-          className="mx-1 hidden min-h-0 min-w-0 flex-1 flex-wrap items-center justify-center gap-x-4 gap-y-1 lg:flex xl:gap-x-6 2xl:gap-x-8"
+          className="mx-1 hidden min-h-0 min-w-0 flex-1 flex-nowrap items-center justify-center gap-x-3 xl:flex xl:gap-x-6 2xl:gap-x-8"
           aria-label="Principal"
         >
           {links.map(({ href, label }) => {
@@ -155,10 +155,10 @@ export function LandingNavbar() {
         <div
           className={cn(
             'relative z-20 ml-auto flex shrink-0 items-center gap-2 bg-white dark:bg-zinc-950',
-            'pl-2 lg:ml-0 lg:gap-3 lg:pl-3 xl:gap-4',
+            'pl-2 xl:ml-0 xl:pl-3 xl:gap-4',
           )}
         >
-          <div className="hidden items-center gap-3 lg:flex xl:gap-4">
+          <div className="hidden items-center gap-3 xl:flex xl:gap-4">
             <ThemeToggle inline variant="landing" />
             <Button asChild variant="ghost" className={pillSecondaryClass}>
               <Link href={LANDING_LINKS.login}>{LANDING_CTA.navSecondary}</Link>
@@ -168,7 +168,7 @@ export function LandingNavbar() {
             </Button>
           </div>
 
-          <div className="flex items-center gap-2 lg:hidden">
+          <div className="flex items-center gap-2 xl:hidden">
             <ThemeToggle inline variant="landing" />
             <button
               type="button"
@@ -186,7 +186,7 @@ export function LandingNavbar() {
 
       <div
         className={cn(
-          'fixed inset-0 z-[70] bg-zinc-950/62 backdrop-blur-[2px] transition-opacity duration-300 ease-in-out lg:hidden',
+          'fixed inset-0 z-[70] bg-zinc-950/62 backdrop-blur-[2px] transition-opacity duration-300 ease-in-out xl:hidden',
           open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
         )}
         aria-hidden={!open}
@@ -195,7 +195,7 @@ export function LandingNavbar() {
       <aside
         id="landing-mobile-menu"
         className={cn(
-          'fixed top-0 right-0 z-[80] flex h-dvh w-[min(80vw,400px)] max-w-[400px] flex-col border-l border-white/12 bg-zinc-950/98 shadow-[-22px_0_50px_rgba(0,0,0,0.45)] ring-1 ring-cyan-500/10 backdrop-blur-xl transition-transform duration-300 ease-in-out lg:hidden',
+          'fixed top-0 right-0 z-[80] flex h-dvh w-[min(80vw,400px)] max-w-[400px] flex-col border-l border-white/12 bg-zinc-950/98 shadow-[-22px_0_50px_rgba(0,0,0,0.45)] ring-1 ring-cyan-500/10 backdrop-blur-xl transition-transform duration-300 ease-in-out xl:hidden',
           open ? 'translate-x-0' : 'translate-x-full',
         )}
       >
