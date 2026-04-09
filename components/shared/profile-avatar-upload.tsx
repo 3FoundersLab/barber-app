@@ -1,7 +1,8 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ImageIcon, Upload, X } from 'lucide-react'
+import { AvatarCropDialog } from '@/components/shared/avatar-crop-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { createClient } from '@/lib/supabase/client'
 import { uploadProfileAvatar } from '@/lib/supabase/upload-profile-avatar'
+import { validateAvatarSourceFile } from '@/lib/image/validate-avatar-source'
 import { cn } from '@/lib/utils'
 
 type ProfileAvatarUploadProps = {
@@ -33,7 +35,58 @@ export function ProfileAvatarUpload({
   className,
 }: ProfileAvatarUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const cropSrcRef = useRef<string | null>(null)
+  /** Blob aguardando revogação após fechar o diálogo (evita race com desmonte do Cropper). */
+  const pendingRevokeRef = useRef<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [cropOpen, setCropOpen] = useState(false)
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
+
+  const revokePendingOrActive = () => {
+    if (pendingRevokeRef.current) {
+      URL.revokeObjectURL(pendingRevokeRef.current)
+      pendingRevokeRef.current = null
+    }
+    if (cropSrcRef.current) {
+      URL.revokeObjectURL(cropSrcRef.current)
+      cropSrcRef.current = null
+    }
+    setCropSrc(null)
+  }
+
+  /** Revoga na hora (ex.: novo arquivo selecionado). */
+  const revokeCropSrcImmediate = () => {
+    revokePendingOrActive()
+  }
+
+  /**
+   * Ao fechar o diálogo, zera o estado já e revoga o blob no próximo macrotask
+   * para o Cropper/img desmontarem sem pedirem um URL já revogado (evita erro no console).
+   */
+  const closeCrop = (open: boolean) => {
+    setCropOpen(open)
+    if (!open) {
+      const url = cropSrcRef.current
+      cropSrcRef.current = null
+      setCropSrc(null)
+      if (url) {
+        pendingRevokeRef.current = url
+        window.setTimeout(() => {
+          const pending = pendingRevokeRef.current
+          if (pending) {
+            URL.revokeObjectURL(pending)
+            pendingRevokeRef.current = null
+          }
+        }, 0)
+      }
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      revokePendingOrActive()
+    }
+  }, [])
 
   const pickFile = () => {
     onError(null)
@@ -45,6 +98,21 @@ export function ProfileAvatarUpload({
     e.target.value = ''
     if (!file || disabled) return
 
+    onError(null)
+    const validation = await validateAvatarSourceFile(file)
+    if (!validation.ok) {
+      onError(validation.message)
+      return
+    }
+
+    revokeCropSrcImmediate()
+    const url = URL.createObjectURL(file)
+    cropSrcRef.current = url
+    setCropSrc(url)
+    setCropOpen(true)
+  }
+
+  const runUpload = async (file: File) => {
     setIsUploading(true)
     onError(null)
     const supabase = createClient()
@@ -56,6 +124,10 @@ export function ProfileAvatarUpload({
       return
     }
     onAvatarUrlChange(result.publicUrl)
+  }
+
+  const handleCroppedFile = async (file: File) => {
+    await runUpload(file)
   }
 
   const clearAvatar = () => {
@@ -70,6 +142,14 @@ export function ProfileAvatarUpload({
 
   return (
     <div className={cn('space-y-3', className)}>
+      <AvatarCropDialog
+        open={cropOpen}
+        onOpenChange={closeCrop}
+        imageSrc={cropSrc}
+        onCroppedFile={handleCroppedFile}
+        onError={(msg) => onError(msg)}
+      />
+
       <Label className="flex items-center gap-1">
         <ImageIcon className="h-3.5 w-3.5" />
         Foto do perfil
@@ -88,14 +168,14 @@ export function ProfileAvatarUpload({
             accept="image/jpeg,image/png,image/webp,image/gif"
             className="sr-only"
             onChange={handleFile}
-            disabled={disabled || isUploading}
+            disabled={disabled || isUploading || cropOpen}
           />
           <Button
             type="button"
             variant="secondary"
             size="sm"
             onClick={pickFile}
-            disabled={disabled || isUploading}
+            disabled={disabled || isUploading || cropOpen}
           >
             {isUploading ? (
               <Spinner className="mr-2 h-4 w-4" />
@@ -110,7 +190,7 @@ export function ProfileAvatarUpload({
               variant="outline"
               size="sm"
               onClick={clearAvatar}
-              disabled={disabled || isUploading}
+              disabled={disabled || isUploading || cropOpen}
             >
               <X className="mr-2 h-4 w-4" />
               Remover
@@ -120,7 +200,7 @@ export function ProfileAvatarUpload({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        JPG, PNG, WebP ou GIF · até 2 MB
+        JPG, PNG, GIF ou WebP · até 10 MB · recorte quadrado · envio em WebP otimizado (~512 px)
       </p>
 
       <div className="space-y-2">
