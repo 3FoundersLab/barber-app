@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Building2, CreditCard, DollarSign, LayoutDashboard, Menu, Ticket, Users } from 'lucide-react'
+import { Building2, CreditCard, DollarSign, LayoutDashboard, Menu, ScrollText, Ticket, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
@@ -18,6 +18,7 @@ const superLinks = [
   { label: 'Planos', href: PLATFORM_PATHS.planos, icon: Ticket },
   { label: 'Financeiro', href: PLATFORM_PATHS.financeiro, icon: DollarSign },
   { label: 'Assinaturas', href: PLATFORM_PATHS.assinaturas, icon: CreditCard },
+  { label: 'Logs', href: PLATFORM_PATHS.logsPoliticas, icon: ScrollText },
 ]
 
 export function SuperDrawer() {

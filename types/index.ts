@@ -158,6 +158,24 @@ export interface Assinatura {
   plano?: Plano
 }
 
+/** Status de execução registrado em log de políticas do sistema. */
+export type PoliticaSistemaLogStatus = 'sucesso' | 'pendente' | 'erro'
+
+/** Linha de auditoria (cobrança, expiração, renovação, ativação de plano, etc.). */
+export interface PoliticaSistemaLog {
+  id: string
+  created_at: string
+  tipo_evento: string
+  barbearia_id: string | null
+  descricao: string
+  status_execucao: PoliticaSistemaLogStatus
+  actor_user_id: string | null
+  detalhes: Record<string, unknown> | null
+  mensagem_erro: string | null
+  barbearia?: Pick<Barbearia, 'id' | 'nome'> | null
+  actor_profile?: Pick<Profile, 'id' | 'nome' | 'email'> | null
+}
+
 // Auth Context
 export interface AuthUser {
   id: string
