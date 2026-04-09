@@ -22,19 +22,36 @@ export function SuperPremiumBackdrop() {
       className="pointer-events-none absolute inset-0 overflow-hidden"
       aria-hidden
     >
-      {/* —— Tema claro —— */}
+      {/* —— Tema claro (alinhado à LP: #f7f7f8, grid 56px, glows cyan/sky + primary) —— */}
       <div className="absolute inset-0 dark:hidden">
-        <div className="absolute inset-0 bg-zinc-50" />
-        <div className="absolute inset-0 bg-gradient-to-br from-zinc-50 via-white to-zinc-100/85" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_95%_75%_at_50%_-18%,rgba(14,165,233,0.07),transparent_58%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_48%_42%_at_8%_88%,rgba(234,88,12,0.045),transparent_55%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_42%_38%_at_92%_78%,rgba(59,130,246,0.05),transparent_58%)]" />
+        <div className="absolute inset-0 bg-[#f2f3f5]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-white via-[#fafafa] to-[#eef0f3]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-transparent to-orange-50/35" />
+        {/* Glow superior centro-direita: “luz” SaaS */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_110%_70%_at_62%_-5%,rgba(14,165,233,0.14),transparent_52%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_48%_at_88%_22%,rgba(56,189,248,0.11),transparent_58%)]" />
+        {/* Glow inferior esquerda: calor da marca */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_52%_46%_at_6%_92%,rgba(249,115,22,0.075),transparent_56%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_38%_34%_at_18%_72%,rgba(234,88,12,0.055),transparent_60%)]" />
+        {/* Profundidade: leve vinheta nas bordas */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_88%_78%_at_50%_50%,transparent_32%,rgba(228,228,231,0.55)_100%)]" />
+        {/* Brilho suave no centro (contraste com o card de login) */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_65%_52%_at_50%_42%,rgba(255,255,255,0.55),transparent_68%)]" />
+        {/* Grid: mesmo pitch da hero LP, linhas zinc discretas + máscara orgânica */}
         <div
-          className="absolute inset-0 bg-[linear-gradient(to_right,rgba(0,0,0,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.04)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_78%_68%_at_50%_48%,black,transparent)] opacity-[0.85]"
+          className="absolute inset-0 bg-[linear-gradient(to_right,rgba(24,24,27,0.055)_1px,transparent_1px),linear-gradient(to_bottom,rgba(24,24,27,0.055)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_74%_64%_at_50%_46%,black,transparent)] opacity-[0.92]"
+          aria-hidden
+        />
+        {/* Micro-textura: linhas mais tênues (1/2 step) para sensação premium */}
+        <div
+          className="absolute inset-0 bg-[linear-gradient(to_right,rgba(24,24,27,0.028)_1px,transparent_1px),linear-gradient(to_bottom,rgba(24,24,27,0.028)_1px,transparent_1px)] bg-[size:28px_28px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_48%,black,transparent)] opacity-[0.65]"
           aria-hidden
         />
         <div className="absolute inset-0 z-[1]">
-          <LandingAmbientMotes preset="login" particleClassName="bg-primary/14" />
+          <LandingAmbientMotes
+            preset="login"
+            particleClassName="bg-gradient-to-br from-primary/28 to-sky-400/22"
+          />
         </div>
       </div>
 
