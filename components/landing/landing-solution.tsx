@@ -40,7 +40,7 @@ export function LandingSolution() {
         <LandingFadeIn className="mx-auto max-w-2xl text-center">
           <p className={landingEyebrow}>Interesse: a resposta</p>
           <h2 id="landing-solucao-heading" className={landingSectionTitle}>
-            BarberApp: software para barbearia com agenda e caixa no mesmo lugar
+            BarberTool: software para barbearia com agenda e caixa no mesmo lugar
           </h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
             Pare de remendar com planilha e print. Um painel pensado para{' '}

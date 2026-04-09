@@ -299,7 +299,7 @@ function LoginPageContent() {
                   Bem-vindo de volta
                 </h1>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Entre com seu e-mail para continuar no BarberApp.
+                  Entre com seu e-mail para continuar no BarberTool.
                 </p>
               </motion.div>
 

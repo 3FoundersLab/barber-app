@@ -23,7 +23,7 @@ export function AppBrandLogo({
     return (
       <Link
         href={href}
-        aria-label="BarberApp, ir para o início"
+        aria-label="BarberTool, ir para o início"
         onClick={onClick}
         className={cn(
           'flex justify-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -46,7 +46,7 @@ export function AppBrandLogo({
       )}
     >
       <span className={markClass}>B</span>
-      <span className="truncate">BarberApp</span>
+      <span className="truncate">BarberTool</span>
     </Link>
   )
 }

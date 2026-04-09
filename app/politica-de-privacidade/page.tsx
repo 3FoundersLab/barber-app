@@ -3,7 +3,7 @@ import { LegalPageHeader } from '@/components/shared/legal-page-header'
 
 export const metadata: Metadata = {
   title: 'Política de privacidade',
-  description: 'Política de privacidade do BarberApp.',
+  description: 'Política de privacidade do BarberTool.',
   robots: { index: true, follow: true },
 }
 
@@ -16,7 +16,7 @@ export default function PoliticaDePrivacidadePage() {
         <h1 className="text-2xl font-semibold tracking-tight">Política de privacidade</h1>
         <p className="mt-6 leading-relaxed text-muted-foreground">
           Esta página está em elaboração. Em breve você encontrará aqui a política de privacidade completa do
-          BarberApp.
+          BarberTool.
         </p>
         </div>
       </main>

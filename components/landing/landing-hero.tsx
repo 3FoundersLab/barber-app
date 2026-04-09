@@ -138,7 +138,7 @@ export function LandingHero() {
             className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-zinc-400 sm:text-lg"
             variants={heroStaggerItem}
           >
-            <span className="font-semibold text-zinc-100">BarberApp</span> é o sistema de gestão e{' '}
+            <span className="font-semibold text-zinc-100">BarberTool</span> é o sistema de gestão e{' '}
             <span className="text-zinc-300">agendamento para barbearia</span> na palma da mão: uma grade só, cliente com
             histórico e fechamento do dia claro, sem depender do grupo do Zap.
           </motion.p>

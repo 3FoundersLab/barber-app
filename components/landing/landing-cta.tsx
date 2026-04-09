@@ -129,7 +129,7 @@ export function LandingCta() {
               className="mx-auto mt-6 max-w-lg text-pretty text-base leading-relaxed text-zinc-400 sm:text-lg lg:mx-0"
               variants={heroStaggerItem}
             >
-              Último passo: criar sua conta. Em poucos minutos você já usa o BarberApp na rotina, com{' '}
+              Último passo: criar sua conta. Em poucos minutos você já usa o BarberTool na rotina, com{' '}
               <strong className="font-medium text-zinc-200">agendamento</strong>, equipe e fechamento do dia na mesma
               tela.
             </motion.p>
@@ -237,7 +237,7 @@ export function LandingCta() {
                   <div className="relative aspect-[16/10] w-full max-h-[min(52vh,380px)] sm:max-h-[min(56vh,420px)]">
                     <Image
                       src={CTA_PRODUCT_IMAGE}
-                      alt="Visualização de painel com agenda e indicadores do BarberApp"
+                      alt="Visualização de painel com agenda e indicadores do BarberTool"
                       fill
                       className="object-cover object-[center_40%]"
                       sizes="(max-width: 1024px) 92vw, 44vw"

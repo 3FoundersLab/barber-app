@@ -16,7 +16,7 @@ import { LANDING_VIEWPORT, staggerContainer, staggerItem } from '@/lib/landing-m
 import { cn } from '@/lib/utils'
 
 const stats = [
-  { value: '+120', label: 'bancadas no BarberApp' },
+  { value: '+120', label: 'bancadas no BarberTool' },
   { value: '4,8/5', label: 'nota dos donos' },
   { value: '35%', label: 'menos horário morto' },
 ]
@@ -56,7 +56,7 @@ export function LandingSocialProof() {
         <LandingFadeIn className="mx-auto max-w-2xl text-center">
           <p className={landingEyebrow}>Prova social: autoridade</p>
           <h2 id="landing-prova-heading" className={landingSectionTitle}>
-            Quem já usa BarberApp no dia a dia da bancada
+            Quem já usa BarberTool no dia a dia da bancada
           </h2>
           <p className={cn(landingSectionLead, 'mx-auto')}>
             Números e relatos de donos que queriam o mesmo que você:{' '}

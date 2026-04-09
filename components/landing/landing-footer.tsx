@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 const social = [
   { label: 'Instagram', href: 'https://instagram.com', icon: Instagram },
   { label: 'LinkedIn', href: 'https://linkedin.com', icon: Linkedin },
-  { label: 'E-mail', href: 'mailto:contato@barberapp.com.br', icon: Mail },
+  { label: 'E-mail', href: 'mailto:contato@barbertool.com.br', icon: Mail },
 ] as const
 
 const footerContainer =
@@ -87,7 +87,7 @@ export function LandingFooter() {
 
       <div className={footerContainer}>
         <h2 id="landing-footer-heading" className="sr-only">
-          Rodapé BarberApp
+          Rodapé BarberTool
         </h2>
 
         <motion.div
@@ -153,7 +153,7 @@ export function LandingFooter() {
               <FooterSectionTitle align="end">Contato & suporte</FooterSectionTitle>
               <div className="w-full max-w-full min-w-0 rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.025] p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] backdrop-blur-sm transition-[border-color,box-shadow] duration-300 hover:border-white/[0.12] sm:min-w-[18.75rem] sm:p-[1.125rem] md:min-w-[19.5rem] md:px-5 md:py-[1.125rem]">
                 <a
-                  href="mailto:contato@barberapp.com.br"
+                  href="mailto:contato@barbertool.com.br"
                   className="group flex w-full min-w-0 items-center gap-3 text-zinc-200 transition-colors hover:text-white sm:gap-3.5"
                 >
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-cyan-400/25 bg-cyan-500/[0.1] text-cyan-300 transition-[transform,border-color,background-color] duration-300 group-hover:scale-[1.03] group-hover:border-cyan-400/40 group-hover:bg-cyan-500/[0.14]">
@@ -166,9 +166,9 @@ export function LandingFooter() {
                     <span className="relative mt-1 block text-[14px] font-medium leading-snug tracking-tight text-zinc-50 sm:text-[15px] sm:leading-[1.5]">
                       <span className="md:hidden">
                         contato@<wbr />
-                        barberapp.com.br
+                        barbertool.com.br
                       </span>
-                      <span className="hidden md:inline md:whitespace-nowrap">contato@barberapp.com.br</span>
+                      <span className="hidden md:inline md:whitespace-nowrap">contato@barbertool.com.br</span>
                       <span
                         className="absolute -bottom-0.5 left-0 h-px w-full max-w-full origin-left scale-x-0 bg-gradient-to-r from-cyan-400/70 to-transparent transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-x-100"
                         aria-hidden
@@ -229,7 +229,7 @@ export function LandingFooter() {
             <p className="text-[13px] leading-snug text-zinc-500 lg:shrink-0">
               <span className="lg:whitespace-nowrap">
                 © {new Date().getFullYear()}{' '}
-                <span className="font-medium text-zinc-400">BarberApp</span>. Todos os direitos reservados.
+                <span className="font-medium text-zinc-400">BarberTool</span>. Todos os direitos reservados.
               </span>
             </p>
             <p className="text-xs leading-[1.65] text-zinc-600 lg:shrink-0 lg:text-right lg:leading-snug">

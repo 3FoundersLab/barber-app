@@ -69,7 +69,7 @@ export const landingNavLinkMicro = cn(
   'after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:origin-left after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform after:duration-300 after:ease-[cubic-bezier(0.22,1,0.36,1)] hover:after:scale-x-100',
 )
 
-/** Painel em destaque (ex.: coluna “Com BarberApp”): brilho no hover. */
+/** Painel em destaque (ex.: coluna “Com BarberTool”): brilho no hover. */
 export const landingPanelGlowHover = cn(
   'transition-[transform,box-shadow,border-color,ring-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
   'hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-xl hover:shadow-primary/10 hover:ring-2 hover:ring-primary/20',

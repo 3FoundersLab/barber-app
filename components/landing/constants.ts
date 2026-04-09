@@ -27,8 +27,8 @@ export const LANDING_CTA = {
 
 /** SEO / meta: palavras-chave usadas de forma natural no corpo da página. */
 export const LANDING_SEO = {
-  siteName: 'BarberApp',
-  title: 'BarberApp, software para barbearia | Agenda, clientes e caixa',
+  siteName: 'BarberTool',
+  title: 'BarberTool, software para barbearia | Agenda, clientes e caixa',
   description:
     'Software para barbearia com agendamento online, gestão da equipe e controle financeiro. Menos caos no WhatsApp, mais horários preenchidos e caixa claro. Teste grátis.',
   keywords: [

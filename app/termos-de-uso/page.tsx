@@ -3,7 +3,7 @@ import { LegalPageHeader } from '@/components/shared/legal-page-header'
 
 export const metadata: Metadata = {
   title: 'Termos de uso',
-  description: 'Termos de uso do BarberApp.',
+  description: 'Termos de uso do BarberTool.',
   robots: { index: true, follow: true },
 }
 
@@ -15,7 +15,7 @@ export default function TermosDeUsoPage() {
         <div className="mx-auto max-w-2xl">
         <h1 className="text-2xl font-semibold tracking-tight">Termos de uso</h1>
         <p className="mt-6 leading-relaxed text-muted-foreground">
-          Esta página está em elaboração. Em breve você encontrará aqui os termos de uso completos do BarberApp.
+          Esta página está em elaboração. Em breve você encontrará aqui os termos de uso completos do BarberTool.
         </p>
         </div>
       </main>

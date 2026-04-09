@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://barberapp.com.br'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://barbertool.com.br'),
   title: {
-    default: 'BarberApp, software para barbearia | Agenda, clientes e caixa',
-    template: '%s | BarberApp',
+    default: 'BarberTool, software para barbearia | Agenda, clientes e caixa',
+    template: '%s | BarberTool',
   },
   description:
     'Software para barbearia com agendamento online, equipe alinhada e controle financeiro. Menos caos no WhatsApp, mais horários preenchidos. Teste grátis.',
@@ -32,14 +32,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'pt_BR',
-    siteName: 'BarberApp',
-    title: 'BarberApp, software para barbearia',
+    siteName: 'BarberTool',
+    title: 'BarberTool, software para barbearia',
     description:
       'Agenda, clientes e caixa na mesma tela. Sistema de gestão feito para donos e barbeiros. Comece grátis.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'BarberApp, software para barbearia',
+    title: 'BarberTool, software para barbearia',
     description: 'Agenda cheia, equipe organizada e caixa claro. Teste grátis.',
   },
   robots: { index: true, follow: true },

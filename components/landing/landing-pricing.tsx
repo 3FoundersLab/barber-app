@@ -74,7 +74,7 @@ const tiers: Tier[] = [
       'Alguém dedicado só pra você',
     ],
     cta: 'Falar com a gente',
-    href: 'mailto:contato@barberapp.com.br?subject=Plano%20Empresarial%20BarberApp',
+    href: 'mailto:contato@barbertool.com.br?subject=Plano%20Empresarial%20BarberTool',
   },
 ]
 
