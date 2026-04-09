@@ -359,9 +359,7 @@ export default function LogsAcoesPage() {
         </div>
 
         <p className="text-sm text-muted-foreground">
-          Auditoria das alterações feitas por super administradores. Os registros ficam em{' '}
-          <span className="font-mono text-xs">sistema_acoes_log</span>. Aplique o script SQL{' '}
-          <span className="font-mono text-xs">031_sistema_acoes_log.sql</span> no Supabase se a tabela ainda não existir.
+          Auditoria das alterações feitas. 
         </p>
 
         {error && (
@@ -552,7 +550,7 @@ export default function LogsAcoesPage() {
               <History className="h-10 w-10 opacity-40" />
               <p>Nenhuma ação encontrada com os filtros atuais.</p>
               <p className="max-w-md text-xs">
-                Quando super administradores criarem, editarem ou excluírem registros instrumentados (ex.: planos), as
+                Quando criarem, editarem ou excluírem registros instrumentados (ex.: planos), as
                 entradas aparecerão aqui, da mais recente para a mais antiga.
               </p>
             </CardContent>

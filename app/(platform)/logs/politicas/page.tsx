@@ -314,8 +314,7 @@ export default function LogsPoliticasPage() {
         </div>
 
         <p className="text-sm text-muted-foreground">
-          Auditoria de alterações e execuções automáticas (cobrança, expiração, planos). Os registros são gravados na
-          tabela <span className="font-mono text-xs">politica_sistema_logs</span>.
+          Auditoria de alterações e execuções automáticas (cobrança, expiração, planos). 
         </p>
 
         {error && (
