@@ -163,22 +163,22 @@ export function LandingHero() {
             variants={heroCopyStaggerItem}
           >
             <Sparkles className="size-3.5 shrink-0 text-primary" aria-hidden />
-            Operação em tempo real — agenda, equipe e caixa
+            Barbearia no controle — agenda, equipe e caixa
           </motion.p>
           <motion.h1
             id="landing-hero-heading"
             className="text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl sm:leading-[1.05] lg:text-[3.25rem] lg:leading-[1.03]"
             variants={heroCopyStaggerItem}
           >
-            Sua barbearia cheia, agenda organizada e caixa fechado no mesmo lugar
+            Agenda cheia, caixa organizado e equipe sob controle
           </motion.h1>
           <motion.p
             className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-zinc-400 sm:text-lg"
             variants={heroCopyStaggerItem}
           >
-            Pare de perder clientes no WhatsApp, horários no improviso e dinheiro sem controle. Com{' '}
-            <span className="font-semibold text-zinc-100">BarberTool</span>, você organiza agenda, equipe e financeiro em
-            minutos.
+            Pare o caos no WhatsApp e no papel. Com{' '}
+            <span className="font-semibold text-zinc-100">BarberTool</span>, você centraliza agendamento, pagamentos e
+            equipe — e volta a focar no atendimento.
           </motion.p>
           <motion.div
             className="mt-10 mb-7 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:flex-wrap sm:items-stretch sm:gap-3"

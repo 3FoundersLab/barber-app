@@ -32,8 +32,6 @@ export function useLandingCarouselSlideActive(slideIndex: number) {
 type LandingPremiumCarouselProps = {
   children: ReactNode
   className?: string
-  /** Carrossel escuro (benefícios / hero-adjacente). */
-  theme?: 'dark'
   /** Repete do primeiro após o último. */
   loop?: boolean
   /** Duração relativa do scroll (Embla; maior = mais lento). */
@@ -48,7 +46,6 @@ type LandingPremiumCarouselProps = {
 export function LandingPremiumCarousel({
   children,
   className,
-  theme = 'dark',
   loop = false,
   scrollDuration = 32,
   labelledBy,
@@ -109,12 +106,12 @@ export function LandingPremiumCarousel({
     [scrollPrev, scrollNext, scrollTo, snapCount],
   )
 
-  const isDark = theme === 'dark'
   const arrowBtn = cn(
     'inline-flex size-11 shrink-0 items-center justify-center rounded-full border transition-[border-color,background-color,box-shadow,transform,color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:size-12',
-    isDark
-      ? 'border-white/16 bg-white/[0.06] text-white shadow-sm shadow-black/20 backdrop-blur-sm hover:border-white/26 hover:bg-white/12 hover:shadow-md disabled:pointer-events-none disabled:opacity-35'
-      : 'border-zinc-200 bg-white text-zinc-900 shadow-sm hover:border-zinc-300 hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-35',
+    'border-zinc-300/95 bg-white text-zinc-800 shadow-md shadow-zinc-900/8 backdrop-blur-sm',
+    'hover:border-primary/40 hover:bg-zinc-50 hover:shadow-lg',
+    'dark:border-white/16 dark:bg-white/[0.06] dark:text-white dark:shadow-black/20 dark:hover:border-white/26 dark:hover:bg-white/12 dark:hover:shadow-md',
+    'disabled:pointer-events-none disabled:opacity-35',
   )
 
   const slideItems = Children.toArray(children).filter(isValidElement)
@@ -185,12 +182,8 @@ export function LandingPremiumCarousel({
               className={cn(
                 'h-2 rounded-full transition-[width,background-color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
                 selectedIndex === i
-                  ? isDark
-                    ? 'w-8 bg-cyan-400/90'
-                    : 'w-8 bg-zinc-900'
-                  : isDark
-                    ? 'w-2 bg-white/20 hover:bg-white/35'
-                    : 'w-2 bg-zinc-300 hover:bg-zinc-400',
+                  ? 'w-8 bg-cyan-600 dark:bg-cyan-400/90'
+                  : 'w-2 bg-zinc-300 hover:bg-zinc-400 dark:bg-white/20 dark:hover:bg-white/35',
               )}
               onClick={() => scrollTo(i)}
             />

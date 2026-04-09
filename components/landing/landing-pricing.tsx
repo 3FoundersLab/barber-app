@@ -14,7 +14,7 @@ import {
   landingTrialCtaClass,
   landingSectionLead,
   landingSectionTitle,
-  landingSectionY,
+  landingSectionYCompact,
 } from '@/components/landing/landing-classes'
 import { LandingFadeIn } from '@/components/landing/landing-reveal'
 import { LANDING_VIEWPORT, staggerContainer, staggerItem } from '@/lib/landing-motion'
@@ -29,6 +29,34 @@ type Tier = {
   highlighted?: boolean
   cta: string
   href: string
+}
+
+function PlanosBackdrop() {
+  return (
+    <>
+      <div className="pointer-events-none absolute inset-0 bg-zinc-950" aria-hidden />
+      <div
+        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950 to-zinc-900"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_100%_80%_at_50%_-20%,rgba(24,24,27,0.9),transparent_55%)]"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_42%_50%_at_0%_50%,rgba(6,182,212,0.09),transparent_65%),radial-gradient(ellipse_42%_50%_at_100%_50%,rgba(6,182,212,0.08),transparent_65%)]"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.028)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.028)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_72%_62%_at_50%_42%,black,transparent)]"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-zinc-950/85 via-transparent to-transparent [mask-image:linear-gradient(to_top,black,transparent)]"
+        aria-hidden
+      />
+    </>
+  )
 }
 
 const tiers: Tier[] = [
@@ -85,25 +113,25 @@ export function LandingPricing() {
     <section
       id={LANDING_SECTIONS.planos}
       className={cn(
-        'scroll-mt-24 border-t border-zinc-200/80 bg-[#f4f4f5] dark:border-zinc-800 dark:bg-zinc-900/50',
-        landingSectionY,
+        'dark relative scroll-mt-24 overflow-hidden border-t border-zinc-800/90',
+        landingSectionYCompact,
       )}
       aria-labelledby="landing-planos-heading"
     >
-      <div className={landingContainer}>
+      <PlanosBackdrop />
+      <div className={`${landingContainer} relative z-10`}>
         <LandingFadeIn className="mx-auto max-w-2xl text-center">
           <p className={landingEyebrow}>Investimento: planos</p>
-          <h2 id="landing-planos-heading" className={landingSectionTitle}>
+          <h2 id="landing-planos-heading" className={cn(landingSectionTitle, 'text-white')}>
             Planos que acompanham o tamanho da sua bancada
           </h2>
-          <p className={cn(landingSectionLead, 'mx-auto')}>
+          <p className={cn(landingSectionLead, 'mx-auto text-zinc-400')}>
             Preços transparentes. No cadastro você confirma o pacote ideal para sua{' '}
-            <strong className="font-semibold text-zinc-800 dark:text-zinc-200">barbearia</strong>, sem surpresa na
-            fatura.
+            <strong className="font-semibold text-zinc-200">barbearia</strong>, sem surpresa na fatura.
           </p>
         </LandingFadeIn>
         <motion.div
-          className="mt-20 grid gap-8 lg:grid-cols-3 lg:gap-6 xl:gap-8"
+          className="mt-10 grid gap-6 lg:grid-cols-3 lg:gap-6 xl:gap-8"
           variants={staggerContainer}
           initial={reduceMotion ? 'visible' : 'hidden'}
           whileInView={reduceMotion ? undefined : 'visible'}
@@ -116,8 +144,15 @@ export function LandingPricing() {
               className={cn(
                 landingCardClass(true),
                 'relative flex flex-col p-8 sm:p-9',
+                'border-zinc-800 bg-zinc-900/50 ring-1 ring-white/[0.06]',
+                'hover:border-zinc-600 hover:shadow-black/30 dark:hover:shadow-black/40',
                 tier.highlighted &&
-                  'border-primary/45 shadow-md ring-2 ring-primary/20 dark:border-primary/50 dark:ring-primary/25',
+                  cn(
+                    'z-[1] border-2 border-primary bg-zinc-900/65',
+                    'shadow-[0_20px_56px_-12px_rgba(249,115,22,0.35),0_0_0_1px_rgba(249,115,22,0.15)]',
+                    'ring-2 ring-primary/45 ring-offset-2 ring-offset-zinc-950',
+                    'hover:border-primary hover:shadow-[0_24px_60px_-10px_rgba(249,115,22,0.4)]',
+                  ),
               )}
             >
               {tier.highlighted ? (
@@ -125,20 +160,18 @@ export function LandingPricing() {
                   Recomendado
                 </span>
               ) : null}
-              <h3 className="text-lg font-semibold text-zinc-950 dark:text-white">{tier.name}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{tier.description}</p>
+              <h3 className="text-lg font-semibold text-white">{tier.name}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{tier.description}</p>
               <p className="mt-8 flex items-baseline gap-1">
-                <span className="text-4xl font-semibold tracking-tight text-zinc-950 tabular-nums dark:text-white">
-                  {tier.price}
-                </span>
+                <span className="text-4xl font-semibold tracking-tight text-white tabular-nums">{tier.price}</span>
                 {tier.period ? (
-                  <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{tier.period}</span>
+                  <span className="text-sm font-medium text-zinc-400">{tier.period}</span>
                 ) : null}
               </p>
-              <ul className="mt-8 flex flex-1 flex-col gap-3.5 text-sm text-zinc-700 dark:text-zinc-300">
+              <ul className="mt-8 flex flex-1 flex-col gap-3.5 text-sm text-zinc-300">
                 {tier.features.map((f) => (
                   <li key={f} className="flex gap-2.5">
-                    <Check className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                    <Check className="mt-0.5 size-5 shrink-0 text-emerald-400" aria-hidden />
                     <span className="leading-snug">{f}</span>
                   </li>
                 ))}
@@ -152,7 +185,7 @@ export function LandingPricing() {
                   tier.name === 'Essencial' && landingPrimaryCtaClass,
                   tier.name === 'Profissional' && landingTrialCtaClass,
                   tier.name === 'Empresarial' &&
-                    'rounded-full border-2 border-zinc-400 bg-white text-zinc-900 shadow-sm hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-900',
+                    'rounded-full border-2 border-zinc-500 bg-zinc-950 text-white shadow-sm hover:border-zinc-400 hover:bg-zinc-900',
                 )}
               >
                 <Link href={tier.href}>{tier.cta}</Link>
@@ -160,8 +193,8 @@ export function LandingPricing() {
             </motion.div>
           ))}
         </motion.div>
-        <LandingFadeIn delay={0.12} className="mt-12 text-center">
-          <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+        <LandingFadeIn delay={0.12} className="mt-8 text-center">
+          <p className="text-sm font-medium text-zinc-400">
             {LANDING_CTA.urgency}{' '}
             <span className="text-primary">{LANDING_CTA.urgencyBanner}</span>
           </p>

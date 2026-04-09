@@ -17,11 +17,11 @@ import {
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 
 const links = [
-  { href: `#${LANDING_SECTIONS.problema}`, label: 'Problema' },
-  { href: `#${LANDING_SECTIONS.solucao}`, label: 'Solução' },
   { href: `#${LANDING_SECTIONS.beneficios}`, label: 'Benefícios' },
-  { href: `#${LANDING_SECTIONS.funcionalidades}`, label: 'Funcionalidades' },
+  { href: `#${LANDING_SECTIONS.demonstracao}`, label: 'Demonstração' },
+  { href: `#${LANDING_SECTIONS.comoFunciona}`, label: 'Como funciona' },
   { href: `#${LANDING_SECTIONS.planos}`, label: 'Planos' },
+  { href: `#${LANDING_SECTIONS.faq}`, label: 'FAQ' },
 ] as const
 
 const navSectionIds = links.map((l) => l.href.replace(/^#/, ''))

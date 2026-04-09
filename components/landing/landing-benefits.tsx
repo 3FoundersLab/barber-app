@@ -3,20 +3,25 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
 import { Check } from 'lucide-react'
-import { LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
+import { Button } from '@/components/ui/button'
+import { LANDING_CTA, LANDING_LINKS, LANDING_SECTIONS } from '@/components/landing/constants'
 import {
   landingButtonLift,
   landingContainer,
+  landingEyebrow,
   landingPrimaryCtaClass,
-  landingSectionY,
+  landingSectionLead,
+  landingSectionTitle,
+  landingSectionYCompact,
 } from '@/components/landing/landing-classes'
+import { LandingFadeIn } from '@/components/landing/landing-reveal'
 import { LandingPremiumCarousel, useLandingCarouselSlideActive } from '@/components/landing/landing-premium-carousel'
-import { Button } from '@/components/ui/button'
-import { LANDING_EASE, LANDING_VIEWPORT } from '@/lib/landing-motion'
+import { LANDING_EASE } from '@/lib/landing-motion'
 import { cn } from '@/lib/utils'
 
-type BenefitBlock = {
+type BenefitSlide = {
   title: string
   lead: string
   bullets: string[]
@@ -24,10 +29,10 @@ type BenefitBlock = {
   imageAlt: string
 }
 
-const blocks: BenefitBlock[] = [
+const slides: BenefitSlide[] = [
   {
     title: 'Gestão completa da barbearia',
-    lead: 'Nunca mais perca um cliente por desorganização. Uma visão só da grade, da equipe e do que falta para o dia fechar redondo.',
+    lead: 'Uma visão só da grade, da equipe e do que falta para o dia fechar redondo — sem planilha paralela.',
     bullets: [
       'Agenda única: dono e barbeiro enxergam o mesmo horário, em tempo real.',
       'Dia organizado em segundos: quem entra, quem sai e onde ainda cabe encaixe.',
@@ -38,298 +43,211 @@ const blocks: BenefitBlock[] = [
     imageAlt: 'Interior de barbearia moderna com cadeiras e espelhos',
   },
   {
-    title: 'Controle financeiro simplificado',
-    lead: 'Saiba quanto entrou e onde está o lucro, sem abrir dez planilhas no domingo à noite.',
+    title: 'Controle financeiro',
+    lead: 'Saiba quanto entrou e de onde veio cada real, sem abrir dez abas no domingo à noite.',
     bullets: [
-      'Corte, barba, Pix e mensalista separados: você vê de onde veio cada real.',
+      'Corte, barba, Pix e mensalista separados: você vê a origem de cada valor.',
       'Pico da semana e vales no radar: ajuste preço e meta com clareza.',
-      'Fechamento do dia que você confia para dormir sem revisar papel.',
+      'Fechamento do dia que você confia antes de trancar a porta.',
     ],
     imageSrc:
       'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1100&q=82',
-    imageAlt: 'Análise financeira em notebook com gráficos',
+    imageAlt: 'Notebook com gráficos e indicadores financeiros',
   },
   {
-    title: 'Comunicação com clientes',
-    lead: 'Cliente lembrado volta. Cliente esquecido some. Menos “sumiu” e mais cadeira cheia.',
+    title: 'Agenda e equipe',
+    lead: 'Grade cheia, fila clara e folga de cada barbeiro no mesmo painel — zero caos no WhatsApp.',
     bullets: [
-      'Lembretes e confirmações que reduzem furo de agenda.',
-      'Histórico na hora: preferências e último corte sem perguntar de novo.',
-      'Menos caos no WhatsApp: informação no lugar certo, para quem precisa.',
+      'Encaixe e reagendamento sem conflito: todos veem a mesma grade.',
+      'Fila por profissional: cada um sabe quem é o próximo.',
+      'Equipe alinhada: menos atrito na bancada, mais ritmo no atendimento.',
     ],
     imageSrc:
-      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=1100&q=82',
-    imageAlt: 'Smartphone com foco em comunicação e apps',
+      'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=1100&q=82',
+    imageAlt: 'Profissional em atendimento na barbearia',
   },
   {
-    title: 'Crescimento e escala',
-    lead: 'Veja o que puxa resultado e repita no próximo mês, com base para contratar ou abrir outra unidade com número na mão.',
+    title: 'Relatórios e comissões',
+    lead: 'Fechamento, metas e comissões refletidas na hora — decisão com número na mão.',
     bullets: [
-      'Sinais claros de horário cheio, serviço forte e equipe no limite.',
-      'Base para escalar: processo repetível em vez de “jeitinho” de cada um.',
-      'Decisões com dado simples: menos achismo, mais margem.',
+      'Leitura rápida do que vende, o que enche a grade e o que pode entrar em promo.',
+      'Histórico que vira padrão: sazonalidade e hábito do cliente na mesma tela.',
+      'Comissões e turno organizados sem planilha escondida.',
     ],
     imageSrc:
       'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1100&q=82',
     imageAlt: 'Dashboard com métricas e gráficos de desempenho',
   },
-  {
-    title: 'Relatórios e inteligência do negócio',
-    lead: 'Pare de decidir no feeling: veja padrões de agenda, ticket e recorrência, e aja antes do problema aparecer no caixa.',
-    bullets: [
-      'Leitura rápida do que vende, o que enche a grade e o que pode sair de promo.',
-      'Histórico que vira previsão: sazonalidade e hábito do cliente na mesma tela.',
-      'Menos planilha paralela: números organizados para reunião com sócio ou equipe.',
-    ],
-    imageSrc:
-      'https://images.unsplash.com/photo-1543286386-713bdd548da4?auto=format&fit=crop&w=1100&q=82',
-    imageAlt: 'Gráficos e indicadores de desempenho em tela',
-  },
 ]
 
-function BenefitsDarkBackdrop({ reduceMotion }: { reduceMotion: boolean }) {
+function BenefitsBackdrop() {
   return (
     <>
-      <div className="pointer-events-none absolute inset-0 bg-zinc-950" aria-hidden />
+      <div className="pointer-events-none absolute inset-0 bg-white dark:hidden" aria-hidden />
       <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-950 to-zinc-900"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_100%_80%_at_50%_-20%,rgba(24,24,27,0.9),transparent_55%)]"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-zinc-50/90 via-white to-white dark:hidden"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_45%_at_78%_28%,rgba(6,182,212,0.09),transparent_62%),radial-gradient(ellipse_40%_35%_at_12%_68%,rgba(59,130,246,0.06),transparent_58%),radial-gradient(ellipse_50%_40%_at_50%_100%,rgba(20,184,166,0.05),transparent_55%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_100%_75%_at_50%_-18%,rgba(234,88,12,0.07),transparent_58%)] dark:hidden"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_85%_70%_at_50%_45%,transparent_0%,rgba(9,9,11,0.55)_100%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_42%_50%_at_0%_50%,rgba(6,182,212,0.06),transparent_65%),radial-gradient(ellipse_42%_50%_at_100%_50%,rgba(6,182,212,0.05),transparent_65%)] dark:hidden"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.028)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.028)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_72%_62%_at_50%_42%,black,transparent)]"
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(24,24,27,0.055)_1px,transparent_1px),linear-gradient(to_bottom,rgba(24,24,27,0.055)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_72%_62%_at_50%_42%,black,transparent)] dark:hidden"
         aria-hidden
       />
-      <motion.div
-        className="pointer-events-none absolute left-1/2 top-[18%] h-[min(62vw,420px)] w-[min(62vw,420px)] -translate-x-1/2 rounded-full bg-cyan-500/[0.1] blur-[72px] md:left-[62%] md:top-[22%] md:translate-x-0"
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-zinc-100/80 via-transparent to-transparent [mask-image:linear-gradient(to_top,black,transparent)] dark:hidden"
         aria-hidden
-        animate={
-          reduceMotion
-            ? undefined
-            : {
-                opacity: [0.32, 0.46, 0.32],
-                scale: [1, 1.03, 1],
-              }
-        }
-        transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
       />
-      <motion.div
-        className="pointer-events-none absolute -left-[14%] bottom-[8%] h-[min(48vw,320px)] w-[min(48vw,320px)] rounded-full bg-teal-600/[0.07] blur-[64px]"
+
+      <div className="pointer-events-none absolute inset-0 hidden bg-zinc-950 dark:block" aria-hidden />
+      <div
+        className="pointer-events-none absolute inset-0 hidden bg-gradient-to-br from-zinc-950 via-zinc-950 to-zinc-900 dark:block"
         aria-hidden
-        animate={reduceMotion ? undefined : { opacity: [0.26, 0.38, 0.26] }}
-        transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
+      />
+      <div
+        className="pointer-events-none absolute inset-0 hidden bg-[radial-gradient(ellipse_100%_80%_at_50%_-20%,rgba(24,24,27,0.9),transparent_55%)] dark:block"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0 hidden bg-[radial-gradient(ellipse_42%_50%_at_0%_50%,rgba(6,182,212,0.09),transparent_65%),radial-gradient(ellipse_42%_50%_at_100%_50%,rgba(6,182,212,0.08),transparent_65%)] dark:block"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(to_right,rgba(255,255,255,0.028)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.028)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_72%_62%_at_50%_42%,black,transparent)] dark:block"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-32 bg-gradient-to-t from-zinc-950/85 via-transparent to-transparent [mask-image:linear-gradient(to_top,black,transparent)] dark:block"
+        aria-hidden
       />
     </>
   )
 }
 
-function BenefitImagePanel({
-  src,
-  alt,
-  reduceMotion,
-  index,
-  isActive,
-}: {
-  src: string
-  alt: string
-  reduceMotion: boolean
-  index: number
-  isActive: boolean
-}) {
-  return (
-    <motion.div
-      className="relative mx-auto w-full max-w-lg lg:max-w-none"
-      initial={false}
-      animate={
-        reduceMotion
-          ? {}
-          : isActive
-            ? { opacity: 1, x: 0, scale: 1 }
-            : { opacity: 0.72, x: 0, scale: 0.992 }
+function BenefitSlidePanel({ slideIndex, slide }: { slideIndex: number; slide: BenefitSlide }) {
+  const active = useLandingCarouselSlideActive(slideIndex)
+  const reduceMotion = useReducedMotion() === true
+  const [enterSeq, setEnterSeq] = useState(0)
+  const prevActive = useRef<boolean | null>(null)
+
+  useEffect(() => {
+    if (active) {
+      const shouldAnimate = prevActive.current === false || prevActive.current === null
+      if (shouldAnimate) {
+        setEnterSeq((n) => n + 1)
       }
-      transition={{ duration: 0.45, ease: LANDING_EASE }}
-    >
-      <motion.div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[105%] w-[88%] -translate-x-1/2 -translate-y-1/2 rounded-[1.75rem] bg-gradient-to-b from-cyan-500/[0.18] via-teal-600/[0.08] to-indigo-950/[0.28] blur-[44px] md:blur-[52px]"
-        animate={
-          reduceMotion
-            ? undefined
-            : {
-                opacity: [0.5, 0.65, 0.5],
-              }
-        }
-        transition={{ duration: 8 + index * 0.4, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <motion.div
-        className={cn(
-          'group relative z-10 overflow-hidden rounded-[1.5rem] shadow-[0_28px_56px_-14px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.07)] ring-1 ring-white/[0.08]',
-          'aspect-[4/3] sm:aspect-[16/10]',
-        )}
-        whileHover={reduceMotion || !isActive ? undefined : { y: -4, transition: { duration: 0.45, ease: LANDING_EASE } }}
-      >
-        <Image
-          src={src}
-          alt={alt}
-          fill
-          className="object-cover object-center transition duration-700 ease-out group-hover:scale-[1.02]"
-          sizes="(max-width: 1024px) 100vw, 48vw"
-        />
-        <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-zinc-950/55 via-transparent to-zinc-950/15"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-cyan-950/10 to-teal-900/15"
-          aria-hidden
-        />
-      </motion.div>
-    </motion.div>
-  )
-}
-
-function BenefitSlide({
-  block,
-  slideIndex,
-  reduceMotion,
-}: {
-  block: BenefitBlock
-  slideIndex: number
-  reduceMotion: boolean
-}) {
-  const isActive = useLandingCarouselSlideActive(slideIndex)
-  const imageLeft = slideIndex % 2 === 0
+      prevActive.current = true
+    } else {
+      prevActive.current = false
+    }
+  }, [active])
 
   return (
-    <article
-      className={cn(
-        'group/slide grid items-center gap-10 md:gap-12 lg:grid-cols-2 lg:gap-16 xl:gap-20',
-        !imageLeft && 'lg:grid-flow-dense',
-      )}
-    >
-      <div className={cn(imageLeft ? 'lg:col-start-1' : 'lg:col-start-2 lg:row-start-1')}>
-        <BenefitImagePanel
-          src={block.imageSrc}
-          alt={block.imageAlt}
-          reduceMotion={reduceMotion}
-          index={slideIndex}
-          isActive={isActive}
-        />
-      </div>
-
+    <div className="mx-auto w-full max-w-5xl px-1 pb-1 sm:px-2 md:px-4">
       <motion.div
-        className={cn(
-          'flex min-h-0 flex-col justify-center pb-1 lg:pb-0',
-          imageLeft ? 'lg:col-start-2' : 'lg:col-start-1 lg:row-start-1',
-        )}
-        initial={false}
-        animate={
-          reduceMotion
-            ? {}
-            : isActive
-              ? { opacity: 1, y: 0 }
-              : { opacity: 0.68, y: 8 }
-        }
-        transition={{ duration: 0.42, ease: LANDING_EASE }}
+        key={enterSeq}
+        className="grid grid-cols-1 items-center gap-8 md:grid-cols-2 md:gap-10 lg:gap-14"
+        initial={reduceMotion ? false : { opacity: 0, x: 40 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5, ease: LANDING_EASE }}
       >
-        <h3 className="text-2xl font-semibold tracking-tight text-white sm:text-[1.65rem] sm:leading-snug">{block.title}</h3>
-        <p className="mt-4 text-pretty text-base leading-relaxed text-zinc-400 sm:text-lg">{block.lead}</p>
-        <ul className="mt-6 space-y-3 sm:mt-7 sm:space-y-3.5" role="list">
-          {block.bullets.map((item) => (
-            <li key={item} className="flex gap-3 text-sm leading-relaxed text-zinc-300 sm:text-[0.9375rem]">
-              <span
-                className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-cyan-300 ring-1 ring-cyan-400/25"
-                aria-hidden
+        <div className="relative order-1 w-full overflow-hidden rounded-2xl shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200/90 dark:shadow-[0_28px_64px_-24px_rgba(0,0,0,0.75)] dark:ring-white/[0.08]">
+          <div className="relative aspect-[4/3] w-full sm:aspect-[5/4] md:aspect-[4/3]">
+            <Image
+              src={slide.imageSrc}
+              alt={slide.imageAlt}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              priority={slideIndex === 0}
+            />
+            <div
+              className="pointer-events-none absolute inset-0 bg-gradient-to-t from-zinc-950/25 via-transparent to-transparent dark:from-zinc-950/50"
+              aria-hidden
+            />
+          </div>
+        </div>
+
+        <div className="order-2 flex min-w-0 flex-col text-left">
+          <h3 className="text-2xl font-semibold tracking-tight text-zinc-950 sm:text-[1.65rem] sm:leading-snug dark:text-white">
+            {slide.title}
+          </h3>
+          <p className="mt-4 text-sm leading-relaxed text-zinc-600 sm:text-base dark:text-zinc-400">{slide.lead}</p>
+          <ul className="mt-6 flex flex-col gap-3.5">
+            {slide.bullets.map((line) => (
+              <li
+                key={line}
+                className="flex gap-3 text-sm leading-snug text-zinc-700 sm:text-[0.9375rem] dark:text-zinc-300"
               >
-                <Check className="size-3" strokeWidth={2.5} />
-              </span>
-              <span>{item}</span>
-            </li>
-          ))}
-        </ul>
+                <Check
+                  className="mt-0.5 size-5 shrink-0 text-cyan-600 dark:text-cyan-400/95"
+                  strokeWidth={2.25}
+                  aria-hidden
+                />
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </motion.div>
-    </article>
+    </div>
   )
 }
 
 export function LandingBenefits() {
-  const reduceMotion = useReducedMotion() === true
-
   return (
     <section
       id={LANDING_SECTIONS.beneficios}
-      className={cn('relative scroll-mt-24 overflow-hidden border-y border-white/[0.06] text-white', landingSectionY)}
+      className={cn(
+        'relative scroll-mt-24 overflow-hidden bg-white text-zinc-950 dark:bg-zinc-950 dark:text-white',
+        landingSectionYCompact,
+      )}
       aria-labelledby="landing-beneficios-heading"
     >
-      <BenefitsDarkBackdrop reduceMotion={reduceMotion} />
+      <BenefitsBackdrop />
 
       <div className={`${landingContainer} relative z-10`}>
-        <motion.header
-          className="mx-auto max-w-3xl text-center"
-          initial={reduceMotion ? false : { opacity: 0, y: 26 }}
-          whileInView={
-            reduceMotion
-              ? undefined
-              : { opacity: 1, y: 0, transition: { duration: 0.58, ease: LANDING_EASE } }
-          }
-          viewport={LANDING_VIEWPORT}
-        >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary sm:text-xs">
-            Benefícios: resultado na bancada
-          </p>
-          <h2
-            id="landing-beneficios-heading"
-            className="mt-4 text-balance text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-[2.625rem] lg:leading-[1.1]"
-          >
+        <LandingFadeIn className="mx-auto max-w-2xl text-center">
+          <p className={cn(landingEyebrow, 'tracking-[0.2em]')}>Benefícios: resultado na bancada</p>
+          <h2 id="landing-beneficios-heading" className={landingSectionTitle}>
             Benefícios e soluções para sua barbearia crescer
           </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-zinc-400 sm:text-lg">
-            Navegue pelos destaques: cada slide é um capítulo da operação, da organização à inteligência do negócio.
+          <p className={cn(landingSectionLead, 'mx-auto')}>
+            Cada slide mostra um pilar do BarberTool — navegue e veja o que muda no chão da operação.
           </p>
-        </motion.header>
+        </LandingFadeIn>
 
-        <div className="mt-14 sm:mt-16">
-          <LandingPremiumCarousel theme="dark" loop={false} scrollDuration={34} labelledBy="landing-beneficios-heading">
-            {blocks.map((block, index) => (
-              <BenefitSlide key={block.title} block={block} slideIndex={index} reduceMotion={reduceMotion} />
+        <div className="mt-10 sm:mt-12 lg:mt-14">
+          <LandingPremiumCarousel
+            loop
+            scrollDuration={42}
+            labelledBy="landing-beneficios-heading"
+          >
+            {slides.map((slide, i) => (
+              <BenefitSlidePanel key={slide.title} slideIndex={i} slide={slide} />
             ))}
           </LandingPremiumCarousel>
         </div>
 
-        <motion.div
-          className="mx-auto mt-12 max-w-xl text-center sm:mt-14"
-          initial={reduceMotion ? false : { opacity: 0, y: 20 }}
-          whileInView={
-            reduceMotion
-              ? undefined
-              : { opacity: 1, y: 0, transition: { duration: 0.52, ease: LANDING_EASE, delay: 0.06 } }
-          }
-          viewport={LANDING_VIEWPORT}
-        >
+        <LandingFadeIn delay={0.08} className="mt-10 flex justify-center sm:mt-12">
           <Button
             asChild
             variant="ghost"
-            size="lg"
             className={cn(
-              'h-14 px-8 text-sm font-bold sm:px-10 sm:text-base',
               landingPrimaryCtaClass,
               landingButtonLift,
+              'h-12 min-w-[min(100%,280px)] px-10 text-sm font-bold sm:h-14 sm:px-12 sm:text-base',
             )}
           >
-            <Link href={LANDING_LINKS.cadastro}>Começar gratuitamente</Link>
+            <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.primary}</Link>
           </Button>
-        </motion.div>
+        </LandingFadeIn>
       </div>
     </section>
   )
