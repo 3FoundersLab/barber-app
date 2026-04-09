@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, LogIn, Pencil, Plus, Search } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, ChevronRight, LogIn, Pencil, Plus, Search, Ticket } from 'lucide-react'
 import { PageContainer, PageContent, PageTitle } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { superPageContainerClass, superPremiumAppHeaderClass } from '@/components/super/super-ui'
@@ -35,6 +35,7 @@ import { SUPER_ADMIN_BARBEARIA_STORAGE_KEY } from '@/lib/resolve-admin-barbearia
 import { tenantBarbeariaDashboardPath } from '@/lib/routes'
 import type { Assinatura, Barbearia } from '@/types'
 import { SuperBarbeariasCadastroMensalChart } from '@/components/super/super-barbearias-cadastro-mensal-chart'
+import { barbeariasIdsComPlano } from '@/lib/barbearias-cadastro-mensal-chart'
 import { cn } from '@/lib/utils'
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const
@@ -47,6 +48,8 @@ const SORT_OPTIONS = [
   { value: 'slug_desc', label: 'Slug (Z–A)' },
 ] as const
 type BarbeariasSort = (typeof SORT_OPTIONS)[number]['value']
+
+type BarbeariasPlanoFilter = 'com' | 'sem' | null
 
 function pageNumberItems(current: number, total: number): (number | 'ellipsis')[] {
   if (total <= 7) {
@@ -77,6 +80,7 @@ export default function SuperBarbeariasPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<BarbeariasPageSize>(10)
   const [sortBy, setSortBy] = useState<BarbeariasSort>('nome_asc')
+  const [planoFilter, setPlanoFilter] = useState<BarbeariasPlanoFilter>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -86,7 +90,7 @@ export default function SuperBarbeariasPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [search, sortBy])
+  }, [search, sortBy, planoFilter])
 
   async function loadBarbearias() {
     const supabase = createClient()
@@ -163,8 +167,28 @@ export default function SuperBarbeariasPage() {
     )
   }
 
+  const comPlanoIds = useMemo(
+    () => barbeariasIdsComPlano(assinaturasResumo),
+    [assinaturasResumo],
+  )
+
+  const countComPlano = useMemo(() => {
+    let n = 0
+    for (const b of barbearias) {
+      if (comPlanoIds.has(b.id)) n++
+    }
+    return n
+  }, [barbearias, comPlanoIds])
+
+  const countSemPlano = barbearias.length - countComPlano
+
   const filtered = useMemo(() => {
     let rows = barbearias
+    if (planoFilter === 'com') {
+      rows = rows.filter((b) => comPlanoIds.has(b.id))
+    } else if (planoFilter === 'sem') {
+      rows = rows.filter((b) => !comPlanoIds.has(b.id))
+    }
     if (search.trim()) {
       const q = search.toLowerCase()
       rows = rows.filter((b) => b.nome.toLowerCase().includes(q) || b.slug.toLowerCase().includes(q))
@@ -177,7 +201,7 @@ export default function SuperBarbeariasPage() {
       const cmp = (a.slug || '').localeCompare(b.slug || '', 'pt-BR', { sensitivity: 'base' })
       return sortBy === 'slug_asc' ? cmp : -cmp
     })
-  }, [barbearias, search, sortBy])
+  }, [barbearias, search, sortBy, planoFilter, comPlanoIds])
 
   const totalPages =
     filtered.length === 0 ? 0 : Math.ceil(filtered.length / pageSize)
@@ -237,6 +261,57 @@ export default function SuperBarbeariasPage() {
             assinaturas={assinaturasResumo}
           />
         )}
+
+        {!isLoading ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              aria-pressed={planoFilter === 'com'}
+              aria-label={`Filtrar por barbearias com plano ativo, ${countComPlano}. Ativar ou desativar o filtro.`}
+              onClick={() => setPlanoFilter((f) => (f === 'com' ? null : 'com'))}
+              className={cn(
+                'rounded-xl border bg-card text-left shadow-sm transition outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                planoFilter === 'com'
+                  ? 'border-emerald-500 ring-2 ring-emerald-500/25'
+                  : 'border-border/80 hover:bg-muted/35',
+              )}
+            >
+              <div className="flex items-center gap-4 p-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400">
+                  <CheckCircle2 className="h-6 w-6" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm text-muted-foreground">Com plano ativo</p>
+                  <p className="text-2xl font-semibold tabular-nums text-foreground">{countComPlano}</p>
+                  <p className="text-xs text-muted-foreground">Assinatura em status ativa</p>
+                </div>
+              </div>
+            </button>
+            <button
+              type="button"
+              aria-pressed={planoFilter === 'sem'}
+              aria-label={`Filtrar por barbearias sem plano ativo, ${countSemPlano}. Ativar ou desativar o filtro.`}
+              onClick={() => setPlanoFilter((f) => (f === 'sem' ? null : 'sem'))}
+              className={cn(
+                'rounded-xl border bg-card text-left shadow-sm transition outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                planoFilter === 'sem'
+                  ? 'border-amber-500 ring-2 ring-amber-500/25'
+                  : 'border-border/80 hover:bg-muted/35',
+              )}
+            >
+              <div className="flex items-center gap-4 p-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300">
+                  <Ticket className="h-6 w-6" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm text-muted-foreground">Sem plano ativo</p>
+                  <p className="text-2xl font-semibold tabular-nums text-foreground">{countSemPlano}</p>
+                  <p className="text-xs text-muted-foreground">Sem assinatura ativa no momento</p>
+                </div>
+              </div>
+            </button>
+          </div>
+        ) : null}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <div className="relative min-w-0 flex-1">
