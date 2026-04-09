@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { createClient } from '@/lib/supabase/client'
 import { clearProfileCache } from '@/lib/profile-cache'
+import { signOutWithPersistenceClear } from '@/lib/supabase/sign-out-client'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 
@@ -29,7 +30,7 @@ export function UserHeaderMenu({ avatarSrc, fallback, profileHref }: UserHeaderM
   const handleLogout = async () => {
     const supabase = createClient()
     clearProfileCache()
-    await supabase.auth.signOut()
+    await signOutWithPersistenceClear(supabase)
     router.push('/login')
   }
 

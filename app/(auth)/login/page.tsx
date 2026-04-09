@@ -18,13 +18,21 @@ import {
 import { AppBrandLogo } from '@/components/shared/app-brand-logo'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Spinner } from '@/components/ui/spinner'
 import { LANDING_EASE } from '@/lib/landing-motion'
+import {
+  finalizeAuthPersistenceAfterLogin,
+  prepareAuthPersistenceForLogin,
+  resetPendingAuthPersistence,
+} from '@/lib/auth-session-persistence'
 import { normalizeEmailInput } from '@/lib/format-contato'
+import { mapSupabaseAuthErrorToMessage } from '@/lib/map-supabase-auth-error'
 import { createClient } from '@/lib/supabase/client'
+import { signOutWithPersistenceClear } from '@/lib/supabase/sign-out-client'
 import { clearProfileCache } from '@/lib/profile-cache'
 import { fetchSessionProfile } from '@/lib/supabase/fetch-session-profile'
 import { resolveBarbeariaSlugForUser } from '@/lib/resolve-admin-barbearia-slug'
@@ -51,6 +59,7 @@ function LoginPageContent() {
     email: '',
     password: '',
   })
+  const [keepSignedIn, setKeepSignedIn] = useState(true)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,30 +79,33 @@ function LoginPageContent() {
         }
       }
 
+      prepareAuthPersistenceForLogin(keepSignedIn)
       const { error: authError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       })
 
       if (authError) {
-        setError('Email ou senha inválidos')
+        resetPendingAuthPersistence()
+        setError(mapSupabaseAuthErrorToMessage(authError))
         return
       }
 
+      finalizeAuthPersistenceAfterLogin(keepSignedIn)
       await supabase.auth.refreshSession()
 
       const {
         data: { user },
       } = await supabase.auth.getUser()
       if (user) {
-        const barbeariaSlug = searchParams.get('barbearia')?.trim().toLowerCase()
+        const barbeariaSlugParam = searchParams.get('barbearia')?.trim().toLowerCase()
 
-        if (barbeariaSlug) {
-          const { data: bar } = await supabase.from('barbearias').select('id').eq('slug', barbeariaSlug).maybeSingle()
+        if (barbeariaSlugParam) {
+          const { data: bar } = await supabase.from('barbearias').select('id').eq('slug', barbeariaSlugParam).maybeSingle()
           if (!bar?.id) {
             setError('Barbearia não encontrada para esta URL')
             clearProfileCache()
-            await supabase.auth.signOut()
+            await signOutWithPersistenceClear(supabase)
             return
           }
           const vinculo = await rpcUserIsMemberOfBarbearia(supabase, bar.id)
@@ -101,7 +113,7 @@ function LoginPageContent() {
           if (!vinculo) {
             setError('Seu usuário não pertence à barbearia da URL')
             clearProfileCache()
-            await supabase.auth.signOut()
+            await signOutWithPersistenceClear(supabase)
             return
           }
         }
@@ -111,7 +123,7 @@ function LoginPageContent() {
         if (profile?.ativo === false) {
           setError('Esta conta está desativada. Entre em contato com o administrador da plataforma.')
           clearProfileCache()
-          await supabase.auth.signOut()
+          await signOutWithPersistenceClear(supabase)
           return
         }
 
@@ -121,8 +133,8 @@ function LoginPageContent() {
         } else if (profile?.role === 'admin') {
           let resolvedSlug: string | null = null
 
-          if (barbeariaSlug) {
-            const { data: bDirect } = await supabase.from('barbearias').select('slug').eq('slug', barbeariaSlug).maybeSingle()
+          if (barbeariaSlugParam) {
+            const { data: bDirect } = await supabase.from('barbearias').select('slug').eq('slug', barbeariaSlugParam).maybeSingle()
 
             if (bDirect?.slug) {
               resolvedSlug = bDirect.slug
@@ -137,7 +149,7 @@ function LoginPageContent() {
               'Não encontramos vínculo com uma barbearia para esta conta. Se você acabou de se cadastrar, use o mesmo e-mail do cadastro ou refaça o cadastro em Cadastrar barbearia. Se o problema continuar, peça ao suporte para conferir a tabela barbearia_users no banco.',
             )
             clearProfileCache()
-            await supabase.auth.signOut()
+            await signOutWithPersistenceClear(supabase)
             return
           }
 
@@ -152,6 +164,7 @@ function LoginPageContent() {
         }
       }
     } catch {
+      resetPendingAuthPersistence()
       setError('Erro ao fazer login. Tente novamente.')
     } finally {
       setIsLoading(false)
@@ -379,6 +392,35 @@ function LoginPageContent() {
                         >
                           {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                         </button>
+                      </div>
+                    </div>
+
+                    <div
+                      className={cn(
+                        'flex items-start gap-3 pt-0.5 transition-opacity',
+                        isLoading && 'pointer-events-none opacity-60',
+                      )}
+                    >
+                      <Checkbox
+                        id="keep-signed-in"
+                        checked={keepSignedIn}
+                        onCheckedChange={(v) => setKeepSignedIn(v === true)}
+                        disabled={isLoading}
+                        className="mt-0.5"
+                        aria-describedby="keep-signed-in-hint"
+                      />
+                      <div className="grid gap-1 leading-none">
+                        <Label
+                          htmlFor="keep-signed-in"
+                          className="cursor-pointer text-sm font-medium leading-snug text-foreground"
+                        >
+                          Manter conectado
+                        </Label>
+                        <p id="keep-signed-in-hint" className="text-xs leading-relaxed text-muted-foreground">
+                          {keepSignedIn
+                            ? 'Você permanece logado por até 30 dias neste dispositivo.'
+                            : 'Ao fechar o navegador, será preciso entrar de novo neste aparelho.'}
+                        </p>
                       </div>
                     </div>
 

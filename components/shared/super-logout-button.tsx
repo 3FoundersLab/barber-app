@@ -5,6 +5,7 @@ import { LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { clearProfileCache } from '@/lib/profile-cache'
+import { signOutWithPersistenceClear } from '@/lib/supabase/sign-out-client'
 import { cn } from '@/lib/utils'
 
 type SuperLogoutButtonProps = {
@@ -20,7 +21,7 @@ export function SuperLogoutButton({ variant = 'button', className, compact }: Su
   const handleLogout = async () => {
     const supabase = createClient()
     clearProfileCache()
-    await supabase.auth.signOut()
+    await signOutWithPersistenceClear(supabase)
     router.push('/login')
   }
 

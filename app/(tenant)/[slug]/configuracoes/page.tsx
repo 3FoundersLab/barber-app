@@ -30,6 +30,7 @@ import { AdminConfiguracoesPageSkeleton } from '@/components/shared/loading-skel
 import { Separator } from '@/components/ui/separator'
 import { ProfileAvatarUpload } from '@/components/shared/profile-avatar-upload'
 import { createClient } from '@/lib/supabase/client'
+import { signOutWithPersistenceClear } from '@/lib/supabase/sign-out-client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { tenantBarbeariaBasePath } from '@/lib/routes'
 import { clearProfileCache, setProfileCache } from '@/lib/profile-cache'
@@ -231,7 +232,7 @@ export default function AdminConfiguracoesPage() {
   const handleLogout = async () => {
     const supabase = createClient()
     clearProfileCache()
-    await supabase.auth.signOut()
+    await signOutWithPersistenceClear(supabase)
     router.push('/login')
   }
 

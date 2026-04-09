@@ -1,6 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import type { User } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
+import {
+  AUTH_PERSIST_INDICATOR_COOKIE,
+  applyAuthPersistenceToSetCookieOptions,
+  getPersistLongFromRequestCookie,
+} from '@/lib/auth-session-persistence'
 
 export async function updateSessionWithUser(request: NextRequest): Promise<{
   response: NextResponse
@@ -10,6 +15,10 @@ export async function updateSessionWithUser(request: NextRequest): Promise<{
   let supabaseResponse = NextResponse.next({
     request,
   })
+
+  const persistLong = getPersistLongFromRequestCookie(
+    request.cookies.get(AUTH_PERSIST_INDICATOR_COOKIE)?.value,
+  )
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,9 +35,11 @@ export async function updateSessionWithUser(request: NextRequest): Promise<{
           supabaseResponse = NextResponse.next({
             request,
           })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
-          )
+          cookiesToSet.forEach(({ name, value, options }) => {
+            const clearing = !value
+            const nextOpts = applyAuthPersistenceToSetCookieOptions(options, persistLong, clearing)
+            supabaseResponse.cookies.set(name, value, nextOpts)
+          })
         },
       },
     },
