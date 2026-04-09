@@ -14,6 +14,7 @@ import {
   landingPrimaryCtaClass,
 } from '@/components/landing/landing-classes'
 import { AppBrandLogo } from '@/components/shared/app-brand-logo'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -58,13 +59,13 @@ const STEPS = [
 ]
 
 const cadastroInputPremium = cn(
-  'h-11 rounded-xl border-zinc-700/80 bg-zinc-900/70 text-zinc-100 shadow-none placeholder:text-zinc-500',
-  'focus-visible:border-cyan-400/45 focus-visible:ring-2 focus-visible:ring-cyan-400/20',
+  'h-11 rounded-xl border border-input bg-background text-foreground shadow-none placeholder:text-muted-foreground',
+  'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/35',
 )
 
 const cadastroLabelPremium = cn(
-  'text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500',
-  '[&_span.text-destructive]:text-red-400',
+  'text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground',
+  '[&_span.text-destructive]:text-destructive',
 )
 
 const cadastroInputError = 'border-red-500/70 focus-visible:border-red-500/70 focus-visible:ring-red-500/25'
@@ -432,8 +433,8 @@ export default function CadastroBarbeariaPage() {
 
   return (
     <LoginLandingShell>
-      <header className="shrink-0 border-b border-white/[0.06] bg-zinc-950/40 backdrop-blur-sm">
-        <div className={cn(landingContainer, 'flex items-center justify-between py-4')}>
+      <header className="shrink-0 border-b border-border/80 bg-background/75 backdrop-blur-md dark:border-white/10 dark:bg-zinc-950/50">
+        <div className={cn(landingContainer, 'flex flex-wrap items-center justify-between gap-3 py-4')}>
           <motion.div
             initial={reduceMotion ? false : { opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -441,14 +442,15 @@ export default function CadastroBarbeariaPage() {
           >
             <AppBrandLogo
               href="/"
-              textClassName="text-lg font-semibold tracking-tight text-white sm:text-xl"
-              className="gap-2.5 rounded-lg outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-cyan-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+              textClassName="text-lg font-semibold tracking-tight text-foreground sm:text-xl"
+              className="gap-2.5 rounded-lg outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             />
           </motion.div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <ThemeToggle inline variant="landing" />
             <Link
               href={LANDING_LINKS.login}
-              className="text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-zinc-100"
+              className="text-sm font-medium text-muted-foreground transition-colors duration-300 hover:text-foreground"
             >
               Já tenho conta
             </Link>
@@ -477,10 +479,10 @@ export default function CadastroBarbeariaPage() {
           >
             <div className="text-center lg:text-left">
               <p className={landingEyebrow}>Onboarding BarberApp</p>
-              <h1 className="mt-3 text-balance text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              <h1 className="mt-3 text-balance text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
                 Cadastre sua barbearia
               </h1>
-              <p className="mx-auto mt-3 max-w-xl text-pretty text-sm leading-relaxed text-zinc-400 sm:text-base lg:mx-0">
+              <p className="mx-auto mt-3 max-w-xl text-pretty text-sm leading-relaxed text-muted-foreground sm:text-base lg:mx-0">
                 Três passos rápidos: dados, endereço e plano. Mesma identidade visual da landing, com você dentro do
                 produto o tempo todo.
               </p>
@@ -488,7 +490,7 @@ export default function CadastroBarbeariaPage() {
 
             <nav
               aria-label="Progresso do cadastro"
-              className="rounded-2xl border border-white/[0.08] bg-zinc-950/50 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] backdrop-blur-sm sm:p-5"
+              className="rounded-2xl border border-border/80 bg-muted/30 p-4 shadow-[inset_0_1px_0_0_rgba(0,0,0,0.04)] backdrop-blur-sm sm:p-5 dark:border-white/[0.08] dark:bg-zinc-950/50 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
             >
               <ol className="flex w-full items-center">
                 {STEPS.map((step, index) => {
@@ -505,8 +507,10 @@ export default function CadastroBarbeariaPage() {
                               'border-cyan-400/70 bg-cyan-500/20 text-cyan-100 shadow-[0_0_20px_-6px_rgba(34,211,238,0.45)]',
                             active &&
                               !done &&
-                              'border-cyan-400/90 bg-cyan-500/15 text-white shadow-md ring-2 ring-cyan-400/35 ring-offset-2 ring-offset-zinc-950',
-                            !active && !done && 'border-zinc-600 bg-zinc-900/80 text-zinc-500',
+                              'border-cyan-400/90 bg-cyan-500/15 text-foreground shadow-md ring-2 ring-cyan-400/35 ring-offset-2 ring-offset-background dark:text-white',
+                            !active &&
+                              !done &&
+                              'border-border bg-muted text-muted-foreground dark:border-zinc-600 dark:bg-zinc-900/80 dark:text-zinc-500',
                           )}
                           aria-current={active ? 'step' : undefined}
                         >
@@ -515,7 +519,7 @@ export default function CadastroBarbeariaPage() {
                         <span
                           className={cn(
                             'max-w-[5.5rem] text-center text-[10px] font-medium leading-tight sm:max-w-none sm:text-left sm:text-sm',
-                            active ? 'text-zinc-100' : 'text-zinc-500',
+                            active ? 'text-foreground dark:text-zinc-100' : 'text-muted-foreground dark:text-zinc-500',
                           )}
                         >
                           <span className="sm:hidden">{step.short}</span>
@@ -526,7 +530,7 @@ export default function CadastroBarbeariaPage() {
                         <div
                           className={cn(
                             'mx-1.5 h-0.5 min-w-[0.75rem] flex-1 rounded-full transition-colors duration-300 sm:mx-3',
-                            currentStep > step.id ? 'bg-cyan-500/60' : 'bg-zinc-700/80',
+                            currentStep > step.id ? 'bg-cyan-500/60' : 'bg-border dark:bg-zinc-700/80',
                           )}
                           aria-hidden
                         />
@@ -539,17 +543,17 @@ export default function CadastroBarbeariaPage() {
 
             <div
               className={cn(
-                'rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.07] to-white/[0.025] p-6 shadow-[0_24px_64px_-28px_rgba(0,0,0,0.55)] backdrop-blur-md sm:p-8',
-                'ring-1 ring-white/[0.04]',
+                'rounded-2xl border border-border/80 bg-card/95 p-6 shadow-[0_24px_64px_-28px_rgba(0,0,0,0.08)] backdrop-blur-md sm:p-8',
+                'ring-1 ring-border/40 dark:border-white/[0.08] dark:bg-gradient-to-b dark:from-white/[0.07] dark:to-white/[0.025] dark:shadow-[0_24px_64px_-28px_rgba(0,0,0,0.55)] dark:ring-white/[0.04]',
               )}
             >
-              <div className="border-b border-white/[0.06] pb-6">
-                <h2 className="text-xl font-semibold tracking-tight text-white sm:text-[1.35rem]">
+              <div className="border-b border-border pb-6 dark:border-white/[0.06]">
+                <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-[1.35rem]">
                   {currentStep === 1 && 'Dados principais'}
                   {currentStep === 2 && 'Endereço da barbearia'}
                   {currentStep === 3 && 'Escolha do plano'}
                 </h2>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {currentStep === 1 &&
                     'Nome, identificador na URL, contato e dados de acesso da conta responsável.'}
                   {currentStep === 2 &&
@@ -557,7 +561,7 @@ export default function CadastroBarbeariaPage() {
                   {currentStep === 3 && 'Selecione o plano e revise o resumo antes de finalizar.'}
                 </p>
                 {hasSession ? (
-                  <p className="mt-3 rounded-lg border border-cyan-500/20 bg-cyan-500/[0.08] px-3 py-2 text-sm text-cyan-100/90">
+                  <p className="mt-3 rounded-lg border border-sky-500/25 bg-sky-500/10 px-3 py-2 text-sm text-sky-900 dark:border-cyan-500/20 dark:bg-cyan-500/[0.08] dark:text-cyan-100/90">
                     Você já está logado. Complete os passos; não é necessário informar senha novamente.
                   </p>
                 ) : null}
@@ -714,7 +718,7 @@ export default function CadastroBarbeariaPage() {
                         <button
                           type="button"
                           onClick={() => setShowSenha((prev) => !prev)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-zinc-200"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                           aria-label={showSenha ? 'Ocultar senha' : 'Mostrar senha'}
                         >
                           {showSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -754,7 +758,7 @@ export default function CadastroBarbeariaPage() {
                         <button
                           type="button"
                           onClick={() => setShowConfirmarSenha((prev) => !prev)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-zinc-200"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                           aria-label={showConfirmarSenha ? 'Ocultar senha' : 'Mostrar senha'}
                         >
                           {showConfirmarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -780,7 +784,7 @@ export default function CadastroBarbeariaPage() {
                     fieldErrors={step2Errors}
                     inputClassName={cadastroInputPremium}
                     labelClassName={cadastroLabelPremium}
-                    className="[&_.text-muted-foreground]:text-zinc-500"
+                    className="[&_.text-muted-foreground]:text-muted-foreground"
                   />
                 )}
 
@@ -788,7 +792,7 @@ export default function CadastroBarbeariaPage() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label className={cadastroLabelPremium}>Período de cobrança</Label>
-                      <p className="text-xs leading-relaxed text-zinc-500">
+                      <p className="text-xs leading-relaxed text-muted-foreground">
                         O valor exibido em cada plano é o total do período (preço mensal do catálogo × meses).
                       </p>
                       <PlanoPeriodicidadeToggle
@@ -798,7 +802,7 @@ export default function CadastroBarbeariaPage() {
                           setFormData((prev) => ({ ...prev, planoPeriodicidade }))
                         }
                         disabled={isSubmitting || isLoadingPlans}
-                        tone="darkSurface"
+                        tone="default"
                       />
                     </div>
                     <div className="space-y-2">
@@ -806,7 +810,7 @@ export default function CadastroBarbeariaPage() {
                         Planos disponíveis
                       </Label>
                       {isLoadingPlans ? (
-                        <CadastroPlanoGridSkeleton className="[&>div]:border-white/[0.08] [&>div]:bg-zinc-900/35" />
+                        <CadastroPlanoGridSkeleton className="[&>div]:border-border [&>div]:bg-muted/50 dark:[&>div]:border-white/[0.08] dark:[&>div]:bg-zinc-900/35" />
                       ) : planos.length > 0 ? (
                         <div className="grid gap-3 md:grid-cols-3">
                           {planos.map((plano) => {
@@ -825,10 +829,10 @@ export default function CadastroBarbeariaPage() {
                                 onClick={() => setFormData((prev) => ({ ...prev, planoId: plano.id }))}
                                 className={cn(
                                   'relative rounded-xl border-2 p-4 pt-5 text-left transition-all duration-300',
-                                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
+                                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                                   isSelected
-                                    ? 'border-cyan-400/55 bg-cyan-500/[0.12] shadow-[0_0_0_1px_rgba(34,211,238,0.12)] shadow-cyan-950/25 ring-2 ring-cyan-400/20'
-                                    : 'border-white/[0.1] bg-zinc-900/40 hover:border-cyan-500/35 hover:bg-zinc-800/50',
+                                    ? 'border-primary/50 bg-primary/10 shadow-sm ring-2 ring-primary/20 dark:border-cyan-400/55 dark:bg-cyan-500/[0.12] dark:shadow-cyan-950/25 dark:ring-cyan-400/20'
+                                    : 'border-border bg-muted/40 hover:border-primary/35 hover:bg-muted/70 dark:border-white/[0.1] dark:bg-zinc-900/40 dark:hover:border-cyan-500/35 dark:hover:bg-zinc-800/50',
                                 )}
                                 disabled={isSubmitting}
                               >
@@ -836,43 +840,55 @@ export default function CadastroBarbeariaPage() {
                                   className={cn(
                                     'absolute right-3 top-3 flex size-8 items-center justify-center rounded-full border-2 transition-colors duration-200',
                                     isSelected
-                                      ? 'border-cyan-400 bg-cyan-500 text-white shadow-[0_0_12px_-2px_rgba(34,211,238,0.45)]'
-                                      : 'border-zinc-600/80 bg-zinc-800/80',
+                                      ? 'border-primary bg-primary text-primary-foreground shadow-md dark:border-cyan-400 dark:bg-cyan-500 dark:text-white dark:shadow-[0_0_12px_-2px_rgba(34,211,238,0.45)]'
+                                      : 'border-border bg-muted dark:border-zinc-600/80 dark:bg-zinc-800/80',
                                   )}
                                   aria-hidden
                                 >
                                   {isSelected ? <Check className="size-4 stroke-[3]" /> : null}
                                 </span>
-                                <p className="pr-10 font-semibold text-zinc-100">{plano.nome}</p>
+                                <p className="pr-10 font-semibold text-foreground dark:text-zinc-100">{plano.nome}</p>
                                 <p
                                   className={cn(
                                     'pr-10 text-sm font-medium tabular-nums',
-                                    isSelected ? 'text-cyan-100/90' : 'text-zinc-500',
+                                    isSelected
+                                      ? 'text-primary dark:text-cyan-100/90'
+                                      : 'text-muted-foreground dark:text-zinc-500',
                                   )}
                                 >
                                   {formatCurrency(totalPeriodo)}
                                   {sufixoPrecoPeriodicidade(formData.planoPeriodicidade)}
                                 </p>
                                 {formData.planoPeriodicidade !== 'mensal' ? (
-                                  <p className="pr-10 text-[11px] text-zinc-500">
+                                  <p className="pr-10 text-[11px] text-muted-foreground dark:text-zinc-500">
                                     {meses}× {formatCurrency(plano.preco_mensal)}/mês
                                   </p>
                                 ) : null}
-                                <ul className="mt-2 space-y-1 text-left text-xs text-zinc-500">
+                                <ul className="mt-2 space-y-1 text-left text-xs text-muted-foreground dark:text-zinc-500">
                                   {linhasBeneficiosPlano(plano).length === 0 ? (
-                                    <li className="list-none text-zinc-600">Sem benefícios listados</li>
+                                    <li className="list-none text-muted-foreground/80 dark:text-zinc-600">
+                                      Sem benefícios listados
+                                    </li>
                                   ) : (
                                     linhasBeneficiosPlano(plano).map((linha, idx) => (
                                       <li key={`${plano.id}-${idx}`} className="flex items-start gap-1.5">
                                         <Check
                                           className={cn(
                                             'mt-0.5 size-3 shrink-0',
-                                            isSelected ? 'text-cyan-400' : 'text-zinc-600',
+                                            isSelected
+                                              ? 'text-primary dark:text-cyan-400'
+                                              : 'text-muted-foreground dark:text-zinc-600',
                                           )}
                                           strokeWidth={2.5}
                                           aria-hidden
                                         />
-                                        <span className={isSelected ? 'text-zinc-400' : ''}>{linha}</span>
+                                        <span
+                                          className={
+                                            isSelected ? 'text-foreground/80 dark:text-zinc-400' : ''
+                                          }
+                                        >
+                                          {linha}
+                                        </span>
                                       </li>
                                     ))
                                   )}
@@ -882,7 +898,7 @@ export default function CadastroBarbeariaPage() {
                           })}
                         </div>
                       ) : (
-                        <div className="rounded-xl border border-dashed border-white/[0.12] bg-zinc-900/30 px-4 py-5 text-center text-sm text-zinc-500">
+                        <div className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-5 text-center text-sm text-muted-foreground dark:border-white/[0.12] dark:bg-zinc-900/30 dark:text-zinc-500">
                           Nenhum plano disponivel no momento.
                         </div>
                       )}
@@ -891,30 +907,30 @@ export default function CadastroBarbeariaPage() {
                     {selectedPlan && (
                       <Alert
                         variant="success"
-                        className="border-cyan-500/25 bg-cyan-950/30 text-left text-cyan-50"
+                        className="border-sky-500/30 bg-sky-500/10 text-left text-sky-950 dark:border-cyan-500/25 dark:bg-cyan-950/30 dark:text-cyan-50"
                         role="status"
                         aria-live="polite"
                       >
-                        <AlertTitle className="text-cyan-100">Resumo do plano selecionado</AlertTitle>
-                        <AlertDescription className="text-cyan-100/85">
+                        <AlertTitle className="text-sky-900 dark:text-cyan-100">Resumo do plano selecionado</AlertTitle>
+                        <AlertDescription className="text-sky-900/90 dark:text-cyan-100/85">
                           <p>
-                            <span className="font-semibold text-white">{selectedPlan.nome}</span>
+                            <span className="font-semibold text-foreground dark:text-white">{selectedPlan.nome}</span>
                             {', '}
                             {labelPeriodicidade(formData.planoPeriodicidade).toLowerCase()}
                           </p>
-                          <p className="mt-1 font-medium tabular-nums text-cyan-50">
+                          <p className="mt-1 font-medium tabular-nums text-sky-800 dark:text-cyan-50">
                             {formatCurrency(
                               precoTotalNoPeriodo(selectedPlan.preco_mensal, formData.planoPeriodicidade),
                             )}
                             {sufixoPrecoPeriodicidade(formData.planoPeriodicidade)}
                             {formData.planoPeriodicidade !== 'mensal' ? (
-                              <span className="block text-xs font-normal text-cyan-200/70">
+                              <span className="block text-xs font-normal text-sky-700/90 dark:text-cyan-200/70">
                                 Base {formatCurrency(selectedPlan.preco_mensal)}/mês ×{' '}
                                 {mesesPorPeriodicidade(formData.planoPeriodicidade)} meses
                               </span>
                             ) : null}
                           </p>
-                          <p className="mt-2 text-sm leading-relaxed text-cyan-100/80">
+                          <p className="mt-2 text-sm leading-relaxed text-sky-900/85 dark:text-cyan-100/80">
                             Voce sera o administrador/proprietario da barbearia. Ate o pagamento ser confirmado em
                             Assinaturas, o acesso fica limitado ao dashboard e as configuracoes; o restante do painel
                             libera apos a aprovacao.
@@ -930,7 +946,7 @@ export default function CadastroBarbeariaPage() {
               {error && (
                 <Alert
                   variant="danger"
-                  className="border-red-500/30 bg-red-950/40 text-left text-red-100"
+                  className="border-destructive/35 bg-destructive/10 text-left dark:border-red-500/30 dark:bg-red-950/40 dark:text-red-100"
                   onClose={() => setError(null)}
                   autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
                 >
@@ -949,11 +965,11 @@ export default function CadastroBarbeariaPage() {
                 </Alert>
               ) : null}
 
-              <div className="flex flex-col-reverse gap-3 border-t border-white/[0.06] pt-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col-reverse gap-3 border-t border-border pt-6 dark:border-white/[0.06] sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <Link
                     href={LANDING_LINKS.login}
-                    className="text-sm text-zinc-500 transition-colors hover:text-cyan-400/95 hover:underline"
+                    className="text-sm text-muted-foreground transition-colors hover:text-sky-600 hover:underline dark:hover:text-cyan-400/95"
                   >
                     Já tem conta? Entrar
                   </Link>
@@ -966,7 +982,7 @@ export default function CadastroBarbeariaPage() {
                       variant="outline"
                       onClick={goBack}
                       disabled={isSubmitting}
-                      className="h-11 rounded-full border-white/[0.12] bg-transparent text-zinc-200 hover:bg-white/[0.06] hover:text-white"
+                      className="h-11 rounded-full border-border bg-transparent text-foreground hover:bg-muted dark:border-white/[0.12] dark:text-zinc-200 dark:hover:bg-white/[0.06] dark:hover:text-white"
                     >
                       <ChevronLeft className="mr-1 size-4" aria-hidden />
                       Voltar
@@ -1001,7 +1017,7 @@ export default function CadastroBarbeariaPage() {
                         landingButtonLift,
                       )}
                     >
-                      {isSubmitting ? <Spinner className="mr-2 size-4 text-white" /> : null}
+                      {isSubmitting ? <Spinner className="mr-2 size-4 text-primary-foreground" /> : null}
                       {isSubmitting ? 'Finalizando cadastro…' : 'Finalizar cadastro'}
                     </Button>
                   )}

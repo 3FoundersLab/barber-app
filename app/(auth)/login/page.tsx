@@ -16,6 +16,7 @@ import {
   landingPrimaryCtaClass,
 } from '@/components/landing/landing-classes'
 import { AppBrandLogo } from '@/components/shared/app-brand-logo'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -35,8 +36,8 @@ const LOGIN_VISUAL_IMAGE =
   'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=960&q=82'
 
 const inputPremiumClass = cn(
-  'h-11 rounded-xl border-zinc-700/80 bg-zinc-900/70 text-zinc-100 shadow-none placeholder:text-zinc-500',
-  'focus-visible:border-cyan-400/45 focus-visible:ring-2 focus-visible:ring-cyan-400/20',
+  'h-11 rounded-xl border border-input bg-background text-foreground shadow-none placeholder:text-muted-foreground',
+  'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/35',
 )
 
 function LoginPageContent() {
@@ -161,8 +162,8 @@ function LoginPageContent() {
 
   return (
     <LoginLandingShell>
-      <header className="shrink-0 border-b border-white/[0.06] bg-zinc-950/40 backdrop-blur-sm">
-        <div className={cn(landingContainer, 'flex items-center justify-between py-4')}>
+      <header className="shrink-0 border-b border-border/80 bg-background/75 backdrop-blur-md dark:border-white/10 dark:bg-zinc-950/50">
+        <div className={cn(landingContainer, 'flex flex-wrap items-center justify-between gap-3 py-4')}>
           <motion.div
             initial={reduceMotion ? false : { opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -170,18 +171,20 @@ function LoginPageContent() {
           >
             <AppBrandLogo
               href="/"
-              textClassName="text-lg font-semibold tracking-tight text-white sm:text-xl"
-              className="gap-2.5 rounded-lg outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-cyan-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+              textClassName="text-lg font-semibold tracking-tight text-foreground sm:text-xl"
+              className="gap-2.5 rounded-lg outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             />
           </motion.div>
           <motion.div
+            className="flex items-center gap-3"
             initial={reduceMotion ? false : { opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: LANDING_EASE, delay: 0.05 }}
           >
+            <ThemeToggle inline variant="landing" />
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-zinc-100"
+              className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors duration-300 hover:text-foreground"
             >
               <ArrowLeft className="size-4 shrink-0" aria-hidden />
               Voltar ao site
@@ -201,10 +204,10 @@ function LoginPageContent() {
               transition={{ duration: 0.6, ease: LANDING_EASE }}
             >
               <p className={landingEyebrow}>Acesso à plataforma</p>
-              <h1 className="mt-4 max-w-xl text-balance text-4xl font-semibold tracking-tight text-white xl:text-[2.5rem] xl:leading-[1.12]">
+              <h1 className="mt-4 max-w-xl text-balance text-4xl font-semibold tracking-tight text-foreground xl:text-[2.5rem] xl:leading-[1.12]">
                 Entre e retome a operação da sua barbearia
               </h1>
-              <p className="mt-5 max-w-lg text-pretty text-lg leading-relaxed text-zinc-400">
+              <p className="mt-5 max-w-lg text-pretty text-lg leading-relaxed text-muted-foreground">
                 Mesma experiência da landing: agenda, equipe e caixa na mesma tela. Um login, tudo sincronizado.
               </p>
 
@@ -292,10 +295,12 @@ function LoginPageContent() {
                 transition={{ duration: 0.5, ease: LANDING_EASE }}
               >
                 <p className={landingEyebrow}>Acesso à plataforma</p>
-                <h1 className="mt-3 text-balance text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                <h1 className="mt-3 text-balance text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                   Bem-vindo de volta
                 </h1>
-                <p className="mt-2 text-sm text-zinc-400">Entre com seu e-mail para continuar no BarberApp.</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Entre com seu e-mail para continuar no BarberApp.
+                </p>
               </motion.div>
 
               <motion.div
@@ -304,16 +309,18 @@ function LoginPageContent() {
                 transition={{ duration: 0.55, ease: LANDING_EASE, delay: reduceMotion ? 0 : 0.08 }}
               >
                 <div className="hidden lg:block">
-                  <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-[1.65rem]">Entrar na conta</h2>
-                  <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                  <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.65rem]">
+                    Entrar na conta
+                  </h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     Use o e-mail cadastrado. Em segundos você volta para a agenda e ao caixa.
                   </p>
                 </div>
 
                 <div
                   className={cn(
-                    'mt-6 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.07] to-white/[0.025] p-6 shadow-[0_24px_64px_-28px_rgba(0,0,0,0.55)] backdrop-blur-md sm:p-8',
-                    'ring-1 ring-white/[0.04]',
+                    'mt-6 rounded-2xl border border-border/80 bg-card/95 p-6 shadow-[0_24px_64px_-28px_rgba(0,0,0,0.08)] backdrop-blur-md sm:p-8',
+                    'ring-1 ring-border/40 dark:border-white/10 dark:bg-gradient-to-b dark:from-white/[0.07] dark:to-white/[0.025] dark:shadow-[0_24px_64px_-28px_rgba(0,0,0,0.55)] dark:ring-white/[0.04]',
                   )}
                 >
                   {inactiveRedirect ? (
@@ -324,7 +331,10 @@ function LoginPageContent() {
 
                   <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                      <Label
+                        htmlFor="email"
+                        className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"
+                      >
                         E-mail
                       </Label>
                       <Input
@@ -345,7 +355,7 @@ function LoginPageContent() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="password"
-                        className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500"
+                        className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"
                       >
                         Senha
                       </Label>
@@ -364,7 +374,7 @@ function LoginPageContent() {
                         <button
                           type="button"
                           onClick={() => setShowPassword((prev) => !prev)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-zinc-200"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                           aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                         >
                           {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -375,7 +385,7 @@ function LoginPageContent() {
                     {error ? (
                       <Alert
                         variant="danger"
-                        className="border-red-500/30 bg-red-950/40 text-left text-red-100"
+                        className="border-destructive/35 bg-destructive/10 text-left dark:border-red-500/30 dark:bg-red-950/40 dark:text-red-100"
                         onClose={() => setError(null)}
                         autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
                       >
@@ -392,35 +402,37 @@ function LoginPageContent() {
                         landingButtonLift,
                       )}
                     >
-                      {isLoading ? <Spinner className="mr-2 size-4 text-white" /> : null}
+                      {isLoading ? <Spinner className="mr-2 size-4 text-primary-foreground" /> : null}
                       {isLoading ? 'Entrando…' : 'Entrar'}
                     </Button>
                   </form>
                 </div>
 
-                <p className="mt-8 text-center text-sm leading-relaxed text-zinc-500 lg:text-left">
+                <p className="mt-8 text-center text-sm leading-relaxed text-muted-foreground lg:text-left">
                   Tem uma barbearia e ainda não usa a plataforma?{' '}
                   <Link
                     href={LANDING_LINKS.cadastro}
-                    className="font-semibold text-cyan-400/95 underline-offset-4 transition-colors hover:text-cyan-300 hover:underline"
+                    className="font-semibold text-sky-600 underline-offset-4 transition-colors hover:text-sky-500 hover:underline dark:text-sky-400 dark:hover:text-sky-300"
                   >
                     Cadastre sua barbearia
                   </Link>
                 </p>
 
-                <div className="mt-6 rounded-xl border border-white/[0.06] bg-zinc-950/50 px-4 py-4 ring-1 ring-white/[0.03]">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Ambiente demo</p>
-                  <p className="mt-3 text-xs leading-relaxed text-zinc-500">
-                    <span className="font-medium text-zinc-400">Super admin:</span> super@barbertool.com
-                    <br />
-                    <span className="font-medium text-zinc-400">Admin:</span> admin@barbertool.com
-                    <br />
-                    <span className="font-medium text-zinc-400">Barbeiro:</span> barbeiro@barbertool.com
-                    <br />
-                    <span className="font-medium text-zinc-400">Cliente:</span> cliente@barbertool.com
+                <div className="mt-6 rounded-xl border border-border/80 bg-muted/40 px-4 py-4 ring-1 ring-border/30 dark:border-white/10 dark:bg-zinc-950/50 dark:ring-white/[0.03]">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Ambiente demo
                   </p>
-                  <p className="mt-3 border-t border-white/[0.06] pt-3 text-xs text-zinc-600">
-                    Senha comum: <span className="font-mono text-zinc-400">123456</span>
+                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                    <span className="font-medium text-foreground/80">Super admin:</span> super@barbertool.com
+                    <br />
+                    <span className="font-medium text-foreground/80">Admin:</span> admin@barbertool.com
+                    <br />
+                    <span className="font-medium text-foreground/80">Barbeiro:</span> barbeiro@barbertool.com
+                    <br />
+                    <span className="font-medium text-foreground/80">Cliente:</span> cliente@barbertool.com
+                  </p>
+                  <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground dark:border-white/10">
+                    Senha comum: <span className="font-mono text-foreground/90">123456</span>
                   </p>
                 </div>
               </motion.div>
@@ -438,8 +450,8 @@ export default function LoginPage() {
       fallback={
         <LoginLandingShell>
           <div className="flex flex-1 flex-col items-center justify-center px-4 py-24">
-            <Spinner className="size-9 text-cyan-400/80" />
-            <p className="mt-4 text-sm text-zinc-500">Carregando…</p>
+            <Spinner className="size-9 text-primary" />
+            <p className="mt-4 text-sm text-muted-foreground">Carregando…</p>
           </div>
         </LoginLandingShell>
       }

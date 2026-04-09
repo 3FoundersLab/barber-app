@@ -73,7 +73,13 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          storageKey="barber-app-theme"
+          disableTransitionOnChange={false}
+        >
           {children}
           <Analytics />
         </ThemeProvider>

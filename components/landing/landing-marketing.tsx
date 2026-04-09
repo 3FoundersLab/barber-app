@@ -36,7 +36,7 @@ export function LandingMarketing() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="min-h-screen bg-[#f7f7f8] text-foreground antialiased dark:bg-zinc-950">
+      <div className="min-h-screen bg-background text-foreground antialiased">
         <LandingNavbar />
         <main className="pb-[5.5rem] lg:pb-0">
           <LandingHero />

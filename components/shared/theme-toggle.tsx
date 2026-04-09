@@ -18,9 +18,11 @@ const themeMenuItemHighlight =
 interface ThemeToggleProps {
   inline?: boolean
   className?: string
+  /** `landing`: botão circular alinhado à navbar da landing. */
+  variant?: 'default' | 'landing'
 }
 
-export function ThemeToggle({ inline = false, className }: ThemeToggleProps) {
+export function ThemeToggle({ inline = false, className, variant = 'default' }: ThemeToggleProps) {
   const { theme, resolvedTheme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
@@ -48,13 +50,25 @@ export function ThemeToggle({ inline = false, className }: ThemeToggleProps) {
           <Button
             variant="outline"
             size="icon"
-            className="h-9 w-9 shadow-sm hover:bg-muted hover:text-foreground dark:hover:bg-muted/70"
+            className={cn(
+              'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
+              variant === 'landing'
+                ? cn(
+                    'h-10 w-10 shrink-0 rounded-full border-2 border-zinc-900 bg-white text-zinc-900 shadow-sm',
+                    'hover:border-primary hover:text-primary hover:shadow-md',
+                    'dark:border-zinc-100 dark:bg-zinc-950 dark:text-white dark:hover:border-primary dark:hover:text-primary',
+                  )
+                : 'h-9 w-9 shadow-sm hover:bg-muted hover:text-foreground dark:hover:bg-muted/70',
+            )}
           >
             <Icon className="h-4 w-4" />
             <span className="sr-only">Alterar tema</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent
+          align="end"
+          className="min-w-[10rem] border-zinc-200/90 bg-popover/95 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95"
+        >
           <DropdownMenuItem onClick={() => setTheme('light')} className={themeMenuItemHighlight}>
             <Sun className="mr-2 h-4 w-4" />
             Claro

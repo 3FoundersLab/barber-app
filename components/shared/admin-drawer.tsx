@@ -6,6 +6,7 @@ import { Calendar, DollarSign, LayoutDashboard, Menu, Scissors, Settings, Users 
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 
 const FULL_ADMIN_LINKS = (basePath: string) => [
   { label: 'Dashboard', href: `${basePath}/dashboard`, icon: LayoutDashboard },
@@ -45,12 +46,12 @@ export function AdminDrawer({
           <span className="sr-only">Abrir menu admin</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[280px] p-0">
+      <SheetContent side="left" className="flex w-[280px] flex-col p-0">
         <SheetHeader className="border-b">
           <SheetTitle>Painel Admin</SheetTitle>
         </SheetHeader>
 
-        <nav className="space-y-1 p-3">
+        <nav className="flex flex-1 flex-col space-y-1 p-3">
           {adminLinks.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             const Icon = item.icon
@@ -71,6 +72,10 @@ export function AdminDrawer({
               </Link>
             )
           })}
+          <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-3">
+            <span className="text-xs font-medium text-muted-foreground">Aparência</span>
+            <ThemeToggle inline />
+          </div>
         </nav>
       </SheetContent>
     </Sheet>

@@ -14,6 +14,7 @@ import {
   landingPrimaryCtaClass,
   landingTrialCtaClass,
 } from '@/components/landing/landing-classes'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 
 const links = [
   { href: `#${LANDING_SECTIONS.problema}`, label: 'Problema' },
@@ -135,6 +136,7 @@ export function LandingNavbar() {
           )}
         >
           <div className="hidden items-center gap-3 lg:flex xl:gap-4">
+            <ThemeToggle inline variant="landing" />
             <Button asChild variant="ghost" className={pillSecondaryClass}>
               <Link href={LANDING_LINKS.login}>{LANDING_CTA.navSecondary}</Link>
             </Button>
@@ -144,6 +146,7 @@ export function LandingNavbar() {
           </div>
 
           <div className="flex items-center gap-2 lg:hidden">
+            <ThemeToggle inline variant="landing" />
             <Button asChild variant="ghost" className={cn(pillPrimaryClass, 'h-9 px-4 text-[10px]')}>
               <Link href={LANDING_LINKS.cadastro}>{LANDING_CTA.navPrimary}</Link>
             </Button>
@@ -189,6 +192,12 @@ export function LandingNavbar() {
             )
           })}
           <div className="mt-4 flex flex-col gap-3 border-t border-zinc-100 pt-5 dark:border-zinc-800">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Aparência
+              </span>
+              <ThemeToggle inline variant="landing" />
+            </div>
             <Link
               href={LANDING_LINKS.login}
               className="rounded-full border-2 border-zinc-900 py-3.5 text-center text-xs font-bold uppercase tracking-wide text-zinc-900 dark:border-zinc-100 dark:text-zinc-100"

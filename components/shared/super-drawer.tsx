@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { AppBrandLogo } from '@/components/shared/app-brand-logo'
 import { PLATFORM_PATHS } from '@/lib/routes'
 import { SuperLogoutButton } from '@/components/shared/super-logout-button'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 
 const superLinks = [
   { label: 'Dashboard', href: PLATFORM_PATHS.dashboard, icon: LayoutDashboard },
@@ -74,7 +75,11 @@ export function SuperDrawer() {
           })}
         </nav>
 
-        <div className="mt-auto border-t border-zinc-200/80 p-3 dark:border-zinc-800">
+        <div className="mt-auto space-y-3 border-t border-zinc-200/80 p-3 dark:border-zinc-800">
+          <div className="flex items-center justify-between gap-2 px-1">
+            <span className="text-xs font-medium text-muted-foreground">Aparência</span>
+            <ThemeToggle inline />
+          </div>
           <SuperLogoutButton variant="nav" />
         </div>
       </SheetContent>
