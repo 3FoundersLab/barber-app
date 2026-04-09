@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
-import { tenantAdminNavFull, tenantAdminNavLimited } from '@/lib/tenant-admin-nav'
+import { tenantAdminNavSectionsFull, tenantAdminNavSectionsLimited } from '@/lib/tenant-admin-nav'
 
 export function AdminDrawer({
   basePath,
@@ -17,7 +17,9 @@ export function AdminDrawer({
   /** Pagamento pendente: navegação reduzida (alinha com layout e proxy). */
   limitedNav?: boolean
 }) {
-  const adminLinks = limitedNav ? tenantAdminNavLimited(basePath) : tenantAdminNavFull(basePath)
+  const adminSections = limitedNav
+    ? tenantAdminNavSectionsLimited(basePath)
+    : tenantAdminNavSectionsFull(basePath)
   const pathname = usePathname()
 
   return (
@@ -48,26 +50,40 @@ export function AdminDrawer({
         </SheetHeader>
 
         <nav className="flex flex-1 flex-col space-y-1 p-3">
-          {adminLinks.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
-            const Icon = item.icon
+          {adminSections.map((section, sectionIndex) => (
+            <div
+              key={section.label}
+              className={cn(
+                'space-y-1',
+                sectionIndex > 0 &&
+                  'border-t border-zinc-200/80 pt-3 dark:border-zinc-800',
+              )}
+            >
+              <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                {section.label}
+              </p>
+              {section.links.map((item) => {
+                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                const Icon = item.icon
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
-                    : 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]',
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            )
-          })}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors',
+                      isActive
+                        ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                        : 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]',
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                )
+              })}
+            </div>
+          ))}
           <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-3">
             <span className="text-xs font-medium text-muted-foreground">Aparência</span>
             <ThemeToggle inline />

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, usePathname, useRouter } from 'next/navigation'
-import { BottomTabs } from '@/components/shared/bottom-tabs'
+import { BottomTabs, flattenNavEntries } from '@/components/shared/bottom-tabs'
 import { AdminDrawer } from '@/components/shared/admin-drawer'
 import { DesktopSidebar } from '@/components/shared/desktop-sidebar'
 import { AppPageHeadingProvider } from '@/components/shared/app-page-heading-context'
@@ -10,7 +10,7 @@ import { SuperLogoutButton } from '@/components/shared/super-logout-button'
 import { SuperPremiumBackdrop } from '@/components/super/super-premium-backdrop'
 import { createClient } from '@/lib/supabase/client'
 import { rpcUserIsMemberOfBarbearia } from '@/lib/barbearia-rpc'
-import { tenantAdminTabsFull, tenantAdminTabsLimited } from '@/lib/tenant-admin-nav'
+import { tenantAdminNavEntriesFull, tenantAdminNavEntriesLimited } from '@/lib/tenant-admin-nav'
 import { tenantBarbeariaBasePath, tenantBarbeariaDashboardPath } from '@/lib/routes'
 
 export default function AdminSlugLayout({ children }: { children: React.ReactNode }) {
@@ -83,11 +83,11 @@ export default function AdminSlugLayout({ children }: { children: React.ReactNod
     }
   }, [slug, pathname, pagamentoPendenteAdmin, router])
 
-  const adminTabs = useMemo(() => {
+  const adminNav = useMemo(() => {
     if (pagamentoPendenteAdmin) {
-      return tenantAdminTabsLimited(base)
+      return tenantAdminNavEntriesLimited(base)
     }
-    return tenantAdminTabsFull(base)
+    return tenantAdminNavEntriesFull(base)
   }, [base, pagamentoPendenteAdmin])
 
   return (
@@ -100,7 +100,7 @@ export default function AdminSlugLayout({ children }: { children: React.ReactNod
         <DesktopSidebar
           appearance="super"
           appBrand={{ href: `${base}/dashboard`, collapsible: true }}
-          tabs={adminTabs}
+          tabs={adminNav}
           footer={({ collapsed }) =>
             collapsed ? (
               <SuperLogoutButton variant="nav" compact className="hover:bg-zinc-100/85 dark:hover:bg-white/[0.06]" />
@@ -113,7 +113,7 @@ export default function AdminSlugLayout({ children }: { children: React.ReactNod
           <AppPageHeadingProvider>{children}</AppPageHeadingProvider>
         </div>
       </div>
-      <BottomTabs appearance="super" scrollable tabs={adminTabs} />
+      <BottomTabs appearance="super" scrollable tabs={flattenNavEntries(adminNav)} />
     </>
   )
 }

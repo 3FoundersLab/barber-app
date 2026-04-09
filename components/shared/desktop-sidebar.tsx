@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { AppBrandLogo } from '@/components/shared/app-brand-logo'
-import { isTabGroup, type TabItem } from '@/components/shared/bottom-tabs'
+import { groupNavEntries, isTabGroup, type NavEntry, type TabItem } from '@/components/shared/bottom-tabs'
 import { APP_PAGE_HEADER_BAR_CLASS } from '@/components/shared/page-container'
 import { superShellHeaderBarClass } from '@/components/super/super-ui'
 import { Button } from '@/components/ui/button'
@@ -29,7 +29,7 @@ export type DesktopSidebarFooter = ReactNode | ((ctx: { collapsed: boolean }) =>
 interface DesktopSidebarProps {
   title?: string
   appBrand?: { href: string; collapsible?: boolean }
-  tabs: TabItem[]
+  tabs: NavEntry[]
   footer?: DesktopSidebarFooter
   /** Super Admin: vidro e navegação alinhados à landing. */
   appearance?: 'default' | 'super'
@@ -131,6 +131,127 @@ export function DesktopSidebar({
     </div>
   )
 
+  const navGroups = groupNavEntries(tabs)
+
+  function renderSidebarTabItem(item: TabItem) {
+    if (isTabGroup(item)) {
+      const groupActive = item.children.some((c) => pathActive(pathname, c.href))
+      const Icon = item.icon
+
+      if (!wide) {
+        return (
+          <DropdownMenu key={`group:${item.label}`}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                title={item.label}
+                className={cn(
+                  'flex w-full items-center justify-center rounded-md px-2 py-2.5 text-sm transition-all duration-200',
+                  groupActive
+                    ? isSuper
+                      ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                      : 'bg-primary text-primary-foreground'
+                    : isSuper
+                      ? 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
+                aria-haspopup="menu"
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="start" className="min-w-[11rem]">
+              {item.children.map((child) => {
+                const active = pathActive(pathname, child.href)
+                return (
+                  <DropdownMenuItem key={child.href} asChild className={cn(active && 'bg-accent')}>
+                    <Link href={child.href} className="cursor-pointer">
+                      {child.label}
+                    </Link>
+                  </DropdownMenuItem>
+                )
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      }
+
+      return (
+        <Collapsible
+          key={`group:${item.label}`}
+          defaultOpen={groupActive}
+          className="space-y-1"
+        >
+          <CollapsibleTrigger
+            type="button"
+            className={cn(
+              'group flex w-full items-center gap-2 rounded-md text-sm transition-all duration-200',
+              'px-3 py-2 text-left',
+              groupActive && !isSuper && 'bg-muted/80 text-foreground',
+              groupActive && isSuper && 'bg-zinc-200/80 text-foreground dark:bg-white/[0.08]',
+              !groupActive &&
+                (isSuper
+                  ? 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'),
+            )}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate font-medium">{item.label}</span>
+            <ChevronDown className="size-4 shrink-0 opacity-60 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-0.5 pl-2">
+            {item.children.map((child) => {
+              const active = pathActive(pathname, child.href)
+              return (
+                <Link
+                  key={child.href}
+                  href={child.href}
+                  className={cn(
+                    'block truncate rounded-md py-2 pl-7 pr-3 text-sm transition-all duration-200',
+                    active
+                      ? isSuper
+                        ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                        : 'bg-primary text-primary-foreground'
+                      : isSuper
+                        ? 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
+                >
+                  {child.label}
+                </Link>
+              )
+            })}
+          </CollapsibleContent>
+        </Collapsible>
+      )
+    }
+
+    const isActive = pathActive(pathname, item.href)
+    const Icon = item.icon
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        title={!wide ? item.label : undefined}
+        className={cn(
+          'flex items-center gap-2 rounded-md text-sm transition-all duration-200',
+          wide ? 'px-3 py-2' : 'justify-center px-2 py-2.5',
+          isActive
+            ? isSuper
+              ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+              : 'bg-primary text-primary-foreground'
+            : isSuper
+              ? 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+        )}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        {wide ? <span className="truncate">{item.label}</span> : null}
+      </Link>
+    )
+  }
+
   return (
     <>
       <aside
@@ -149,124 +270,41 @@ export function DesktopSidebar({
           className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden p-3"
           aria-label="Navegação principal"
         >
-          {tabs.map((item) => {
-            if (isTabGroup(item)) {
-              const groupActive = item.children.some((c) => pathActive(pathname, c.href))
-              const Icon = item.icon
-
-              if (!wide) {
-                return (
-                  <DropdownMenu key={`group:${item.label}`}>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        title={item.label}
-                        className={cn(
-                          'flex w-full items-center justify-center rounded-md px-2 py-2.5 text-sm transition-all duration-200',
-                          groupActive
-                            ? isSuper
-                              ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
-                              : 'bg-primary text-primary-foreground'
-                            : isSuper
-                              ? 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]'
-                              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                        )}
-                        aria-haspopup="menu"
-                      >
-                        <Icon className="h-4 w-4 shrink-0" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent side="right" align="start" className="min-w-[11rem]">
-                      {item.children.map((child) => {
-                        const active = pathActive(pathname, child.href)
-                        return (
-                          <DropdownMenuItem key={child.href} asChild className={cn(active && 'bg-accent')}>
-                            <Link href={child.href} className="cursor-pointer">
-                              {child.label}
-                            </Link>
-                          </DropdownMenuItem>
-                        )
-                      })}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )
-              }
-
-              return (
-                <Collapsible
-                  key={`group:${item.label}`}
-                  defaultOpen={groupActive}
-                  className="space-y-1"
-                >
-                  <CollapsibleTrigger
-                    type="button"
+          {navGroups.map((group, groupIndex) => (
+            <div
+              key={group.label ?? `default-${groupIndex}`}
+              className={cn(
+                'space-y-1',
+                groupIndex > 0 &&
+                  (isSuper
+                    ? 'border-t border-zinc-200/80 pt-3 dark:border-zinc-800/80'
+                    : 'border-t border-border/70 pt-3'),
+              )}
+            >
+              {group.label ? (
+                wide ? (
+                  <p
                     className={cn(
-                      'group flex w-full items-center gap-2 rounded-md text-sm transition-all duration-200',
-                      'px-3 py-2 text-left',
-                      groupActive && !isSuper && 'bg-muted/80 text-foreground',
-                      groupActive && isSuper && 'bg-zinc-200/80 text-foreground dark:bg-white/[0.08]',
-                      !groupActive &&
-                        (isSuper
-                          ? 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]'
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'),
+                      'px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground',
+                      isSuper && 'text-zinc-500 dark:text-zinc-400',
                     )}
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span className="min-w-0 flex-1 truncate font-medium">{item.label}</span>
-                    <ChevronDown className="size-4 shrink-0 opacity-60 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-0.5 pl-2">
-                    {item.children.map((child) => {
-                      const active = pathActive(pathname, child.href)
-                      return (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          className={cn(
-                            'block truncate rounded-md py-2 pl-7 pr-3 text-sm transition-all duration-200',
-                            active
-                              ? isSuper
-                                ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
-                                : 'bg-primary text-primary-foreground'
-                              : isSuper
-                                ? 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]'
-                                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                          )}
-                        >
-                          {child.label}
-                        </Link>
-                      )
-                    })}
-                  </CollapsibleContent>
-                </Collapsible>
-              )
-            }
-
-            const isActive = pathActive(pathname, item.href)
-            const Icon = item.icon
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={!wide ? item.label : undefined}
-                className={cn(
-                  'flex items-center gap-2 rounded-md text-sm transition-all duration-200',
-                  wide ? 'px-3 py-2' : 'justify-center px-2 py-2.5',
-                  isActive
-                    ? isSuper
-                      ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
-                      : 'bg-primary text-primary-foreground'
-                    : isSuper
-                      ? 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {wide ? <span className="truncate">{item.label}</span> : null}
-              </Link>
-            )
-          })}
+                    {group.label}
+                  </p>
+                ) : groupIndex > 0 ? (
+                  <div
+                    className={cn(
+                      'mx-1 mb-1 h-px shrink-0',
+                      isSuper ? 'bg-zinc-200 dark:bg-zinc-800' : 'bg-border',
+                    )}
+                    role="separator"
+                    aria-hidden
+                  />
+                ) : null
+              ) : null}
+              {group.items.map((item) => renderSidebarTabItem(item))}
+            </div>
+          ))}
         </nav>
 
         {footer ? (

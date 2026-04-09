@@ -34,6 +34,51 @@ export function isTabGroup(item: TabItem): item is TabItemGroup {
   return 'children' in item && Array.isArray(item.children)
 }
 
+/** Separador de seção na sidebar desktop (não é item de bottom tabs). */
+export interface NavSectionHeader {
+  kind: 'section'
+  label: string
+}
+
+export type NavEntry = TabItem | NavSectionHeader
+
+export function isNavSectionHeader(entry: NavEntry): entry is NavSectionHeader {
+  return (entry as NavSectionHeader).kind === 'section'
+}
+
+/** Itens clicáveis na ordem, para a barra inferior mobile. */
+export function flattenNavEntries(entries: NavEntry[]): TabItem[] {
+  return entries.filter((e): e is TabItem => !isNavSectionHeader(e))
+}
+
+export function groupNavEntries(
+  entries: NavEntry[],
+): { label?: string; items: TabItem[] }[] {
+  const groups: { label?: string; items: TabItem[] }[] = []
+  let currentLabel: string | undefined
+  let currentItems: TabItem[] = []
+
+  const pushGroup = () => {
+    if (currentLabel !== undefined || currentItems.length > 0) {
+      groups.push({ label: currentLabel, items: currentItems })
+    }
+    currentLabel = undefined
+    currentItems = []
+  }
+
+  for (const e of entries) {
+    if (isNavSectionHeader(e)) {
+      pushGroup()
+      currentLabel = e.label
+      currentItems = []
+    } else {
+      currentItems.push(e)
+    }
+  }
+  pushGroup()
+  return groups
+}
+
 interface BottomTabsProps {
   tabs: TabItem[]
   basePath?: string
