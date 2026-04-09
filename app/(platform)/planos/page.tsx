@@ -541,7 +541,7 @@ export default function SuperPlanosPage() {
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter>
             <Button
               variant="outline"
               className="rounded-lg hover:bg-muted hover:text-foreground dark:hover:bg-muted/80"
