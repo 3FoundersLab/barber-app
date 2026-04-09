@@ -218,6 +218,8 @@ export interface ListState<T> {
   isEmpty: boolean
 }
 
+export type { EstoqueNivel, EstoqueProduto, EstoqueStatusFiltro } from './estoque-produto'
+
 // Navigation
 export interface NavItem {
   label: string

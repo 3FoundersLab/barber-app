@@ -1,23 +1,318 @@
 'use client'
 
-import { Package } from 'lucide-react'
-import { TenantRoutePlaceholder } from '@/components/shared/tenant-route-placeholder'
+import { useMemo, useState } from 'react'
+import { LayoutList, Search } from 'lucide-react'
+import { EstoqueProdutoCard } from '@/components/domain/estoque-produto-card'
+import { PageContent } from '@/components/shared/page-container'
+import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  ESTOQUE_CATEGORIAS_ORDEM,
+  estoqueIconeCategoria,
+} from '@/lib/estoque-categoria-icons'
+import { ESTOQUE_PRODUTOS_MOCK } from '@/lib/estoque-produto-mock'
+import { nivelEstoquePorQuantidade } from '@/lib/estoque-produto-utils'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
+import type { EstoqueProduto, EstoqueStatusFiltro } from '@/types/estoque-produto'
 
 export default function TenantEstoquePage() {
   const { base } = useTenantAdminBase()
+  const [produtos, setProdutos] = useState<EstoqueProduto[]>(ESTOQUE_PRODUTOS_MOCK)
+  const [busca, setBusca] = useState('')
+  const [categoriaFiltro, setCategoriaFiltro] = useState<string>('todas')
+  const [statusFiltro, setStatusFiltro] = useState<EstoqueStatusFiltro>('todos')
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editando, setEditando] = useState<EstoqueProduto | null>(null)
+  const [formNome, setFormNome] = useState('')
+  const [formCategoria, setFormCategoria] = useState('')
+  const [formQuantidade, setFormQuantidade] = useState('')
+  const [formMinimo, setFormMinimo] = useState('')
+  const [formPrecoCusto, setFormPrecoCusto] = useState('')
+
+  const abrirEdicao = (p: EstoqueProduto) => {
+    setEditando(p)
+    setFormNome(p.nome)
+    setFormCategoria(p.categoria)
+    setFormQuantidade(String(p.quantidade))
+    setFormMinimo(String(p.minimo))
+    setFormPrecoCusto(p.precoCusto != null ? String(p.precoCusto) : '')
+    setDialogOpen(true)
+  }
+
+  const fecharDialog = (open: boolean) => {
+    setDialogOpen(open)
+    if (!open) setEditando(null)
+  }
+
+  const aplicarEdicao = () => {
+    if (!editando) return
+    const q = Math.max(0, Math.floor(Number(formQuantidade) || 0))
+    const m = Math.max(0, Math.floor(Number(formMinimo) || 0))
+    const custoRaw = formPrecoCusto.trim()
+    let precoCusto: number | undefined
+    if (custoRaw === '') {
+      precoCusto = undefined
+    } else {
+      const n = Number(custoRaw.replace(',', '.'))
+      precoCusto = Number.isFinite(n) ? Math.round(n * 100) / 100 : editando.precoCusto
+    }
+
+    setProdutos((prev) =>
+      prev.map((p) =>
+        p.id === editando.id
+          ? {
+              ...p,
+              nome: formNome.trim() || p.nome,
+              categoria: formCategoria,
+              quantidade: q,
+              minimo: m,
+              precoCusto,
+            }
+          : p,
+      ),
+    )
+    fecharDialog(false)
+  }
+
+  const deltaQuantidade = (id: number, delta: number) => {
+    setProdutos((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, quantidade: Math.max(0, p.quantidade + delta) } : p,
+      ),
+    )
+  }
+
+  const filtradosOrdenados = useMemo(() => {
+    const q = busca.trim().toLowerCase()
+    let list = produtos.filter((p) => {
+      if (q && !p.nome.toLowerCase().includes(q)) return false
+      if (categoriaFiltro !== 'todas' && p.categoria !== categoriaFiltro) return false
+      if (statusFiltro !== 'todos' && nivelEstoquePorQuantidade(p.quantidade) !== statusFiltro) {
+        return false
+      }
+      return true
+    })
+    list = [...list].sort((a, b) => a.quantidade - b.quantidade)
+    return list
+  }, [produtos, busca, categoriaFiltro, statusFiltro])
 
   return (
-    <TenantRoutePlaceholder
-      title="Estoque"
-      cardTitle="Estoque em breve"
-      description="Cadastro de produtos, entradas, saídas e alertas de reposição serão adicionados aqui. Ajuste dados da unidade e da equipe nas configurações enquanto o módulo não está disponível."
-      icon={Package}
-      actions={[
-        { label: 'Configurações', href: `${base}/configuracoes` },
-        { label: 'Serviços', href: `${base}/servicos`, variant: 'outline' },
-        { label: 'Dashboard', href: `${base}/dashboard`, variant: 'outline' },
-      ]}
-    />
+    <TenantPanelPageContainer>
+      <TenantPanelPageHeader title="Estoque" profileHref={`${base}/configuracoes`} avatarFallback="A" />
+
+      <PageContent className="space-y-4 md:space-y-5">
+        <div className="grid gap-3 sm:gap-4 lg:grid-cols-4 lg:items-end">
+          <div className="relative min-w-0 lg:col-span-2">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome do produto..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="pl-9"
+              aria-label="Buscar produto"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Categoria</Label>
+            <Select value={categoriaFiltro} onValueChange={setCategoriaFiltro}>
+              <SelectTrigger className="w-full" size="default" aria-label="Filtrar por categoria">
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">
+                  <span className="flex items-center gap-2">
+                    <LayoutList className="h-4 w-4 text-muted-foreground" />
+                    Todas
+                  </span>
+                </SelectItem>
+                {ESTOQUE_CATEGORIAS_ORDEM.map((cat) => {
+                  const Icon = estoqueIconeCategoria(cat)
+                  return (
+                    <SelectItem key={cat} value={cat}>
+                      <span className="flex items-center gap-2">
+                        <Icon className="h-4 w-4 text-primary" />
+                        {cat}
+                      </span>
+                    </SelectItem>
+                  )
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Status do estoque</Label>
+            <Select
+              value={statusFiltro}
+              onValueChange={(v) => setStatusFiltro(v as EstoqueStatusFiltro)}
+            >
+              <SelectTrigger className="w-full" aria-label="Filtrar por status">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="normal">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Normal (&gt; 10)
+                  </span>
+                </SelectItem>
+                <SelectItem value="baixo">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-amber-400" />
+                    Baixo (5–10)
+                  </span>
+                </SelectItem>
+                <SelectItem value="critico">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-red-500" />
+                    Crítico (&lt; 5)
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Ordenação: quantidade do menor para o maior.
+        </p>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 xl:grid-cols-4 xl:gap-6">
+          {filtradosOrdenados.length > 0 ? (
+            filtradosOrdenados.map((p) => (
+              <EstoqueProdutoCard
+                key={p.id}
+                produto={p}
+                onEdit={abrirEdicao}
+                onDeltaQuantidade={deltaQuantidade}
+              />
+            ))
+          ) : (
+            <Card className="border-dashed md:col-span-2 xl:col-span-4">
+              <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+                <p className="text-muted-foreground">Nenhum produto encontrado com os filtros atuais.</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => {
+                    setBusca('')
+                    setCategoriaFiltro('todas')
+                    setStatusFiltro('todos')
+                  }}
+                >
+                  Limpar filtros
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </PageContent>
+
+      <Dialog open={dialogOpen} onOpenChange={fecharDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar produto</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="estoque-nome">Nome</Label>
+              <Input
+                id="estoque-nome"
+                value={formNome}
+                onChange={(e) => setFormNome(e.target.value)}
+                placeholder="Nome do produto"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Categoria</Label>
+              <Select value={formCategoria} onValueChange={setFormCategoria}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ESTOQUE_CATEGORIAS_ORDEM.map((cat) => {
+                    const Icon = estoqueIconeCategoria(cat)
+                    return (
+                      <SelectItem key={cat} value={cat}>
+                        <span className="flex items-center gap-2">
+                          <Icon className="h-4 w-4 text-primary" />
+                          {cat}
+                        </span>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="estoque-qtd">Quantidade atual</Label>
+                <Input
+                  id="estoque-qtd"
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  value={formQuantidade}
+                  onChange={(e) => setFormQuantidade(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="estoque-min">Mínimo (alerta)</Label>
+                <Input
+                  id="estoque-min"
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  value={formMinimo}
+                  onChange={(e) => setFormMinimo(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="estoque-custo">Preço de custo (R$, opcional)</Label>
+              <Input
+                id="estoque-custo"
+                type="text"
+                inputMode="decimal"
+                placeholder="Ex: 24,90"
+                value={formPrecoCusto}
+                onChange={(e) => setFormPrecoCusto(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => fecharDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={aplicarEdicao}
+              disabled={!formNome.trim() || !formCategoria}
+            >
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </TenantPanelPageContainer>
   )
 }
