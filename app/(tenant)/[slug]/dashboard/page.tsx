@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
 import { Calendar, ChevronRight, DollarSign, Scissors, TrendingUp, Users } from 'lucide-react'
-import { PageContainer, PageContent } from '@/components/shared/page-container'
-import { AppPageHeader } from '@/components/shared/app-page-header'
+import { PageContent } from '@/components/shared/page-container'
+import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { Alert, AlertDescription, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,7 +17,7 @@ import {
 import { formatCurrency, formatTime } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
-import { tenantBarbeariaBasePath } from '@/lib/routes'
+import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import type { Agendamento, Barbearia } from '@/types'
 
 interface Stats {
@@ -31,9 +30,7 @@ interface Stats {
 }
 
 export default function AdminDashboardPage() {
-  const params = useParams()
-  const slug = typeof params.slug === 'string' ? params.slug : ''
-  const base = slug ? tenantBarbeariaBasePath(slug) : '/painel'
+  const { slug, base } = useTenantAdminBase()
 
   const [barbearia, setBarbearia] = useState<Barbearia | null>(null)
   const [stats, setStats] = useState<Stats | null>(null)
@@ -163,8 +160,8 @@ export default function AdminDashboardPage() {
   }, [slug])
 
   return (
-    <PageContainer>
-      <AppPageHeader
+    <TenantPanelPageContainer>
+      <TenantPanelPageHeader
         greetingOnly
         profileHref={`${base}/configuracoes`}
         avatarFallback="A"
@@ -175,9 +172,9 @@ export default function AdminDashboardPage() {
           <Alert variant="warning" className="text-left">
             <AlertTitle>Pagamento pendente</AlertTitle>
             <AlertDescription>
-              Seu acesso ao painel está limitado ao dashboard e às configurações até o administrador da plataforma
-              confirmar o pagamento em Assinaturas. Depois da aprovação, agenda, financeiro, serviços e equipe ficam
-              liberados.
+              Seu acesso ao painel está limitado ao dashboard, à página de assinatura e às configurações até o
+              administrador da plataforma confirmar o pagamento. Depois da aprovação, demais áreas (clientes, comandas,
+              financeiro, equipe, estoque etc.) ficam liberadas.
             </AlertDescription>
           </Alert>
         )}
@@ -315,6 +312,6 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </PageContent>
-    </PageContainer>
+    </TenantPanelPageContainer>
   )
 }

@@ -3,7 +3,7 @@
 import { cn } from '@/lib/utils'
 import { useOptionalAppPageHeading } from '@/components/shared/app-page-heading-context'
 
-interface PageContainerProps {
+export interface PageContainerProps {
   children: React.ReactNode
   className?: string
   /** Adiciona padding inferior para BottomTabs */

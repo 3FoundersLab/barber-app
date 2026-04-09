@@ -1,10 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
 import { Plus } from 'lucide-react'
-import { PageContainer, PageContent } from '@/components/shared/page-container'
-import { AppPageHeader } from '@/components/shared/app-page-header'
+import { PageContent } from '@/components/shared/page-container'
+import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { ServiceCard } from '@/components/domain/service-card'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -23,13 +22,11 @@ import { ServiceCardListSkeleton } from '@/components/shared/loading-skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
-import { tenantBarbeariaBasePath } from '@/lib/routes'
+import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import type { Servico } from '@/types'
 
 export default function AdminServicosPage() {
-  const params = useParams()
-  const slug = typeof params.slug === 'string' ? params.slug : ''
-  const base = slug ? tenantBarbeariaBasePath(slug) : '/painel'
+  const { slug, base } = useTenantAdminBase()
 
   const [servicos, setServicos] = useState<Servico[]>([])
   const [barbeariaId, setBarbeariaId] = useState<string | null>(null)
@@ -136,8 +133,8 @@ export default function AdminServicosPage() {
   }
 
   return (
-    <PageContainer>
-      <AppPageHeader title="Serviços" profileHref={`${base}/configuracoes`} avatarFallback="A" />
+    <TenantPanelPageContainer>
+      <TenantPanelPageHeader title="Serviços" profileHref={`${base}/configuracoes`} avatarFallback="A" />
 
       <PageContent className="space-y-3">
         <div className="flex justify-end">
@@ -246,6 +243,6 @@ export default function AdminServicosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </PageContainer>
+    </TenantPanelPageContainer>
   )
 }

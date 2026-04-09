@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'next/navigation'
-import { PageContainer, PageContent } from '@/components/shared/page-container'
-import { AppPageHeader } from '@/components/shared/app-page-header'
+import { PageContent } from '@/components/shared/page-container'
+import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { AppointmentCard } from '@/components/domain/appointment-card'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AppointmentListSkeleton } from '@/components/shared/loading-skeleton'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
-import { tenantBarbeariaBasePath } from '@/lib/routes'
+import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import { formatCurrency } from '@/lib/constants'
 import type { Agendamento, AppointmentStatus, PaymentStatus } from '@/types'
 
@@ -30,9 +29,7 @@ type AtendimentoFilter = AppointmentStatus | 'todos'
 type PagamentoFilter = PaymentStatus | 'todos'
 
 export default function AdminFinanceiroPage() {
-  const params = useParams()
-  const slug = typeof params.slug === 'string' ? params.slug : ''
-  const base = slug ? tenantBarbeariaBasePath(slug) : '/painel'
+  const { slug, base } = useTenantAdminBase()
 
   const [barbeariaId, setBarbeariaId] = useState<string | null>(null)
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([])
@@ -161,8 +158,8 @@ export default function AdminFinanceiroPage() {
   }, [agendamentos])
 
   return (
-    <PageContainer>
-      <AppPageHeader
+    <TenantPanelPageContainer>
+      <TenantPanelPageHeader
         title="Financeiro"
         subtitle="Histórico de pagamentos por atendimento"
         profileHref={`${base}/configuracoes`}
@@ -266,6 +263,6 @@ export default function AdminFinanceiroPage() {
           </Card>
         )}
       </PageContent>
-    </PageContainer>
+    </TenantPanelPageContainer>
   )
 }

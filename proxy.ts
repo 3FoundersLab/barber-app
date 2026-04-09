@@ -71,6 +71,7 @@ export async function proxy(request: NextRequest) {
     if (slug) {
       const allowedLimitedAdmin =
         pathname === `/${slug}/dashboard` ||
+        pathname === `/${slug}/assinatura` ||
         pathname === `/${slug}/configuracoes` ||
         pathname.startsWith(`/${slug}/configuracoes/`)
       if (!allowedLimitedAdmin) {

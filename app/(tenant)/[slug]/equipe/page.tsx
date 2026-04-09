@@ -1,10 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
-import { Plus, Phone, Mail } from 'lucide-react'
-import { PageContainer, PageContent } from '@/components/shared/page-container'
-import { AppPageHeader } from '@/components/shared/app-page-header'
+import { Plus, Phone, Mail, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
+import { PageContent } from '@/components/shared/page-container'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
@@ -28,17 +27,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
-import { tenantBarbeariaBasePath } from '@/lib/routes'
 import type { Barbeiro } from '@/types'
 
-export default function AdminEquipePage() {
-  const params = useParams()
-  const slug = typeof params.slug === 'string' ? params.slug : ''
-  const base = slug ? tenantBarbeariaBasePath(slug) : '/painel'
+export default function TenantEquipePage() {
+  const { slug, base } = useTenantAdminBase()
 
   const [barbeiros, setBarbeiros] = useState<Barbeiro[]>([])
   const [barbeariaId, setBarbeariaId] = useState<string | null>(null)
@@ -47,7 +43,7 @@ export default function AdminEquipePage() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [editingBarbeiro, setEditingBarbeiro] = useState<Barbeiro | null>(null)
-  
+
   const [formData, setFormData] = useState({
     nome: '',
     telefone: '',
@@ -62,8 +58,10 @@ export default function AdminEquipePage() {
   async function loadBarbeiros() {
     const supabase = createClient()
     setError(null)
-    
-    const { data: { user } } = await supabase.auth.getUser()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) {
       setError('Usuário não autenticado')
@@ -95,7 +93,7 @@ export default function AdminEquipePage() {
     } else if (data) {
       setBarbeiros(data)
     }
-    
+
     setIsLoading(false)
   }
 
@@ -123,7 +121,7 @@ export default function AdminEquipePage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este barbeiro?')) return
-    
+
     const supabase = createClient()
     const { error: deleteError } = await supabase.from('barbeiros').delete().eq('id', id)
     if (deleteError) {
@@ -135,10 +133,10 @@ export default function AdminEquipePage() {
 
   const handleSave = async () => {
     if (!barbeariaId) return
-    
+
     setIsSaving(true)
     const supabase = createClient()
-    
+
     const barbeiroData = {
       barbearia_id: barbeariaId,
       nome: formData.nome,
@@ -146,7 +144,7 @@ export default function AdminEquipePage() {
       email: formData.email || null,
       ativo: formData.ativo,
     }
-    
+
     if (editingBarbeiro) {
       const { error: updateError } = await supabase
         .from('barbeiros')
@@ -165,15 +163,15 @@ export default function AdminEquipePage() {
         return
       }
     }
-    
+
     setIsSaving(false)
     setIsDialogOpen(false)
     loadBarbeiros()
   }
 
   return (
-    <PageContainer>
-      <AppPageHeader title="Equipe" profileHref={`${base}/configuracoes`} avatarFallback="A" />
+    <TenantPanelPageContainer>
+      <TenantPanelPageHeader title="Equipe" profileHref={`${base}/configuracoes`} avatarFallback="A" />
 
       <PageContent className="space-y-3">
         <div className="flex justify-end">
@@ -199,13 +197,11 @@ export default function AdminEquipePage() {
               <CardContent className="flex items-center gap-3 p-4">
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={barbeiro.avatar} />
-                  <AvatarFallback>
-                    {barbeiro.nome.charAt(0).toUpperCase()}
-                  </AvatarFallback>
+                  <AvatarFallback>{barbeiro.nome.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium truncate">{barbeiro.nome}</span>
+                    <span className="truncate font-medium">{barbeiro.nome}</span>
                     {!barbeiro.ativo && (
                       <Badge variant="secondary" className="text-xs">
                         Inativo
@@ -263,15 +259,12 @@ export default function AdminEquipePage() {
         )}
       </PageContent>
 
-      {/* Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingBarbeiro ? 'Editar Barbeiro' : 'Novo Barbeiro'}
-            </DialogTitle>
+            <DialogTitle>{editingBarbeiro ? 'Editar barbeiro' : 'Novo barbeiro'}</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="nome">Nome</Label>
@@ -282,36 +275,32 @@ export default function AdminEquipePage() {
                 placeholder="Nome do barbeiro"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="telefone">Telefone</Label>
               <Input
                 id="telefone"
                 value={formData.telefone}
-                onChange={(e) =>
-                  setFormData({ ...formData, telefone: maskTelefoneBr(e.target.value) })
-                }
+                onChange={(e) => setFormData({ ...formData, telefone: maskTelefoneBr(e.target.value) })}
                 placeholder="(00) 00000-0000"
                 inputMode="tel"
                 autoComplete="tel"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: normalizeEmailInput(e.target.value) })
-                }
+                onChange={(e) => setFormData({ ...formData, email: normalizeEmailInput(e.target.value) })}
                 placeholder="email@exemplo.com"
                 inputMode="email"
                 autoComplete="email"
               />
             </div>
-            
+
             <div className="flex items-center justify-between">
               <Label htmlFor="ativo">Barbeiro ativo</Label>
               <Switch
@@ -321,7 +310,7 @@ export default function AdminEquipePage() {
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancelar
@@ -333,6 +322,6 @@ export default function AdminEquipePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </PageContainer>
+    </TenantPanelPageContainer>
   )
 }

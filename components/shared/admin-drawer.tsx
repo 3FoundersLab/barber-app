@@ -2,36 +2,22 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Calendar, DollarSign, LayoutDashboard, Menu, Scissors, Settings, Users } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
-
-const FULL_ADMIN_LINKS = (basePath: string) => [
-  { label: 'Dashboard', href: `${basePath}/dashboard`, icon: LayoutDashboard },
-  { label: 'Agenda', href: `${basePath}/agendamentos`, icon: Calendar },
-  { label: 'Financeiro', href: `${basePath}/financeiro`, icon: DollarSign },
-  { label: 'Serviços', href: `${basePath}/servicos`, icon: Scissors },
-  { label: 'Equipe', href: `${basePath}/equipe`, icon: Users },
-  { label: 'Configurações', href: `${basePath}/configuracoes`, icon: Settings },
-]
-
-const LIMITED_ADMIN_LINKS = (basePath: string) => [
-  { label: 'Dashboard', href: `${basePath}/dashboard`, icon: LayoutDashboard },
-  { label: 'Configurações', href: `${basePath}/configuracoes`, icon: Settings },
-]
+import { tenantAdminNavFull, tenantAdminNavLimited } from '@/lib/tenant-admin-nav'
 
 export function AdminDrawer({
   basePath,
   limitedNav = false,
 }: {
   basePath: string
-  /** Pagamento pendente: só dashboard + configurações */
+  /** Pagamento pendente: navegação reduzida (alinha com layout e proxy). */
   limitedNav?: boolean
 }) {
-  const adminLinks = limitedNav ? LIMITED_ADMIN_LINKS(basePath) : FULL_ADMIN_LINKS(basePath)
-
+  const adminLinks = limitedNav ? tenantAdminNavLimited(basePath) : tenantAdminNavFull(basePath)
   const pathname = usePathname()
 
   return (
@@ -40,20 +26,30 @@ export function AdminDrawer({
         <Button
           variant="outline"
           size="icon"
-          className="fixed left-4 top-4 z-50 h-9 w-9 shadow-sm md:hidden"
+          className={cn(
+            'fixed left-4 top-4 z-50 h-9 w-9 shadow-md md:hidden',
+            'border-zinc-200/90 bg-white/90 backdrop-blur-md dark:border-zinc-700 dark:bg-zinc-950/90',
+            'transition-[border-color,background-color,box-shadow] duration-200 hover:bg-zinc-50 dark:hover:bg-zinc-900/90',
+          )}
         >
           <Menu className="h-4 w-4" />
-          <span className="sr-only">Abrir menu admin</span>
+          <span className="sr-only">Abrir menu do painel</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="flex w-[280px] flex-col p-0">
-        <SheetHeader className="border-b">
-          <SheetTitle>Painel Admin</SheetTitle>
+      <SheetContent
+        side="left"
+        className={cn(
+          'flex w-[280px] flex-col gap-0 p-0',
+          'border-zinc-200/80 bg-white/95 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95',
+        )}
+      >
+        <SheetHeader className="border-b border-zinc-200/80 px-4 py-4 dark:border-zinc-800">
+          <SheetTitle>Painel da barbearia</SheetTitle>
         </SheetHeader>
 
         <nav className="flex flex-1 flex-col space-y-1 p-3">
           {adminLinks.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
             const Icon = item.icon
 
             return (
@@ -63,8 +59,8 @@ export function AdminDrawer({
                 className={cn(
                   'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors',
                   isActive
-                  ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                    : 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]',
                 )}
               >
                 <Icon className="h-4 w-4" />

@@ -1,32 +1,17 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { LayoutDashboard, Calendar, Scissors, Users, Settings, DollarSign } from 'lucide-react'
 import { useParams, usePathname, useRouter } from 'next/navigation'
-import { BottomTabs, type TabItem } from '@/components/shared/bottom-tabs'
+import { BottomTabs } from '@/components/shared/bottom-tabs'
 import { AdminDrawer } from '@/components/shared/admin-drawer'
 import { DesktopSidebar } from '@/components/shared/desktop-sidebar'
 import { AppPageHeadingProvider } from '@/components/shared/app-page-heading-context'
+import { SuperLogoutButton } from '@/components/shared/super-logout-button'
+import { SuperPremiumBackdrop } from '@/components/super/super-premium-backdrop'
 import { createClient } from '@/lib/supabase/client'
 import { rpcUserIsMemberOfBarbearia } from '@/lib/barbearia-rpc'
+import { tenantAdminTabsFull, tenantAdminTabsLimited } from '@/lib/tenant-admin-nav'
 import { tenantBarbeariaBasePath, tenantBarbeariaDashboardPath } from '@/lib/routes'
-
-const FULL_ADMIN_TABS = (
-  base: string,
-): TabItem[] => [
-  { label: 'Dashboard', href: `${base}/dashboard`, icon: LayoutDashboard },
-  { label: 'Agenda', href: `${base}/agendamentos`, icon: Calendar },
-  { label: 'Financeiro', href: `${base}/financeiro`, icon: DollarSign },
-  { label: 'Serviços', href: `${base}/servicos`, icon: Scissors },
-  { label: 'Equipe', href: `${base}/equipe`, icon: Users },
-  { label: 'Config', href: `${base}/configuracoes`, icon: Settings },
-]
-
-/** Pagamento pendente: só dashboard + configurações (alinha com proxy.ts). */
-const LIMITED_ADMIN_TABS = (base: string): TabItem[] => [
-  { label: 'Dashboard', href: `${base}/dashboard`, icon: LayoutDashboard },
-  { label: 'Config', href: `${base}/configuracoes`, icon: Settings },
-]
 
 export default function AdminSlugLayout({ children }: { children: React.ReactNode }) {
   const params = useParams()
@@ -90,6 +75,7 @@ export default function AdminSlugLayout({ children }: { children: React.ReactNod
     const prefix = tenantBarbeariaBasePath(slug)
     const ok =
       pathname === `${prefix}/dashboard` ||
+      pathname === `${prefix}/assinatura` ||
       pathname === `${prefix}/configuracoes` ||
       pathname.startsWith(`${prefix}/configuracoes/`)
     if (!ok) {
@@ -99,21 +85,35 @@ export default function AdminSlugLayout({ children }: { children: React.ReactNod
 
   const adminTabs = useMemo(() => {
     if (pagamentoPendenteAdmin) {
-      return LIMITED_ADMIN_TABS(base)
+      return tenantAdminTabsLimited(base)
     }
-    return FULL_ADMIN_TABS(base)
+    return tenantAdminTabsFull(base)
   }, [base, pagamentoPendenteAdmin])
 
   return (
     <>
-      <AdminDrawer basePath={base} limitedNav={pagamentoPendenteAdmin} />
-      <div className="md:flex md:min-h-screen md:bg-muted/20">
-        <DesktopSidebar title="Painel Admin" tabs={adminTabs} />
-        <div className="min-w-0 flex-1">
+      <div className="relative min-h-screen md:flex" data-tenant-admin-shell>
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden>
+          <SuperPremiumBackdrop />
+        </div>
+        <AdminDrawer basePath={base} limitedNav={pagamentoPendenteAdmin} />
+        <DesktopSidebar
+          appearance="super"
+          appBrand={{ href: `${base}/dashboard`, collapsible: true }}
+          tabs={adminTabs}
+          footer={({ collapsed }) =>
+            collapsed ? (
+              <SuperLogoutButton variant="nav" compact className="hover:bg-zinc-100/85 dark:hover:bg-white/[0.06]" />
+            ) : (
+              <SuperLogoutButton variant="nav" className="hover:bg-zinc-100/85 dark:hover:bg-white/[0.06]" />
+            )
+          }
+        />
+        <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col">
           <AppPageHeadingProvider>{children}</AppPageHeadingProvider>
         </div>
       </div>
-      <BottomTabs tabs={adminTabs} />
+      <BottomTabs appearance="super" scrollable tabs={adminTabs} />
     </>
   )
 }

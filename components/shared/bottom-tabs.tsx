@@ -38,6 +38,8 @@ interface BottomTabsProps {
   tabs: TabItem[]
   basePath?: string
   appearance?: 'default' | 'super'
+  /** Muitos itens (ex.: painel tenant): rolagem horizontal no mobile em vez de espichar. */
+  scrollable?: boolean
 }
 
 function childPathActive(pathname: string, basePath: string, childHref: string) {
@@ -45,7 +47,12 @@ function childPathActive(pathname: string, basePath: string, childHref: string) 
   return pathname === full || pathname.startsWith(`${full}/`)
 }
 
-export function BottomTabs({ tabs, basePath = '', appearance = 'default' }: BottomTabsProps) {
+export function BottomTabs({
+  tabs,
+  basePath = '',
+  appearance = 'default',
+  scrollable = false,
+}: BottomTabsProps) {
   const pathname = usePathname()
   const isSuper = appearance === 'super'
 
@@ -58,7 +65,14 @@ export function BottomTabs({ tabs, basePath = '', appearance = 'default' }: Bott
           : 'border-t bg-background',
       )}
     >
-      <div className="flex h-16 items-center justify-around">
+      <div
+        className={cn(
+          'flex h-16 items-center',
+          scrollable
+            ? 'touch-pan-x justify-start gap-0.5 overflow-x-auto overflow-y-hidden px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+            : 'justify-around',
+        )}
+      >
         {tabs.map((tab) => {
           if (isTabGroup(tab)) {
             const groupActive = tab.children.some((c) => childPathActive(pathname, basePath, c.href))
@@ -70,7 +84,7 @@ export function BottomTabs({ tabs, basePath = '', appearance = 'default' }: Bott
                   <button
                     type="button"
                     className={cn(
-                      'flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs transition-all duration-200',
+                      'flex min-w-[64px] shrink-0 flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs transition-all duration-200',
                       'text-muted-foreground hover:text-foreground',
                       isSuper && 'hover:bg-zinc-100/80 dark:hover:bg-white/[0.06]',
                       groupActive && 'text-primary',
@@ -118,7 +132,7 @@ export function BottomTabs({ tabs, basePath = '', appearance = 'default' }: Bott
               key={tab.href}
               href={fullHref}
               className={cn(
-                'flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs transition-all duration-200',
+                'flex min-w-[64px] shrink-0 flex-col items-center justify-center gap-1 rounded-lg px-2.5 py-2 text-xs transition-all duration-200',
                 isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
                 isSuper && !isActive && 'hover:bg-zinc-100/80 dark:hover:bg-white/[0.06]',
                 isSuper && isActive && 'bg-primary/10 dark:bg-primary/15',

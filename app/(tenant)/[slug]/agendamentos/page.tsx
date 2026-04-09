@@ -1,10 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
-import { PageContainer, PageContent } from '@/components/shared/page-container'
-import { AppPageHeader } from '@/components/shared/app-page-header'
+import { PageContent } from '@/components/shared/page-container'
+import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { AppointmentCard } from '@/components/domain/appointment-card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
@@ -16,13 +15,11 @@ import { DateNavigatorCalendar } from '@/components/shared/date-navigator-calend
 import { formatDate, DIAS_SEMANA_ABREV } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
-import { tenantBarbeariaBasePath } from '@/lib/routes'
+import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import type { Agendamento, Barbeiro } from '@/types'
 
 export default function AdminAgendamentosPage() {
-  const params = useParams()
-  const slug = typeof params.slug === 'string' ? params.slug : ''
-  const base = slug ? tenantBarbeariaBasePath(slug) : '/painel'
+  const { slug, base } = useTenantAdminBase()
 
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedBarbeiro, setSelectedBarbeiro] = useState<string>('all')
@@ -198,8 +195,8 @@ export default function AdminAgendamentosPage() {
   }
 
   return (
-    <PageContainer>
-      <AppPageHeader title="Agendamentos" profileHref={`${base}/configuracoes`} avatarFallback="A" />
+    <TenantPanelPageContainer>
+      <TenantPanelPageHeader title="Agendamentos" profileHref={`${base}/configuracoes`} avatarFallback="A" />
 
       <PageContent className="space-y-4">
         <div className="flex justify-end">
@@ -328,6 +325,6 @@ export default function AdminAgendamentosPage() {
           )}
         </div>
       </PageContent>
-    </PageContainer>
+    </TenantPanelPageContainer>
   )
 }

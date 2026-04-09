@@ -10,10 +10,15 @@ import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Spinner } from '@/components/ui/spinner'
 import { superPageContainerClass, superPremiumAppHeaderClass } from '@/components/super/super-ui'
+import { SuperProfilePageSkeleton } from '@/components/super/super-profile-page-skeleton'
+import {
+  superProfileGlassCardClass,
+  superProfileInputClass,
+  superProfileDangerAlertClass,
+} from '@/components/super/super-profile-styles'
 import {
   landingButtonLift,
   landingEyebrow,
@@ -25,55 +30,6 @@ import { setProfileCache } from '@/lib/profile-cache'
 import { ProfileAvatarUpload } from '@/components/shared/profile-avatar-upload'
 import { cn } from '@/lib/utils'
 import type { Profile } from '@/types'
-
-const inputPremiumClass = cn(
-  'h-10 shadow-none transition-[border-color,box-shadow,background-color] duration-300 focus-visible:border-ring focus-visible:ring-ring/45 disabled:opacity-70',
-  'border-zinc-200 bg-white text-foreground placeholder:text-zinc-500 hover:border-zinc-300',
-  'dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:hover:border-white/[0.14]',
-)
-
-const glassCardClass = cn(
-  'rounded-2xl border backdrop-blur-md transition-[border-color,box-shadow] duration-300',
-  'border-zinc-200/95 bg-white/80 shadow-[0_22px_44px_-24px_rgba(0,0,0,0.12)] hover:border-zinc-300/90',
-  'dark:border-white/[0.08] dark:bg-white/[0.04] dark:shadow-[0_24px_48px_-28px_rgba(0,0,0,0.65)] dark:hover:border-white/[0.11]',
-)
-
-function SuperPerfilPageSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div className={cn(glassCardClass, 'p-6')}>
-        <div className="flex gap-4">
-          <Skeleton className="h-16 w-16 shrink-0 rounded-full bg-zinc-200/90 dark:bg-white/10" />
-          <div className="flex-1 space-y-2 pt-1">
-            <Skeleton className="h-6 w-48 bg-zinc-200/90 dark:bg-white/10" />
-            <Skeleton className="h-4 w-32 bg-zinc-200/90 dark:bg-white/10" />
-            <Skeleton className="h-3 w-full max-w-xs bg-zinc-200/90 dark:bg-white/10" />
-          </div>
-        </div>
-      </div>
-      <div className={cn(glassCardClass, 'overflow-hidden')}>
-        <div className="border-b border-zinc-200/80 px-5 py-4 dark:border-white/[0.06] md:px-6">
-          <Skeleton className="h-4 w-36 bg-zinc-200/90 dark:bg-white/10" />
-          <Skeleton className="mt-2 h-3 w-56 bg-zinc-200/90 dark:bg-white/10" />
-        </div>
-        <div className="space-y-5 p-5 md:p-6">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="space-y-2">
-              <Skeleton className="h-3 w-20 bg-zinc-200/90 dark:bg-white/10" />
-              <Skeleton className="h-10 w-full bg-zinc-200/90 dark:bg-white/10" />
-              {i === 0 ? <Skeleton className="h-3 w-full max-w-xs bg-zinc-200/90 dark:bg-white/10" /> : null}
-            </div>
-          ))}
-          <div className="flex flex-col items-center gap-3 py-2">
-            <Skeleton className="h-24 w-24 rounded-full bg-zinc-200/90 dark:bg-white/10" />
-            <Skeleton className="h-9 w-28 bg-zinc-200/90 dark:bg-white/10" />
-          </div>
-        </div>
-      </div>
-      <Skeleton className="h-12 w-full rounded-full bg-zinc-200/90 dark:bg-white/10" />
-    </div>
-  )
-}
 
 export default function SuperEditarPerfilPage() {
   const router = useRouter()
@@ -211,7 +167,7 @@ export default function SuperEditarPerfilPage() {
             </div>
 
             {isLoading ? (
-              <SuperPerfilPageSkeleton />
+              <SuperProfilePageSkeleton />
             ) : (
               <>
                 {error ? (
@@ -219,7 +175,7 @@ export default function SuperEditarPerfilPage() {
                     variant="danger"
                     onClose={() => setError(null)}
                     autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
-                    className="border-destructive/40 bg-destructive/10 dark:border-red-500/35 dark:bg-red-950/35"
+                    className={superProfileDangerAlertClass}
                   >
                     <AlertTitle>{error}</AlertTitle>
                   </Alert>
@@ -228,7 +184,7 @@ export default function SuperEditarPerfilPage() {
                 {profile ? (
                   <div
                     className={cn(
-                      glassCardClass,
+                      superProfileGlassCardClass,
                       'flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:gap-6 md:p-6',
                     )}
                   >
@@ -251,7 +207,7 @@ export default function SuperEditarPerfilPage() {
                   </div>
                 ) : null}
 
-                <section className={cn(glassCardClass, 'overflow-hidden')}>
+                <section className={cn(superProfileGlassCardClass, 'overflow-hidden')}>
                   <header className="border-b border-zinc-200/80 px-5 py-4 dark:border-white/[0.06] md:px-6">
                     <div className="flex items-center gap-2 text-foreground">
                       <User className="size-4 text-primary opacity-90" aria-hidden />
@@ -278,7 +234,7 @@ export default function SuperEditarPerfilPage() {
                         value={profile?.email || ''}
                         disabled
                         className={cn(
-                          inputPremiumClass,
+                          superProfileInputClass,
                           'cursor-not-allowed bg-zinc-100 text-muted-foreground dark:bg-white/[0.06] dark:text-zinc-400',
                         )}
                       />
@@ -297,7 +253,7 @@ export default function SuperEditarPerfilPage() {
                         onChange={(e) => setNome(e.target.value)}
                         placeholder="Seu nome"
                         autoComplete="name"
-                        className={inputPremiumClass}
+                        className={superProfileInputClass}
                       />
                     </div>
 
@@ -316,7 +272,7 @@ export default function SuperEditarPerfilPage() {
                         placeholder="(00) 00000-0000"
                         inputMode="tel"
                         autoComplete="tel"
-                        className={inputPremiumClass}
+                        className={superProfileInputClass}
                       />
                     </div>
 
@@ -341,7 +297,7 @@ export default function SuperEditarPerfilPage() {
                   </div>
                 </section>
 
-                <section className={cn(glassCardClass, 'px-5 py-4 md:px-6')}>
+                <section className={cn(superProfileGlassCardClass, 'px-5 py-4 md:px-6')}>
                   <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     <Shield className="size-4 text-sky-600 dark:text-sky-400/90" aria-hidden />
                     Acesso

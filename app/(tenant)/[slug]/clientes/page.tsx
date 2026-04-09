@@ -1,10 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
 import { Plus, Search } from 'lucide-react'
-import { PageContainer, PageContent } from '@/components/shared/page-container'
-import { AppPageHeader } from '@/components/shared/app-page-header'
+import { PageContent } from '@/components/shared/page-container'
+import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { ClienteCard } from '@/components/domain/cliente-card'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -23,13 +22,11 @@ import { Spinner } from '@/components/ui/spinner'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
-import { tenantBarbeariaBasePath } from '@/lib/routes'
+import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import type { Cliente } from '@/types'
 
 export default function AdminClientesPage() {
-  const params = useParams()
-  const slug = typeof params.slug === 'string' ? params.slug : ''
-  const base = slug ? tenantBarbeariaBasePath(slug) : '/painel'
+  const { slug, base } = useTenantAdminBase()
 
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [filteredClientes, setFilteredClientes] = useState<Cliente[]>([])
@@ -151,8 +148,8 @@ export default function AdminClientesPage() {
   }
 
   return (
-    <PageContainer>
-      <AppPageHeader title="Clientes" profileHref={`${base}/configuracoes`} avatarFallback="A" />
+    <TenantPanelPageContainer>
+      <TenantPanelPageHeader title="Clientes" profileHref={`${base}/configuracoes`} avatarFallback="A" />
 
       <PageContent className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
@@ -272,6 +269,6 @@ export default function AdminClientesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </PageContainer>
+    </TenantPanelPageContainer>
   )
 }
