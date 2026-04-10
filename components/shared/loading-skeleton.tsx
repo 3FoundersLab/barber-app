@@ -186,15 +186,20 @@ export function ServiceCardListSkeleton({ count = 4, className }: ListSkeletonPr
   )
 }
 
+/** Card de cliente (grid quadrado, até 6 colunas em telas largas) */
 export function ClientCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('flex items-center gap-3 rounded-lg border bg-card p-4', className)}>
-      <Skeleton className="h-10 w-10 rounded-full" />
-      <div className="flex-1 space-y-2">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-3 w-24" />
-      </div>
-    </div>
+    <Card className={cn('relative flex aspect-square flex-col overflow-hidden', className)}>
+      <Skeleton className="absolute right-2 top-2 h-8 w-8 shrink-0 rounded-md" />
+      <CardContent className="flex h-full flex-col items-center gap-2 p-3 pt-9 sm:p-4 sm:pt-10">
+        <Skeleton className="h-12 w-12 shrink-0 rounded-full sm:h-14 sm:w-14 md:h-[4.5rem] md:w-[4.5rem]" />
+        <div className="flex w-full flex-1 flex-col items-center justify-center gap-2 px-1">
+          <Skeleton className="h-3.5 w-4/5 max-w-[9rem]" />
+          <Skeleton className="h-3 w-3/5 max-w-[6rem]" />
+          <Skeleton className="h-3 w-full max-w-[8rem]" />
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -213,9 +218,9 @@ export function TeamMemberCardSkeleton({ className }: { className?: string }) {
   return (
     <Card className={cn('relative flex aspect-square flex-col overflow-hidden', className)}>
       <Skeleton className="absolute right-2 top-2 h-8 w-8 shrink-0 rounded-md" />
-      <CardContent className="flex h-full flex-col items-center justify-center gap-2 p-3 pt-9 sm:p-4 sm:pt-10">
-        <Skeleton className="h-14 w-14 shrink-0 rounded-full sm:h-[4.5rem] sm:w-[4.5rem]" />
-        <div className="flex w-full flex-col items-center gap-2 px-1">
+      <CardContent className="flex h-full flex-col items-center gap-2 p-3 pt-9 sm:p-4 sm:pt-10">
+        <Skeleton className="h-12 w-12 shrink-0 rounded-full sm:h-14 sm:w-14 md:h-[4.5rem] md:w-[4.5rem]" />
+        <div className="flex w-full flex-1 flex-col items-center justify-center gap-2 px-1">
           <Skeleton className="h-3.5 w-4/5 max-w-[9rem]" />
           <Skeleton className="h-3 w-3/5 max-w-[6rem]" />
           <Skeleton className="h-3 w-full max-w-[8rem]" />
