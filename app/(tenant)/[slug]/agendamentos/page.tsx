@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { Calendar, ChevronLeft, ChevronRight, Pencil, Plus } from 'lucide-react'
 import { PageContent } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
+import { AppointmentAdminFormDialog } from '@/components/domain/appointment-admin-form-dialog'
 import { AppointmentCard } from '@/components/domain/appointment-card'
 import { AppointmentDayGrid } from '@/components/domain/appointment-day-grid'
 import { Button } from '@/components/ui/button'
@@ -40,7 +42,7 @@ export default function AdminAgendamentosPage() {
   const [barbeiros, setBarbeiros] = useState<Barbeiro[]>([])
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([])
   const [barbeariaId, setBarbeariaId] = useState<string | null>(null)
-  const [useDemoData, setUseDemoData] = useState(true)
+  const [useDemoData, setUseDemoData] = useState(false)
   const [demoAgendamentos, setDemoAgendamentos] = useState<Agendamento[]>(() =>
     getAgendaDemoAgendamentosForMonth(new Date().getFullYear(), new Date().getMonth()),
   )
@@ -48,6 +50,30 @@ export default function AdminAgendamentosPage() {
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('grade')
   const [detailAppointment, setDetailAppointment] = useState<Agendamento | null>(null)
+  const [appointmentFormOpen, setAppointmentFormOpen] = useState(false)
+  const [editingAppointment, setEditingAppointment] = useState<Agendamento | null>(null)
+  const [fabPortalHost, setFabPortalHost] = useState<Element | null>(null)
+
+  useEffect(() => {
+    setFabPortalHost(document.body)
+  }, [])
+
+  const openNewAppointment = () => {
+    setEditingAppointment(null)
+    setAppointmentFormOpen(true)
+  }
+
+  const parseLocalYMD = (ymd: string) => {
+    const [y, m, d] = ymd.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  }
+
+  const handleAppointmentSaved = (savedDataYmd: string) => {
+    const d = parseLocalYMD(savedDataYmd)
+    setEditingAppointment(null)
+    setSelectedDate(d)
+    void loadAgendamentos(d)
+  }
 
   const formatDateKey = (date: Date) => {
     const year = date.getFullYear()
@@ -111,18 +137,20 @@ export default function AdminAgendamentosPage() {
     }
   }, [useDemoData, barbeiros, selectedBarbeiro])
 
-  async function loadAgendamentos() {
+  async function loadAgendamentos(dateOverride?: Date) {
     if (!barbeariaId) {
       setIsLoading(false)
       return
     }
 
+    const refDate = dateOverride ?? selectedDate
+
     setIsLoading(true)
     setError(null)
     const supabase = createClient()
     
-    const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
-    const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
+    const monthStart = new Date(refDate.getFullYear(), refDate.getMonth(), 1)
+    const monthEnd = new Date(refDate.getFullYear(), refDate.getMonth() + 1, 0)
     
     let query = supabase
       .from('agendamentos')
@@ -274,12 +302,6 @@ export default function AdminAgendamentosPage() {
         title="Agendamentos"
         profileHref={`${base}/configuracoes`}
         avatarFallback="A"
-        headingActions={
-          <Button size="sm">
-            <Plus className="mr-1 h-4 w-4" />
-            Novo
-          </Button>
-        }
       />
 
       <PageContent className="space-y-4">
@@ -492,10 +514,57 @@ export default function AdminAgendamentosPage() {
         )}
       </PageContent>
 
+      {fabPortalHost && barbeariaId
+        ? createPortal(
+            <Button
+              type="button"
+              size="icon"
+              className="fixed right-4 bottom-24 z-[60] h-14 w-14 rounded-full border-2 border-sky-300 bg-blue-600 text-white shadow-lg hover:bg-blue-700 dark:border-sky-300 dark:bg-blue-600 dark:hover:bg-blue-500 md:right-8 md:bottom-8"
+              onClick={openNewAppointment}
+              aria-label="Novo agendamento"
+            >
+              <Plus className="h-7 w-7" />
+            </Button>,
+            fabPortalHost,
+          )
+        : null}
+
+      <AppointmentAdminFormDialog
+        open={appointmentFormOpen}
+        onOpenChange={(open) => {
+          setAppointmentFormOpen(open)
+          if (!open) setEditingAppointment(null)
+        }}
+        barbeariaId={barbeariaId}
+        barbeiros={barbeiros}
+        initialDate={selectedDate}
+        editing={editingAppointment}
+        defaultBarbeiroId={selectedBarbeiro === 'all' ? undefined : selectedBarbeiro}
+        onSaved={handleAppointmentSaved}
+        onError={setError}
+        demoDataActive={useDemoData}
+      />
+
       <Dialog open={detailAppointment !== null} onOpenChange={(open) => !open && setDetailAppointment(null)}>
         <DialogContent className="max-w-md sm:max-w-lg" showCloseButton>
-          <DialogHeader>
+          <DialogHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
             <DialogTitle>Detalhes do agendamento</DialogTitle>
+            {detailAppointment?.status === 'agendado' && !useDemoData && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                onClick={() => {
+                  setEditingAppointment(detailAppointment)
+                  setDetailAppointment(null)
+                  setAppointmentFormOpen(true)
+                }}
+              >
+                <Pencil className="mr-1.5 h-4 w-4" />
+                Editar
+              </Button>
+            )}
           </DialogHeader>
           {detailAppointment && (
             <AppointmentCard
