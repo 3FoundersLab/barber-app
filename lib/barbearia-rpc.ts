@@ -48,6 +48,35 @@ export async function rpcUpdateBarbeariaDadosTenant(
   return { row: null, error: error ?? new Error('RPC update_barbearia_dados_tenant falhou'), missingFunction: false }
 }
 
+export type CriarUnidadeBarbeariaTenantPayload = {
+  p_barbearia_referencia_id: string
+  p_nome: string
+  p_slug: string
+}
+
+/**
+ * Cria nova barbearia (unidade) e vínculo do usuário como admin, espelhando plano/assinatura da referência.
+ * Script `040_rpc_criar_unidade_barbearia_tenant.sql`.
+ */
+export async function rpcCriarUnidadeBarbeariaTenant(
+  supabase: SupabaseClient,
+  payload: CriarUnidadeBarbeariaTenantPayload,
+): Promise<{ row: Barbearia | null; error: unknown; missingFunction: boolean }> {
+  const { data, error } = await supabase.rpc('criar_unidade_barbearia_tenant', payload)
+  if (!error && data != null) {
+    const raw = Array.isArray(data) ? data[0] : data
+    return { row: raw as Barbearia, error: null, missingFunction: false }
+  }
+  if (error && isMissingDatabaseFunctionError(error)) {
+    return { row: null, error, missingFunction: true }
+  }
+  return {
+    row: null,
+    error: error ?? new Error('RPC criar_unidade_barbearia_tenant falhou'),
+    missingFunction: false,
+  }
+}
+
 export async function rpcGetMyBarbeariaSlug(supabase: SupabaseClient): Promise<string | null> {
   const { data, error } = await supabase.rpc('get_my_barbearia_slug')
   if (error || data == null) return null

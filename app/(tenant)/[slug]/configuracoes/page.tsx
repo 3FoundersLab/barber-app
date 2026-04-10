@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
-  ChevronLeft,
+  Building2,
   Clock,
   CreditCard,
   LogOut,
   Mail,
   Phone,
+  Plus,
   Save,
   Store,
   User,
@@ -34,7 +35,7 @@ import { ProfileAvatarUpload } from '@/components/shared/profile-avatar-upload'
 import { createClient } from '@/lib/supabase/client'
 import { signOutWithPersistenceClear } from '@/lib/supabase/sign-out-client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
-import { rpcUpdateBarbeariaDadosTenant } from '@/lib/barbearia-rpc'
+import { rpcCriarUnidadeBarbeariaTenant, rpcUpdateBarbeariaDadosTenant } from '@/lib/barbearia-rpc'
 import { fetchLatestAssinaturaWithPlano, type AssinaturaComPlano } from '@/lib/tenant-assinatura-query'
 import { clearProfileCache, setProfileCache } from '@/lib/profile-cache'
 import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
@@ -44,8 +45,10 @@ import {
   serializeBarbeariaEndereco,
 } from '@/lib/barbearia-endereco'
 import { BarbeariaEnderecoFields } from '@/components/shared/barbearia-endereco-fields'
-import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
+import { maskTelefoneBr } from '@/lib/format-contato'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
+import { tenantBarbeariaBasePath } from '@/lib/routes'
+import { slugifyBarbeariaSlug } from '@/lib/super-barbearia-form'
 import { SuperProfileTenantConfigSkeleton } from '@/components/super/super-profile-page-skeleton'
 import {
   superProfileGlassCardClass,
@@ -86,6 +89,17 @@ const MSGS = {
     'Não foi possível salvar os dados da barbearia. Só o administrador da barbearia pode alterá-los. Tente sair da conta e entrar de novo; se o problema continuar, entre em contato com o suporte.',
 } as const
 
+/** Query `?tab=` nas configurações: mantém aba após navegar entre unidades ou dar refresh. */
+const CONFIG_TAB_QUERY = 'tab' as const
+const CONFIG_TAB_BEARBEARIA = 'barbearia' as const
+
+type ConfiguracoesTab = 'conta' | 'barbearia' | 'assinatura'
+
+function configuracoesTabFromParam(raw: string | null): ConfiguracoesTab {
+  if (raw === 'barbearia' || raw === 'assinatura') return raw
+  return 'conta'
+}
+
 const profileAvatarUploadPremiumClass = cn(
   'space-y-3 border-t border-zinc-200/80 pt-5 dark:border-white/[0.06]',
   '[&_.text-muted-foreground]:text-muted-foreground [&_label]:text-foreground dark:[&_label]:text-zinc-300',
@@ -99,8 +113,28 @@ const profileAvatarUploadPremiumClass = cn(
 const configuracoesInputErrorClass =
   'border-red-500/90 focus-visible:border-red-500 focus-visible:ring-red-500/25 dark:border-red-500/70'
 
+type MinhaUnidade = { id: string; nome: string; slug: string }
+
+function parseMinhasUnidadesFromBarbeariaUsers(
+  rows: { barbearias?: MinhaUnidade | MinhaUnidade[] | null }[] | null,
+): MinhaUnidade[] {
+  const byId = new Map<string, MinhaUnidade>()
+  for (const row of rows ?? []) {
+    const raw = row.barbearias
+    const b = Array.isArray(raw) ? raw[0] : raw
+    if (b?.id && b.slug) {
+      byId.set(b.id, { id: b.id, nome: b.nome?.trim() || b.slug, slug: b.slug })
+    }
+  }
+  return [...byId.values()].sort((a, b) =>
+    a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }),
+  )
+}
+
 export default function AdminConfiguracoesPage() {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const reduceMotion = useReducedMotion() === true
   const { slug, base } = useTenantAdminBase()
   const saveFeedbackAnchorRef = useRef<HTMLDivElement>(null)
@@ -118,6 +152,22 @@ export default function AdminConfiguracoesPage() {
     })
   }, [reduceMotion])
 
+  const activeConfiguracoesTab = configuracoesTabFromParam(searchParams.get(CONFIG_TAB_QUERY))
+
+  const setConfiguracoesTabInUrl = useCallback(
+    (next: ConfiguracoesTab) => {
+      const params = new URLSearchParams(searchParams.toString())
+      if (next === 'conta') {
+        params.delete(CONFIG_TAB_QUERY)
+      } else {
+        params.set(CONFIG_TAB_QUERY, next)
+      }
+      const qs = params.toString()
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    },
+    [pathname, router, searchParams],
+  )
+
   const [profile, setProfile] = useState<Profile | null>(null)
   const [barbearia, setBarbearia] = useState<Barbearia | null>(null)
   const [assinatura, setAssinatura] = useState<AssinaturaComPlano | null>(null)
@@ -134,6 +184,8 @@ export default function AdminConfiguracoesPage() {
     contaNome?: string
     barbeariaNome?: string
     barbeariaHorario?: string
+    barbeariaNovaUnidadeNome?: string
+    barbeariaNovaUnidadeSlug?: string
   }>({})
 
   const clearFieldErrors = useCallback(() => {
@@ -152,11 +204,23 @@ export default function AdminConfiguracoesPage() {
   const [formBarbearia, setFormBarbearia] = useState({
     nome: '',
     enderecoParts: emptyBarbeariaEnderecoParts(),
-    telefone: '',
-    email: '',
     horario_abertura: '',
     horario_fechamento: '',
   })
+  const [minhasUnidades, setMinhasUnidades] = useState<MinhaUnidade[]>([])
+  const [novaUnidadeNome, setNovaUnidadeNome] = useState('')
+  const [novaUnidadeSlug, setNovaUnidadeSlug] = useState('')
+  const [novaUnidadeSlugAutofill, setNovaUnidadeSlugAutofill] = useState(true)
+  const [isCreatingUnidade, setIsCreatingUnidade] = useState(false)
+
+  const refreshMinhasUnidades = useCallback(async (userId: string) => {
+    const client = createClient()
+    const { data: buRows } = await client
+      .from('barbearia_users')
+      .select('barbearias ( id, nome, slug )')
+      .eq('user_id', userId)
+    setMinhasUnidades(parseMinhasUnidadesFromBarbeariaUsers(buRows))
+  }, [])
 
   useEffect(() => {
     async function load() {
@@ -198,6 +262,8 @@ export default function AdminConfiguracoesPage() {
         setAvatar(profileData.avatar || '')
       }
 
+      await refreshMinhasUnidades(user.id)
+
       let b: Barbearia | null = null
 
       const barbeariaIdResolved = await resolveAdminBarbeariaId(supabase, user.id, { slug })
@@ -220,8 +286,6 @@ export default function AdminConfiguracoesPage() {
         setFormBarbearia({
           nome: b.nome,
           enderecoParts: deserializeBarbeariaEndereco(b.endereco ?? null),
-          telefone: maskTelefoneBr(b.telefone || ''),
-          email: normalizeEmailInput(b.email || ''),
           horario_abertura: timeFromDb(b.horario_abertura),
           horario_fechamento: timeFromDb(b.horario_fechamento),
         })
@@ -247,7 +311,7 @@ export default function AdminConfiguracoesPage() {
     }
 
     void load()
-  }, [slug])
+  }, [slug, refreshMinhasUnidades])
 
   const handleSaveBarbearia = async () => {
     if (!barbearia) return
@@ -288,8 +352,8 @@ export default function AdminConfiguracoesPage() {
     const basePayload = {
       nome: nomeBarbearia,
       endereco: serializeBarbeariaEndereco(formBarbearia.enderecoParts),
-      telefone: formBarbearia.telefone || null,
-      email: formBarbearia.email || null,
+      telefone: barbearia.telefone?.trim() || null,
+      email: barbearia.email?.trim() ? barbearia.email.trim().toLowerCase() : null,
     }
 
     const withHorarios = {
@@ -380,6 +444,80 @@ export default function AdminConfiguracoesPage() {
     setIsSavingBarbearia(false)
   }
 
+  const podeGerenciarUnidades =
+    profile?.role === 'admin' || profile?.role === 'super_admin'
+
+  const handleCriarUnidade = async () => {
+    if (!barbearia || !profile || !podeGerenciarUnidades) return
+
+    setFieldErrors((prev) => {
+      const { barbeariaNovaUnidadeNome, barbeariaNovaUnidadeSlug, ...rest } = prev
+      return rest
+    })
+
+    const nome = novaUnidadeNome.trim()
+    const slugRaw = novaUnidadeSlug.trim()
+    const slugUnit = slugifyBarbeariaSlug(slugRaw)
+
+    if (!nome) {
+      setSuccessMessage(null)
+      const msg = 'Informe o nome da nova unidade.'
+      setError(msg)
+      setFieldErrors((prev) => ({ ...prev, barbeariaNovaUnidadeNome: msg }))
+      scheduleScrollToSaveFeedback()
+      return
+    }
+    if (!slugUnit) {
+      setSuccessMessage(null)
+      const msg = 'Informe um identificador (slug) válido para a URL da unidade.'
+      setError(msg)
+      setFieldErrors((prev) => ({ ...prev, barbeariaNovaUnidadeSlug: msg }))
+      scheduleScrollToSaveFeedback()
+      return
+    }
+
+    setIsCreatingUnidade(true)
+    setError(null)
+    setWarning(null)
+    setSuccessMessage(null)
+    const supabase = createClient()
+
+    const rpc = await rpcCriarUnidadeBarbeariaTenant(supabase, {
+      p_barbearia_referencia_id: barbearia.id,
+      p_nome: nome,
+      p_slug: slugUnit,
+    })
+
+    if (rpc.row) {
+      setNovaUnidadeNome('')
+      setNovaUnidadeSlug('')
+      setNovaUnidadeSlugAutofill(true)
+      await refreshMinhasUnidades(profile.id)
+      setSuccessMessage('Unidade criada com sucesso.')
+      scheduleScrollToSaveFeedback()
+      setIsCreatingUnidade(false)
+      router.push(
+        `${tenantBarbeariaBasePath(rpc.row.slug)}/configuracoes?${CONFIG_TAB_QUERY}=${CONFIG_TAB_BEARBEARIA}`,
+      )
+      return
+    }
+
+    if (rpc.missingFunction) {
+      setWarning(
+        'Não foi possível criar a unidade: a função no banco ainda não existe. Execute no Supabase o script `040_rpc_criar_unidade_barbearia_tenant.sql` (ou a migração `20260410210000_rpc_criar_unidade_barbearia_tenant.sql`).',
+      )
+      scheduleScrollToSaveFeedback()
+      setIsCreatingUnidade(false)
+      return
+    }
+
+    setError(
+      toUserFriendlyErrorMessage(rpc.error, { fallback: 'Não foi possível criar a unidade. Tente de novo.' }),
+    )
+    scheduleScrollToSaveFeedback()
+    setIsCreatingUnidade(false)
+  }
+
   const handleSaveProfile = async () => {
     if (!profile) return
 
@@ -468,26 +606,14 @@ export default function AdminConfiguracoesPage() {
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="space-y-6"
           >
-            <div className="flex min-w-0 flex-wrap items-center gap-3">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-9 shrink-0 text-muted-foreground transition-colors duration-300 hover:bg-zinc-100 hover:text-primary dark:hover:bg-white/[0.06]"
-                onClick={() => router.back()}
-                aria-label="Voltar"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <div className="min-w-0 flex-1">
-                <p className={landingEyebrow}>Painel da barbearia</p>
-                <h1 className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                  Configurações
-                </h1>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  Sua conta, dados do negócio e assinatura. O email de login não é alterado aqui.
-                </p>
-              </div>
+            <div className="min-w-0">
+              <p className={landingEyebrow}>Painel da barbearia</p>
+              <h1 className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                Configurações
+              </h1>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                Sua conta, dados do negócio e assinatura. O email de login não é alterado aqui.
+              </p>
             </div>
 
             {isLoading ? (
@@ -575,7 +701,11 @@ export default function AdminConfiguracoesPage() {
                   </div>
                 ) : null}
 
-                <Tabs defaultValue="conta" className="w-full gap-5">
+                <Tabs
+                  value={activeConfiguracoesTab}
+                  onValueChange={(v) => setConfiguracoesTabInUrl(configuracoesTabFromParam(v))}
+                  className="w-full gap-5"
+                >
                   <TabsList
                     className={cn(
                       'grid h-auto w-full grid-cols-3 gap-1 rounded-xl border border-zinc-200/80 bg-zinc-50/90 p-1 shadow-none',
@@ -731,7 +861,7 @@ export default function AdminConfiguracoesPage() {
                           </h2>
                         </div>
                         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                          Nome, contato, endereço e horário de funcionamento de referência.
+                          Nome, endereço e horário de funcionamento de referência.
                         </p>
                       </header>
 
@@ -785,53 +915,158 @@ export default function AdminConfiguracoesPage() {
                               ) : null}
                             </div>
 
-                            <div className="space-y-2">
-                              <Label
-                                htmlFor="telefoneBarbearia"
-                                className="flex items-center gap-1.5 text-sm font-medium text-foreground dark:text-zinc-300"
-                              >
-                                <Phone className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                                Telefone de contato
-                              </Label>
-                              <Input
-                                id="telefoneBarbearia"
-                                value={formBarbearia.telefone}
-                                onChange={(e) =>
-                                  setFormBarbearia({
-                                    ...formBarbearia,
-                                    telefone: maskTelefoneBr(e.target.value),
-                                  })
-                                }
-                                placeholder="(00) 00000-0000"
-                                inputMode="tel"
-                                autoComplete="tel"
-                                className={superProfileInputClass}
-                              />
-                            </div>
+                            <div
+                              className="rounded-lg border border-zinc-200/80 bg-zinc-50/50 p-4 dark:border-white/[0.08] dark:bg-white/[0.03]"
+                              role="region"
+                              aria-label="Unidades"
+                            >
+                              <p className="flex items-center gap-2 text-sm font-medium text-foreground dark:text-zinc-300">
+                                <Building2 className="size-4 text-muted-foreground" aria-hidden />
+                                Unidades
+                              </p>
+                              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                                Cada unidade é um painel próprio (URL com slug). A assinatura da unidade nova segue o
+                                plano e o status da unidade em que você está agora (ativa ou pendente de pagamento).
+                              </p>
+                              {minhasUnidades.length > 0 ? (
+                                <ul className="mt-3 space-y-2">
+                                  {minhasUnidades.map((u) => {
+                                    const isCurrent = u.slug === slug
+                                    return (
+                                      <li
+                                        key={u.id}
+                                        className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-zinc-200/70 bg-white/80 px-3 py-2.5 dark:border-white/[0.08] dark:bg-white/[0.04]"
+                                      >
+                                        <div className="min-w-0 flex-1">
+                                          <p className="truncate text-sm font-medium text-foreground">{u.nome}</p>
+                                          <p className="truncate font-mono text-xs text-muted-foreground">/{u.slug}</p>
+                                        </div>
+                                        {isCurrent ? (
+                                          <span className="shrink-0 text-xs font-medium text-primary">Painel atual</span>
+                                        ) : (
+                                          <Button variant="outline" size="sm" className="shrink-0" asChild>
+                                            <Link
+                                              href={`${tenantBarbeariaBasePath(u.slug)}/configuracoes?${CONFIG_TAB_QUERY}=${CONFIG_TAB_BEARBEARIA}`}
+                                            >
+                                              Acessar
+                                            </Link>
+                                          </Button>
+                                        )}
+                                      </li>
+                                    )
+                                  })}
+                                </ul>
+                              ) : null}
 
-                            <div className="space-y-2">
-                              <Label
-                                htmlFor="emailBarbearia"
-                                className="flex items-center gap-1.5 text-sm font-medium text-foreground dark:text-zinc-300"
-                              >
-                                <Mail className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                                Email de contato da barbearia
-                              </Label>
-                              <Input
-                                id="emailBarbearia"
-                                type="email"
-                                value={formBarbearia.email}
-                                onChange={(e) =>
-                                  setFormBarbearia({
-                                    ...formBarbearia,
-                                    email: normalizeEmailInput(e.target.value),
-                                  })
-                                }
-                                placeholder="Opcional — contato@barbearia.com"
-                                inputMode="email"
-                                autoComplete="email"
-                                className={superProfileInputClass}
-                              />
+                              {podeGerenciarUnidades ? (
+                                <div className="mt-4 border-t border-zinc-200/80 pt-4 dark:border-white/[0.08]">
+                                  <p className="text-sm font-medium text-foreground dark:text-zinc-300">
+                                    Nova unidade
+                                  </p>
+                                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                                    O identificador vira o caminho do painel (apenas letras minúsculas, números e hífens).
+                                  </p>
+                                  <div className="mt-3 space-y-3">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="novaUnidadeNome" className={superProfileLabelClass}>
+                                        Nome da unidade
+                                      </Label>
+                                      <Input
+                                        id="novaUnidadeNome"
+                                        value={novaUnidadeNome}
+                                        onChange={(e) => {
+                                          const v = e.target.value
+                                          setNovaUnidadeNome(v)
+                                          if (novaUnidadeSlugAutofill) {
+                                            setNovaUnidadeSlug(slugifyBarbeariaSlug(v))
+                                          }
+                                          setFieldErrors((prev) => {
+                                            if (!prev.barbeariaNovaUnidadeNome) return prev
+                                            const { barbeariaNovaUnidadeNome: _r, ...rest } = prev
+                                            return rest
+                                          })
+                                        }}
+                                        placeholder="Ex.: Filial Centro"
+                                        disabled={isCreatingUnidade}
+                                        aria-invalid={fieldErrors.barbeariaNovaUnidadeNome ? true : undefined}
+                                        aria-describedby={
+                                          fieldErrors.barbeariaNovaUnidadeNome ? 'novaUnidadeNome-error' : undefined
+                                        }
+                                        className={cn(
+                                          superProfileInputClass,
+                                          fieldErrors.barbeariaNovaUnidadeNome
+                                            ? configuracoesInputErrorClass
+                                            : null,
+                                        )}
+                                      />
+                                      {fieldErrors.barbeariaNovaUnidadeNome ? (
+                                        <p
+                                          id="novaUnidadeNome-error"
+                                          className="text-sm text-destructive"
+                                          role="alert"
+                                        >
+                                          {fieldErrors.barbeariaNovaUnidadeNome}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor="novaUnidadeSlug" className={superProfileLabelClass}>
+                                        Identificador na URL (slug)
+                                      </Label>
+                                      <Input
+                                        id="novaUnidadeSlug"
+                                        value={novaUnidadeSlug}
+                                        onChange={(e) => {
+                                          setNovaUnidadeSlugAutofill(false)
+                                          setNovaUnidadeSlug(e.target.value)
+                                          setFieldErrors((prev) => {
+                                            if (!prev.barbeariaNovaUnidadeSlug) return prev
+                                            const { barbeariaNovaUnidadeSlug: _r, ...rest } = prev
+                                            return rest
+                                          })
+                                        }}
+                                        placeholder="ex.: filial-centro"
+                                        disabled={isCreatingUnidade}
+                                        className={cn(
+                                          superProfileInputClass,
+                                          'font-mono text-sm',
+                                          fieldErrors.barbeariaNovaUnidadeSlug
+                                            ? configuracoesInputErrorClass
+                                            : null,
+                                        )}
+                                        aria-invalid={fieldErrors.barbeariaNovaUnidadeSlug ? true : undefined}
+                                        aria-describedby={
+                                          fieldErrors.barbeariaNovaUnidadeSlug ? 'novaUnidadeSlug-error' : undefined
+                                        }
+                                        autoComplete="off"
+                                      />
+                                      {fieldErrors.barbeariaNovaUnidadeSlug ? (
+                                        <p
+                                          id="novaUnidadeSlug-error"
+                                          className="text-sm text-destructive"
+                                          role="alert"
+                                        >
+                                          {fieldErrors.barbeariaNovaUnidadeSlug}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      className="w-full sm:w-auto"
+                                      onClick={() => void handleCriarUnidade()}
+                                      disabled={isCreatingUnidade}
+                                    >
+                                      {isCreatingUnidade ? (
+                                        <Spinner className="mr-2 h-4 w-4" />
+                                      ) : (
+                                        <Plus className="mr-2 h-4 w-4" aria-hidden />
+                                      )}
+                                      Criar unidade
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : null}
                             </div>
 
                             <BarbeariaEnderecoFields
@@ -936,8 +1171,8 @@ export default function AdminConfiguracoesPage() {
                           </>
                         ) : (
                           <p className="text-sm leading-relaxed text-muted-foreground">
-                            Quando o cadastro estiver sincronizado, o nome, telefone e demais dados da barbearia
-                            aparecerão aqui para edição.
+                            Quando o cadastro estiver sincronizado, o nome e demais dados da barbearia aparecerão aqui
+                            para edição.
                           </p>
                         )}
                       </div>
