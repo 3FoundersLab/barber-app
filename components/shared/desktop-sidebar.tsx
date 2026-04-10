@@ -31,6 +31,8 @@ interface DesktopSidebarProps {
   title?: string
   appBrand?: { href: string; collapsible?: boolean }
   tabs: NavEntry[]
+  /** Faixa opcional logo abaixo do cabeçalho (ex.: contexto da unidade no painel tenant). */
+  belowHeader?: DesktopSidebarFooter
   footer?: DesktopSidebarFooter
   /** Super Admin: vidro e navegação alinhados à landing. */
   appearance?: 'default' | 'super'
@@ -50,6 +52,7 @@ export function DesktopSidebar({
   title,
   appBrand,
   tabs,
+  belowHeader,
   footer,
   appearance = 'default',
 }: DesktopSidebarProps) {
@@ -284,6 +287,18 @@ export function DesktopSidebar({
         )}
       >
         {header}
+
+        {belowHeader ? (
+          <div
+            className={cn(
+              'border-b px-2.5 py-2 md:px-3',
+              isSuper && 'border-zinc-200/80 dark:border-zinc-800',
+              !isSuper && 'border-border/70',
+            )}
+          >
+            {resolveFooter(belowHeader, !wide)}
+          </div>
+        ) : null}
 
         <nav
           id="desktop-sidebar-nav"

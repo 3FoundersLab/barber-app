@@ -13,6 +13,8 @@ import { createClient } from '@/lib/supabase/client'
 import { rpcUserIsMemberOfBarbearia } from '@/lib/barbearia-rpc'
 import { tenantAdminNavEntriesFull, tenantAdminNavEntriesLimited } from '@/lib/tenant-admin-nav'
 import { tenantBarbeariaBasePath, tenantBarbeariaDashboardPath } from '@/lib/routes'
+import { TenantUnidadeSessionGate } from '@/components/tenant/tenant-unidade-session-gate'
+import { TenantUnidadeVinculoHint } from '@/components/tenant/tenant-unidade-vinculo-hint'
 
 export default function AdminSlugLayout({ children }: { children: React.ReactNode }) {
   const params = useParams()
@@ -97,11 +99,16 @@ export default function AdminSlugLayout({ children }: { children: React.ReactNod
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden>
           <SuperPremiumBackdrop />
         </div>
-        <AdminDrawer basePath={base} limitedNav={pagamentoPendenteAdmin} />
+        <AdminDrawer
+          basePath={base}
+          limitedNav={pagamentoPendenteAdmin}
+          headerHint={<TenantUnidadeVinculoHint />}
+        />
         <DesktopSidebar
           appearance="super"
           appBrand={{ href: `${base}/dashboard`, collapsible: true }}
           tabs={adminNav}
+          belowHeader={({ collapsed }) => <TenantUnidadeVinculoHint collapsed={collapsed} />}
           footer={({ collapsed }) =>
             collapsed ? (
               <SuperLogoutButton variant="nav" compact className="hover:bg-zinc-100/85 dark:hover:bg-white/[0.06]" />
@@ -115,6 +122,7 @@ export default function AdminSlugLayout({ children }: { children: React.ReactNod
         </div>
       </div>
       <BottomTabs appearance="super" scrollable tabs={flattenNavEntries(adminNav)} />
+      {slug ? <TenantUnidadeSessionGate slug={slug} /> : null}
     </>
   )
 }

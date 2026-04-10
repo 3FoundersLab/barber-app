@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Menu } from 'lucide-react'
@@ -12,10 +13,13 @@ import { tenantAdminNavSectionsFull, tenantAdminNavSectionsLimited } from '@/lib
 export function AdminDrawer({
   basePath,
   limitedNav = false,
+  headerHint,
 }: {
   basePath: string
   /** Pagamento pendente: navegação reduzida (alinha com layout e proxy). */
   limitedNav?: boolean
+  /** Linha opcional abaixo do título (ex.: contexto de unidade). */
+  headerHint?: ReactNode
 }) {
   const adminSections = limitedNav
     ? tenantAdminNavSectionsLimited(basePath)
@@ -47,6 +51,7 @@ export function AdminDrawer({
       >
         <SheetHeader className="border-b border-zinc-200/80 px-4 py-4 dark:border-zinc-800">
           <SheetTitle>Painel da barbearia</SheetTitle>
+          {headerHint ? <div className="mt-2">{headerHint}</div> : null}
         </SheetHeader>
 
         <nav className="flex flex-1 flex-col space-y-1 p-3">
