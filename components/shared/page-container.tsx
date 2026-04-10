@@ -85,14 +85,21 @@ export function PageContent({ children, className }: PageContentProps) {
       )}
     >
       {heading ? (
-        <div className="mb-4 space-y-1 md:mb-6 lg:mb-8">
-          <PageTitle>{heading.title}</PageTitle>
-          {heading.subtitle != null &&
-            (typeof heading.subtitle === 'string' ? (
-              <p className="text-sm text-muted-foreground">{heading.subtitle}</p>
-            ) : (
-              heading.subtitle
-            ))}
+        <div className="mb-4 md:mb-6 lg:mb-8">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div className="min-w-0 space-y-1">
+              <PageTitle>{heading.title}</PageTitle>
+              {heading.subtitle != null &&
+                (typeof heading.subtitle === 'string' ? (
+                  <p className="text-sm text-muted-foreground">{heading.subtitle}</p>
+                ) : (
+                  heading.subtitle
+                ))}
+            </div>
+            {heading.actions ? (
+              <div className="flex shrink-0 flex-wrap items-center gap-2">{heading.actions}</div>
+            ) : null}
+          </div>
         </div>
       ) : null}
       {children}

@@ -1,21 +1,35 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { PageContent } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { AppointmentCard } from '@/components/domain/appointment-card'
+import { AppointmentDayGrid } from '@/components/domain/appointment-day-grid'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { AppointmentListSkeleton } from '@/components/shared/loading-skeleton'
 import { ViewToggle, type ViewMode } from '@/components/shared/view-toggle'
 import { DateNavigatorCalendar } from '@/components/shared/date-navigator-calendar'
-import { formatDate, DIAS_SEMANA_ABREV } from '@/lib/constants'
+import { DIAS_SEMANA_ABREV, formatDateWeekdayLong } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
+import {
+  getAgendaDemoAgendamentosForMonth,
+  getAgendaDemoBarbeiros,
+  getAgendaDemoUnavailableBlocks,
+} from '@/lib/agenda-demo-data'
 import type { Agendamento, Barbeiro } from '@/types'
 
 export default function AdminAgendamentosPage() {
@@ -26,9 +40,14 @@ export default function AdminAgendamentosPage() {
   const [barbeiros, setBarbeiros] = useState<Barbeiro[]>([])
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([])
   const [barbeariaId, setBarbeariaId] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [useDemoData, setUseDemoData] = useState(true)
+  const [demoAgendamentos, setDemoAgendamentos] = useState<Agendamento[]>(() =>
+    getAgendaDemoAgendamentosForMonth(new Date().getFullYear(), new Date().getMonth()),
+  )
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [viewMode, setViewMode] = useState<ViewMode>('grade')
+  const [detailAppointment, setDetailAppointment] = useState<Agendamento | null>(null)
 
   const formatDateKey = (date: Date) => {
     const year = date.getFullYear()
@@ -67,14 +86,37 @@ export default function AdminAgendamentosPage() {
   }, [slug])
 
   useEffect(() => {
+    if (useDemoData) {
+      setIsLoading(false)
+      setError(null)
+      return
+    }
     if (barbeariaId) {
       loadAgendamentos()
     }
-  }, [selectedDate, selectedBarbeiro, barbeariaId])
+  }, [selectedDate, selectedBarbeiro, barbeariaId, useDemoData])
+
+  const selectedYear = selectedDate.getFullYear()
+  const selectedMonth = selectedDate.getMonth()
+
+  useEffect(() => {
+    if (!useDemoData) return
+    setDemoAgendamentos(getAgendaDemoAgendamentosForMonth(selectedYear, selectedMonth))
+  }, [useDemoData, selectedYear, selectedMonth])
+
+  useEffect(() => {
+    if (useDemoData || selectedBarbeiro === 'all') return
+    if (!barbeiros.some((b) => b.id === selectedBarbeiro)) {
+      setSelectedBarbeiro('all')
+    }
+  }, [useDemoData, barbeiros, selectedBarbeiro])
 
   async function loadAgendamentos() {
-    if (!barbeariaId) return
-    
+    if (!barbeariaId) {
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
     setError(null)
     const supabase = createClient()
@@ -131,33 +173,53 @@ export default function AdminAgendamentosPage() {
   }
 
   const handleStatusChange = async (id: string, status: 'concluido' | 'cancelado' | 'faltou') => {
+    if (useDemoData) {
+      setDemoAgendamentos((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, status } : a)),
+      )
+      return
+    }
     const supabase = createClient()
-    
-    await supabase
-      .from('agendamentos')
-      .update({ status })
-      .eq('id', id)
-    
+
+    await supabase.from('agendamentos').update({ status }).eq('id', id)
+
     loadAgendamentos()
   }
 
   const handleMarkPaid = async (id: string) => {
+    if (useDemoData) {
+      setDemoAgendamentos((prev) =>
+        prev.map((a) =>
+          a.id === id ? { ...a, status_pagamento: 'pago' as const } : a,
+        ),
+      )
+      return
+    }
     const supabase = createClient()
-    
-    await supabase
-      .from('agendamentos')
-      .update({ status_pagamento: 'pago' })
-      .eq('id', id)
-    
+
+    await supabase.from('agendamentos').update({ status_pagamento: 'pago' }).eq('id', id)
+
     loadAgendamentos()
   }
 
-  const isToday = selectedDate.toDateString() === new Date().toDateString()
   const selectedDateKey = formatDateKey(selectedDate)
-  const appointmentsOfSelectedDate = useMemo(
-    () => agendamentos.filter((agendamento) => agendamento.data === selectedDateKey),
-    [agendamentos, selectedDateKey]
+
+  const displayBarbeiros = useMemo(
+    () => (useDemoData ? getAgendaDemoBarbeiros() : barbeiros),
+    [useDemoData, barbeiros],
   )
+
+  const displayAgendamentos = useDemoData ? demoAgendamentos : agendamentos
+
+  const appointmentsOfSelectedDate = useMemo(
+    () => displayAgendamentos.filter((agendamento) => agendamento.data === selectedDateKey),
+    [displayAgendamentos, selectedDateKey],
+  )
+
+  const barbeirosNaGrade = useMemo(() => {
+    if (selectedBarbeiro === 'all') return displayBarbeiros
+    return displayBarbeiros.filter((b) => b.id === selectedBarbeiro)
+  }, [displayBarbeiros, selectedBarbeiro])
 
   // Generate week days
   const getWeekDays = () => {
@@ -175,10 +237,21 @@ export default function AdminAgendamentosPage() {
 
   const handleMoveAppointment = async (appointmentId: string, nextDate: Date) => {
     const nextDateKey = formatDateKey(nextDate)
+
+    if (useDemoData) {
+      setDemoAgendamentos((prev) =>
+        prev.map((item) =>
+          item.id === appointmentId ? { ...item, data: nextDateKey } : item,
+        ),
+      )
+      setSelectedDate(nextDate)
+      return
+    }
+
     const supabase = createClient()
 
     setAgendamentos((prev) =>
-      prev.map((item) => (item.id === appointmentId ? { ...item, data: nextDateKey } : item))
+      prev.map((item) => (item.id === appointmentId ? { ...item, data: nextDateKey } : item)),
     )
 
     const { error: updateError } = await supabase
@@ -197,32 +270,67 @@ export default function AdminAgendamentosPage() {
 
   return (
     <TenantPanelPageContainer>
-      <TenantPanelPageHeader title="Agendamentos" profileHref={`${base}/configuracoes`} avatarFallback="A" />
-
-      <PageContent className="space-y-4">
-        <div className="flex justify-end">
+      <TenantPanelPageHeader
+        title="Agendamentos"
+        profileHref={`${base}/configuracoes`}
+        avatarFallback="A"
+        headingActions={
           <Button size="sm">
             <Plus className="mr-1 h-4 w-4" />
             Novo
           </Button>
-        </div>
+        }
+      />
 
-        {/* Date Navigation */}
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" size="icon" onClick={handlePrevDay}>
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <div className="text-center">
-            <p className="text-lg font-semibold">
-              {formatDate(selectedDate)}
+      <PageContent className="space-y-4">
+        {useDemoData && (
+          <Alert variant="info">
+            <AlertTitle>
+              Modo demonstração: agenda com dados fictícios (Gabriel, Fernando, Pedro, Lucas).
+              Desative o interruptor abaixo para ver os agendamentos reais da barbearia.
+            </AlertTitle>
+          </Alert>
+        )}
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-lg font-semibold leading-snug tracking-tight sm:text-xl">
+              {formatDateWeekdayLong(selectedDate)}
             </p>
-            <p className="text-sm text-muted-foreground">
-              {DIAS_SEMANA_ABREV[selectedDate.getDay()]}
+            <p className="text-xs text-muted-foreground sm:text-sm">
+              {viewMode === 'grade'
+                ? 'Calendário por profissional · intervalos de 10 minutos'
+                : viewMode === 'calendar'
+                  ? 'Calendário mensal — arraste para mover o dia do agendamento'
+                  : 'Lista do dia selecionado'}
             </p>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleNextDay}>
-            <ChevronRight className="h-5 w-5" />
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleToday} className="shrink-0">
+              <Calendar className="mr-1.5 h-4 w-4" />
+              Hoje
+            </Button>
+            <div className="flex rounded-lg border border-border bg-background shadow-sm">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-none rounded-l-lg"
+                onClick={handlePrevDay}
+                aria-label="Dia anterior"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-none rounded-r-lg border-l"
+                onClick={handleNextDay}
+                aria-label="Próximo dia"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Week Days */}
@@ -251,26 +359,34 @@ export default function AdminAgendamentosPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-3 gap-y-2">
           <Select value={selectedBarbeiro} onValueChange={setSelectedBarbeiro}>
-            <SelectTrigger className="flex-1">
+            <SelectTrigger className="min-w-[160px] flex-1 sm:max-w-xs">
               <SelectValue placeholder="Barbeiro" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os barbeiros</SelectItem>
-              {barbeiros.map((barbeiro) => (
+              {displayBarbeiros.map((barbeiro) => (
                 <SelectItem key={barbeiro.id} value={barbeiro.id}>
                   {barbeiro.nome}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {!isToday && (
-            <Button variant="outline" onClick={handleToday}>
-              Hoje
-            </Button>
-          )}
-          <ViewToggle value={viewMode} onChange={setViewMode} />
+          <div className="flex flex-1 flex-wrap items-center justify-end gap-3 sm:flex-none">
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-1.5">
+              <Switch
+                id="agenda-demo-data"
+                checked={useDemoData}
+                onCheckedChange={setUseDemoData}
+                aria-label="Usar dados fictícios de demonstração"
+              />
+              <Label htmlFor="agenda-demo-data" className="cursor-pointer text-xs font-medium">
+                Dados fictícios
+              </Label>
+            </div>
+            <ViewToggle value={viewMode} onChange={setViewMode} />
+          </div>
         </div>
 
         {viewMode === 'calendar' && (
@@ -279,7 +395,7 @@ export default function AdminAgendamentosPage() {
               <DateNavigatorCalendar
                 value={selectedDate}
                 onChange={setSelectedDate}
-                appointments={agendamentos.map((agendamento) => ({
+                appointments={displayAgendamentos.map((agendamento) => ({
                   id: agendamento.id,
                   data: agendamento.data,
                   horario: agendamento.horario,
@@ -292,49 +408,117 @@ export default function AdminAgendamentosPage() {
           </Card>
         )}
 
-        {/* Appointments (lista em grade no desktop; calendário inalterado) */}
-        <div
-          className={
-            viewMode === 'list' && !error && (isLoading || appointmentsOfSelectedDate.length > 0)
-              ? 'grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3 xl:gap-5'
-              : 'space-y-3'
-          }
-        >
-          {error ? (
-            <Alert
-              variant="danger"
-              onClose={() => setError(null)}
-              autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
-            >
-              <AlertTitle>{error}</AlertTitle>
-            </Alert>
-          ) : isLoading ? (
-            <AppointmentListSkeleton
-              count={viewMode === 'list' ? 6 : 4}
-              className={viewMode === 'list' ? 'contents' : undefined}
-            />
-          ) : appointmentsOfSelectedDate.length > 0 ? (
-            appointmentsOfSelectedDate.map((agendamento) => (
-              <AppointmentCard
-                key={agendamento.id}
-                appointment={agendamento}
-                onComplete={(id) => handleStatusChange(id, 'concluido')}
-                onCancel={(id) => handleStatusChange(id, 'cancelado')}
-                onNoShow={(id) => handleStatusChange(id, 'faltou')}
-                onMarkPaid={handleMarkPaid}
+        {viewMode === 'grade' && (useDemoData || !error) && (
+          <>
+            {!useDemoData && isLoading ? (
+              <Card className="overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="flex gap-0 border-b bg-muted/30 p-3">
+                    <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-muted" />
+                    <div className="ml-3 h-4 w-24 animate-pulse rounded bg-muted" />
+                  </div>
+                  <div className="space-y-2 p-4">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-12 animate-pulse rounded-lg bg-muted/60"
+                        style={{ marginLeft: `${(i % 3) * 12}%`, width: `${68 - (i % 3) * 8}%` }}
+                      />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <AppointmentDayGrid
+                barbeiros={barbeirosNaGrade}
+                appointments={appointmentsOfSelectedDate}
+                onBlockClick={setDetailAppointment}
+                timeRange={useDemoData ? { start: '09:00', end: '18:00' } : undefined}
+                unavailableBlocks={useDemoData ? getAgendaDemoUnavailableBlocks() : undefined}
               />
-            ))
-          ) : (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <p className="text-muted-foreground">
-                  Nenhum agendamento para este dia
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+            )}
+          </>
+        )}
+
+        {/* Lista de cartões (modo lista) */}
+        {viewMode === 'list' && (
+          <div
+            className={
+              !error && (isLoading || appointmentsOfSelectedDate.length > 0)
+                ? 'grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3 xl:gap-5'
+                : 'space-y-3'
+            }
+          >
+            {error ? (
+              <Alert
+                variant="danger"
+                onClose={() => setError(null)}
+                autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+              >
+                <AlertTitle>{error}</AlertTitle>
+              </Alert>
+            ) : isLoading ? (
+              <AppointmentListSkeleton count={6} className="contents" />
+            ) : appointmentsOfSelectedDate.length > 0 ? (
+              appointmentsOfSelectedDate.map((agendamento) => (
+                <AppointmentCard
+                  key={agendamento.id}
+                  appointment={agendamento}
+                  onComplete={(id) => handleStatusChange(id, 'concluido')}
+                  onCancel={(id) => handleStatusChange(id, 'cancelado')}
+                  onNoShow={(id) => handleStatusChange(id, 'faltou')}
+                  onMarkPaid={handleMarkPaid}
+                />
+              ))
+            ) : (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                  <p className="text-muted-foreground">Nenhum agendamento para este dia</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {error && !useDemoData && viewMode !== 'list' && (
+          <Alert
+            variant="danger"
+            onClose={() => setError(null)}
+            autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+          >
+            <AlertTitle>{error}</AlertTitle>
+          </Alert>
+        )}
       </PageContent>
+
+      <Dialog open={detailAppointment !== null} onOpenChange={(open) => !open && setDetailAppointment(null)}>
+        <DialogContent className="max-w-md sm:max-w-lg" showCloseButton>
+          <DialogHeader>
+            <DialogTitle>Detalhes do agendamento</DialogTitle>
+          </DialogHeader>
+          {detailAppointment && (
+            <AppointmentCard
+              appointment={detailAppointment}
+              onComplete={(id) => {
+                handleStatusChange(id, 'concluido')
+                setDetailAppointment(null)
+              }}
+              onCancel={(id) => {
+                handleStatusChange(id, 'cancelado')
+                setDetailAppointment(null)
+              }}
+              onNoShow={(id) => {
+                handleStatusChange(id, 'faltou')
+                setDetailAppointment(null)
+              }}
+              onMarkPaid={(id) => {
+                handleMarkPaid(id)
+                setDetailAppointment(null)
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </TenantPanelPageContainer>
   )
 }

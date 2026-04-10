@@ -23,16 +23,18 @@ function greetingFromProfile(profile: Profile | null) {
 function RegisterPageHeading({
   title,
   subtitle,
+  actions,
 }: {
   title: string
   subtitle?: ReactNode
+  actions?: ReactNode
 }) {
   const setHeading = useOptionalAppPageHeading()?.setHeading
   useEffect(() => {
     if (!setHeading) return
-    setHeading({ title, subtitle })
+    setHeading({ title, subtitle, actions })
     return () => setHeading(null)
-  }, [title, subtitle, setHeading])
+  }, [title, subtitle, actions, setHeading])
   return null
 }
 
@@ -49,6 +51,8 @@ type BaseAppPageHeaderProps = {
 type TitleVariant = BaseAppPageHeaderProps & {
   title: string
   subtitle?: React.ReactNode
+  /** Exibido ao lado do título no `PageContent` (não confundir com `actions` do header superior). */
+  headingActions?: React.ReactNode
   leading?: never
   greetingOnly?: never
   contentTitle?: never
@@ -151,7 +155,11 @@ export function AppPageHeader(props: AppPageHeaderProps) {
     )
   } else if ('title' in props && props.title != null) {
     headingSync = (
-      <RegisterPageHeading title={props.title} subtitle={props.subtitle} />
+      <RegisterPageHeading
+        title={props.title}
+        subtitle={props.subtitle}
+        actions={'headingActions' in props ? props.headingActions : undefined}
+      />
     )
     left = <div className="min-w-0 flex-1">{greetingMuted}</div>
   } else {

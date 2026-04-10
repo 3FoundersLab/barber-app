@@ -81,6 +81,18 @@ export function formatDateShort(date: string | Date): string {
   }).format(d)
 }
 
+/** Ex.: "Quarta-feira, 08 de jan. de 2026" — para cabeçalho da agenda diária. */
+export function formatDateWeekdayLong(date: string | Date): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  const raw = new Intl.DateTimeFormat('pt-BR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(d)
+  return raw.charAt(0).toUpperCase() + raw.slice(1)
+}
+
 export function formatTime(time: string): string {
   return time.slice(0, 5) // HH:MM
 }

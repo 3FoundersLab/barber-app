@@ -12,6 +12,8 @@ import {
 export type RegisteredPageHeading = {
   title: string
   subtitle?: ReactNode
+  /** À direita do título (ex.: botão primário da página). */
+  actions?: ReactNode
 }
 
 type CtxValue = {
