@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
@@ -20,6 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { shellSidebarInsetRem } from '@/lib/shell-sidebar-inset'
 import { cn } from '@/lib/utils'
 
 const SUPER_SIDEBAR_COLLAPSED_KEY = 'barber-app-super-sidebar-collapsed'
@@ -78,6 +79,23 @@ export function DesktopSidebar({
   const wide = !collapsible || !collapsed
   /** Tablet: 16rem; desktop largo: mais espaço para labels e seções sem mudar o mobile. */
   const widthClass = wide ? 'md:w-64 lg:w-72' : 'md:w-[4.5rem]'
+
+  const asideRef = useRef<HTMLElement>(null)
+
+  useLayoutEffect(() => {
+    const shell = asideRef.current?.closest('[data-app-shell]')
+    if (!shell) return
+
+    const apply = () => {
+      shell.style.setProperty('--shell-sidebar-inset', shellSidebarInsetRem(collapsible, wide))
+    }
+    apply()
+    window.addEventListener('resize', apply)
+    return () => {
+      window.removeEventListener('resize', apply)
+      shell.style.removeProperty('--shell-sidebar-inset')
+    }
+  }, [collapsible, wide])
 
   const headerBarClass = isSuper ? superShellHeaderBarClass : APP_PAGE_HEADER_BAR_CLASS
   const sidebarHeaderExtras = cn('border-b-0', isSuper && 'shadow-none')
@@ -256,6 +274,7 @@ export function DesktopSidebar({
   return (
     <>
       <aside
+        ref={asideRef}
         className={cn(
           'hidden md:fixed md:inset-y-0 md:left-0 md:z-40 md:flex md:flex-col md:border-r md:transition-[width] md:duration-200 md:ease-out',
           isSuper
@@ -319,7 +338,6 @@ export function DesktopSidebar({
           </div>
         ) : null}
       </aside>
-      <div className={cn('hidden shrink-0 md:block', widthClass)} aria-hidden />
     </>
   )
 }

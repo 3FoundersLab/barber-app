@@ -7,6 +7,7 @@ import { AdminDrawer } from '@/components/shared/admin-drawer'
 import { DesktopSidebar } from '@/components/shared/desktop-sidebar'
 import { AppPageHeadingProvider } from '@/components/shared/app-page-heading-context'
 import { SuperLogoutButton } from '@/components/shared/super-logout-button'
+import { appShellMainClass } from '@/components/shared/app-shell-classes'
 import { SuperPremiumBackdrop } from '@/components/super/super-premium-backdrop'
 import { createClient } from '@/lib/supabase/client'
 import { rpcUserIsMemberOfBarbearia } from '@/lib/barbearia-rpc'
@@ -92,7 +93,7 @@ export default function AdminSlugLayout({ children }: { children: React.ReactNod
 
   return (
     <>
-      <div className="relative min-h-screen md:flex" data-tenant-admin-shell>
+      <div className="relative min-h-screen md:flex" data-app-shell data-tenant-admin-shell>
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden>
           <SuperPremiumBackdrop />
         </div>
@@ -109,7 +110,7 @@ export default function AdminSlugLayout({ children }: { children: React.ReactNod
             )
           }
         />
-        <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col w-full">
+        <div className={appShellMainClass}>
           <AppPageHeadingProvider>{children}</AppPageHeadingProvider>
         </div>
       </div>

@@ -48,17 +48,26 @@ export function TeamMemberCard({ barbeiro, onEdit, onDelete, className }: TeamMe
   return (
     <Card
       className={cn(
-        /* py-0/gap-0: o Card padrão usa py-6 e gap-6; em cards quadrados isso + overflow-hidden cortava o nome */
-        'relative flex aspect-square flex-col gap-0 overflow-hidden py-0 transition-colors',
+        'relative flex min-w-0 gap-0 overflow-hidden py-0 transition-colors',
+        /* Mobile (abaixo de md): lista em linha; na grade da página, 1 card por linha */
+        'max-md:aspect-auto max-md:min-h-[4.75rem] max-md:flex-row max-md:items-center',
+        /* Tablet (md–lg): coluna com altura automática — evita texto encavalado no quadrado */
+        'md:max-lg:flex-col md:max-lg:aspect-auto',
+        /* Desktop denso: cartão quadrado */
+        'lg:aspect-square lg:flex-col',
         !barbeiro.ativo && 'opacity-60',
         className,
       )}
     >
       {(onEdit || onDelete) && (
-        <div className="absolute right-1 top-1 z-10 sm:right-2 sm:top-2">
+        <div className="absolute right-1 top-1 z-10 max-md:top-1/2 max-md:-translate-y-1/2 md:top-2 md:translate-y-0 md:right-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="sm" className="h-8 w-8 shrink-0 p-0 shadow-sm">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-9 w-9 shrink-0 p-0 shadow-sm md:h-11 md:w-11 lg:h-8 lg:w-8"
+              >
                 <MoreVertical className="h-4 w-4" />
                 <span className="sr-only">Menu</span>
               </Button>
@@ -84,54 +93,119 @@ export function TeamMemberCard({ barbeiro, onEdit, onDelete, className }: TeamMe
         </div>
       )}
 
-      <CardContent className="flex h-full min-h-0 flex-col items-center gap-2 p-3 pt-9 text-center sm:gap-2.5 sm:p-4 sm:pt-10">
-        <Avatar className="h-12 w-12 shrink-0 border-2 border-border/60 sm:h-14 sm:w-14 md:h-[4.5rem] md:w-[4.5rem]">
+      <CardContent
+        className={cn(
+          'flex w-full min-w-0 flex-1 flex-col',
+          /* Mobile: linha */
+          'max-md:flex-row max-md:items-center max-md:gap-3 max-md:p-3 max-md:pr-12 max-md:pt-3 max-md:text-left',
+          /* Tablet */
+          'md:max-lg:items-center md:max-lg:gap-3 md:max-lg:p-4 md:max-lg:px-4 md:max-lg:pb-5 md:max-lg:pt-12 md:max-lg:text-center',
+          /* Desktop quadrado */
+          'lg:h-full lg:min-h-0 lg:items-center lg:gap-2 lg:p-4 lg:pt-10 lg:text-center xl:gap-2 xl:p-4 xl:pt-10',
+        )}
+      >
+        <Avatar
+          className={cn(
+            'h-11 w-11 shrink-0 border-2 border-border/60',
+            'md:max-lg:h-16 md:max-lg:w-16',
+            'lg:h-14 lg:w-14 xl:h-[4.5rem] xl:w-[4.5rem]',
+          )}
+        >
           <AvatarImage src={barbeiro.avatar} className="object-cover" />
-          <AvatarFallback className="text-base sm:text-lg md:text-xl">
+          <AvatarFallback className="text-base md:text-lg lg:text-xl">
             {nome.charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
 
-        <div className="flex w-full shrink-0 flex-col items-center gap-1">
-          <span
-            className="line-clamp-4 w-full min-w-0 break-words text-xs font-medium leading-snug text-foreground sm:text-sm sm:leading-snug"
-            title={nome}
+        <div
+          className={cn(
+            'flex min-h-0 w-full min-w-0 flex-col gap-2',
+            'max-md:flex-1 max-md:justify-center max-md:gap-1.5',
+            'md:max-lg:items-center md:max-lg:gap-2.5',
+            'lg:min-h-0 lg:flex-1 lg:justify-between lg:gap-1',
+          )}
+        >
+          <div
+            className={cn(
+              'flex w-full min-w-0 shrink-0 flex-col gap-1',
+              'max-md:items-start',
+              'md:max-lg:items-center',
+              'lg:items-center',
+            )}
           >
-            {nome}
-          </span>
-          <div className="flex flex-wrap justify-center gap-1">
-            <Badge
-              variant="outline"
+            <span
               className={cn(
-                'px-1.5 py-0 text-[10px] font-normal shadow-none sm:text-xs',
-                equipeFuncaoBadgeClass(barbeiro.funcao_equipe),
+                'w-full min-w-0 text-xs font-medium leading-snug text-foreground sm:text-sm',
+                'max-md:line-clamp-2 max-md:text-left',
+                'md:max-lg:line-clamp-3 md:max-lg:text-center',
+                'lg:line-clamp-4 lg:text-center',
+              )}
+              title={nome}
+            >
+              {nome}
+            </span>
+            <div
+              className={cn(
+                'flex max-w-full flex-wrap gap-1',
+                'max-md:justify-start',
+                'md:max-lg:justify-center',
+                'lg:justify-center',
               )}
             >
-              {labelEquipeFuncao(barbeiro.funcao_equipe)}
-            </Badge>
-            {!barbeiro.ativo && (
               <Badge
                 variant="outline"
-                className="border-border/70 bg-muted/45 px-1.5 py-0 text-[10px] font-normal text-muted-foreground shadow-none dark:bg-muted/25 sm:text-xs"
+                className={cn(
+                  'max-w-full truncate px-1.5 py-0 text-[10px] font-normal shadow-none sm:text-xs',
+                  equipeFuncaoBadgeClass(barbeiro.funcao_equipe),
+                )}
               >
-                Inativo
+                {labelEquipeFuncao(barbeiro.funcao_equipe)}
               </Badge>
-            )}
+              {!barbeiro.ativo && (
+                <Badge
+                  variant="outline"
+                  className="max-w-full truncate border-border/70 bg-muted/45 px-1.5 py-0 text-[10px] font-normal text-muted-foreground shadow-none dark:bg-muted/25 sm:text-xs"
+                >
+                  Inativo
+                </Badge>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="mt-auto flex w-full min-h-0 flex-1 flex-col justify-end space-y-0.5 text-[10px] text-muted-foreground sm:text-xs">
-          {barbeiro.telefone ? (
-            <span className="flex items-center justify-center gap-1">
-              <Phone className="h-3 w-3 shrink-0" />
-              <span className="truncate">{barbeiro.telefone}</span>
-            </span>
-          ) : null}
-          {barbeiro.email ? (
-            <span className="flex items-center justify-center gap-1">
-              <Mail className="h-3 w-3 shrink-0" />
-              <span className="truncate">{barbeiro.email}</span>
-            </span>
-          ) : null}
+
+          <div
+            className={cn(
+              'flex w-full min-w-0 shrink-0 flex-col space-y-0.5 text-[10px] text-muted-foreground sm:text-xs',
+              'max-md:pt-0',
+              'lg:mt-auto lg:pt-0.5',
+            )}
+          >
+            {barbeiro.telefone ? (
+              <span
+                className={cn(
+                  'flex min-w-0 items-center gap-1',
+                  'max-md:justify-start',
+                  'md:max-lg:justify-center',
+                  'lg:justify-center',
+                )}
+              >
+                <Phone className="h-3 w-3 shrink-0" />
+                <span className="min-w-0 truncate">{barbeiro.telefone}</span>
+              </span>
+            ) : null}
+            {barbeiro.email ? (
+              <span
+                className={cn(
+                  'flex min-w-0 items-center gap-1',
+                  'max-md:justify-start',
+                  'md:max-lg:justify-center',
+                  'lg:justify-center',
+                )}
+              >
+                <Mail className="h-3 w-3 shrink-0" />
+                <span className="min-w-0 truncate">{barbeiro.email}</span>
+              </span>
+            ) : null}
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -30,10 +30,15 @@ export function ClienteCard({
   showActions = true,
   className,
 }: ClienteCardProps) {
+  const showMenu = showActions && Boolean(onEdit || onDelete)
+
   return (
     <Card
       className={cn(
-        'relative flex aspect-square flex-col overflow-hidden transition-colors',
+        'relative flex min-w-0 gap-0 overflow-hidden py-0 transition-colors',
+        'max-md:aspect-auto max-md:min-h-[4.75rem] max-md:flex-row max-md:items-center',
+        'md:max-lg:flex-col md:max-lg:aspect-auto',
+        'lg:aspect-square lg:flex-col',
         onClick && 'cursor-pointer hover:bg-accent/50',
         className,
       )}
@@ -48,11 +53,15 @@ export function ClienteCard({
         }
       }}
     >
-      {showActions && (onEdit || onDelete) && (
-        <div className="absolute right-1 top-1 z-10 sm:right-2 sm:top-2">
+      {showMenu && (
+        <div className="absolute right-1 top-1 z-10 max-md:top-1/2 max-md:-translate-y-1/2 md:top-2 md:translate-y-0 md:right-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="secondary" size="sm" className="h-8 w-8 shrink-0 p-0 shadow-sm">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-9 w-9 shrink-0 p-0 shadow-sm md:h-11 md:w-11 lg:h-8 lg:w-8"
+              >
                 <MoreVertical className="h-4 w-4" />
                 <span className="sr-only">Menu</span>
               </Button>
@@ -78,32 +87,81 @@ export function ClienteCard({
         </div>
       )}
 
-      <CardContent className="flex h-full min-h-0 flex-col items-center gap-2 p-3 pt-9 text-center sm:gap-2.5 sm:p-4 sm:pt-10">
-        <Avatar className="h-12 w-12 shrink-0 border-2 border-border/60 sm:h-14 sm:w-14 md:h-[4.5rem] md:w-[4.5rem]">
+      <CardContent
+        className={cn(
+          'flex w-full min-w-0 flex-1 flex-col',
+          'max-md:flex-row max-md:items-center max-md:gap-3 max-md:p-3 max-md:pt-3 max-md:text-left',
+          showMenu && 'max-md:pr-12',
+          'md:max-lg:items-center md:max-lg:gap-3 md:max-lg:p-4 md:max-lg:px-4 md:max-lg:pb-5 md:max-lg:text-center',
+          showMenu ? 'md:max-lg:pt-12' : 'md:max-lg:pt-4',
+          'lg:h-full lg:min-h-0 lg:items-center lg:gap-2 lg:p-4 lg:text-center',
+          showMenu ? 'lg:pt-10 xl:pt-10' : 'lg:pt-4 xl:pt-4',
+          'xl:gap-2 xl:p-4',
+        )}
+      >
+        <Avatar
+          className={cn(
+            'h-11 w-11 shrink-0 border-2 border-border/60',
+            'md:max-lg:h-16 md:max-lg:w-16',
+            'lg:h-14 lg:w-14 xl:h-[4.5rem] xl:w-[4.5rem]',
+          )}
+        >
           <AvatarImage src={cliente.profile?.avatar} className="object-cover" />
-          <AvatarFallback className="text-base sm:text-lg md:text-xl">
+          <AvatarFallback className="text-base md:text-lg lg:text-xl">
             {cliente.nome.charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
 
-        <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-1">
+        <div
+          className={cn(
+            'flex min-h-0 w-full min-w-0 flex-col gap-2',
+            'max-md:flex-1 max-md:justify-center max-md:gap-1.5',
+            'md:max-lg:items-center md:max-lg:gap-2.5',
+            'lg:min-h-0 lg:flex-1 lg:justify-between lg:gap-1',
+          )}
+        >
           <span
-            className="line-clamp-4 w-full min-w-0 break-words text-xs font-medium leading-snug sm:text-sm sm:leading-snug"
+            className={cn(
+              'w-full min-w-0 text-xs font-medium leading-snug text-foreground sm:text-sm',
+              'max-md:line-clamp-2 max-md:text-left',
+              'md:max-lg:line-clamp-3 md:max-lg:text-center',
+              'lg:line-clamp-4 lg:text-center',
+            )}
             title={cliente.nome}
           >
             {cliente.nome}
           </span>
-          <div className="mt-0.5 w-full space-y-0.5 text-[10px] text-muted-foreground sm:text-xs">
+
+          <div
+            className={cn(
+              'w-full min-w-0 space-y-0.5 text-[10px] text-muted-foreground sm:text-xs',
+              'lg:mt-auto lg:pt-0.5',
+            )}
+          >
             {cliente.telefone ? (
-              <span className="flex items-center justify-center gap-1">
+              <span
+                className={cn(
+                  'flex min-w-0 items-center gap-1',
+                  'max-md:justify-start',
+                  'md:max-lg:justify-center',
+                  'lg:justify-center',
+                )}
+              >
                 <Phone className="h-3 w-3 shrink-0" />
-                <span className="truncate">{cliente.telefone}</span>
+                <span className="min-w-0 truncate">{cliente.telefone}</span>
               </span>
             ) : null}
             {cliente.email ? (
-              <span className="flex items-center justify-center gap-1">
+              <span
+                className={cn(
+                  'flex min-w-0 items-center gap-1',
+                  'max-md:justify-start',
+                  'md:max-lg:justify-center',
+                  'lg:justify-center',
+                )}
+              >
                 <Mail className="h-3 w-3 shrink-0" />
-                <span className="truncate">{cliente.email}</span>
+                <span className="min-w-0 truncate">{cliente.email}</span>
               </span>
             ) : null}
           </div>

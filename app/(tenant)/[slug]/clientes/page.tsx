@@ -273,7 +273,7 @@ export default function AdminClientesPage() {
         <div
           className={
             isLoading || clientes.length > 0
-              ? 'grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-6'
+              ? 'grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-5 lg:grid-cols-4 lg:gap-4 xl:grid-cols-6'
               : undefined
           }
         >
@@ -291,7 +291,7 @@ export default function AdminClientesPage() {
               />
             ))
           ) : (
-            <Card className="border-dashed col-span-full lg:col-span-6">
+            <Card className="col-span-full border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                 <p className="text-muted-foreground">
                   {searchTerm.trim() ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}

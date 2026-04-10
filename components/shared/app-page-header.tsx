@@ -13,7 +13,8 @@ import {
 import type { Profile } from '@/types'
 import { cn } from '@/lib/utils'
 
-const MOBILE_DRAWER_PADDING = 'pl-16 md:pl-6'
+/** Espaço para o botão fixo do drawer (`md:hidden`); em desktop o padding horizontal vem do `PageHeader`. */
+const MOBILE_DRAWER_PADDING = 'max-md:pl-16'
 
 function greetingFromProfile(profile: Profile | null) {
   const nome = profile?.nome?.trim()

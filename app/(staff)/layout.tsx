@@ -3,6 +3,7 @@
 import { Calendar, Clock, User } from 'lucide-react'
 import { BottomTabs, type TabItem } from '@/components/shared/bottom-tabs'
 import { DesktopSidebar } from '@/components/shared/desktop-sidebar'
+import { appShellMainClass } from '@/components/shared/app-shell-classes'
 import { AppPageHeadingProvider } from '@/components/shared/app-page-heading-context'
 import { STAFF_PATHS } from '@/lib/routes'
 
@@ -19,9 +20,9 @@ export default function BarbeiroLayout({
 }) {
   return (
     <>
-      <div className="md:flex md:min-h-screen md:bg-muted/20">
+      <div className="md:flex md:min-h-screen md:bg-muted/20" data-app-shell>
         <DesktopSidebar title="Painel Barbeiro" tabs={barbeiroTabs} />
-        <div className="min-w-0 flex-1">
+        <div className={appShellMainClass}>
           <AppPageHeadingProvider>{children}</AppPageHeadingProvider>
         </div>
       </div>

@@ -162,6 +162,14 @@
 }
 
 @layer components {
+  /* Coluna principal alinhada à sidebar em overlay (DesktopSidebar define --shell-sidebar-inset). */
+  @media (min-width: 768px) {
+    [data-app-shell] > .app-shell-main {
+      padding-left: var(--shell-sidebar-inset, 16rem);
+      transition: padding-left 200ms ease-out;
+    }
+  }
+
   /*
    * Super Admin (data-super-shell): cards premium alinhados à landing.
    * Exclui placeholders tracejados e cartões totalmente transparentes.

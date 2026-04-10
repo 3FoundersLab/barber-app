@@ -187,17 +187,25 @@ export function ServiceCardListSkeleton({ count = 4, className }: ListSkeletonPr
   )
 }
 
-/** Card de cliente (grid quadrado, até 6 colunas em telas largas) */
+/** Card de cliente (mobile lista; tablet altura auto; lg+ quadrado na grade) */
 export function ClientCardSkeleton({ className }: { className?: string }) {
   return (
-    <Card className={cn('relative flex aspect-square flex-col overflow-hidden', className)}>
-      <Skeleton className="absolute right-2 top-2 h-8 w-8 shrink-0 rounded-md" />
-      <CardContent className="flex h-full flex-col items-center gap-2 p-3 pt-9 sm:p-4 sm:pt-10">
-        <Skeleton className="h-12 w-12 shrink-0 rounded-full sm:h-14 sm:w-14 md:h-[4.5rem] md:w-[4.5rem]" />
-        <div className="flex w-full flex-1 flex-col items-center justify-center gap-2 px-1">
-          <Skeleton className="h-3.5 w-4/5 max-w-[9rem]" />
-          <Skeleton className="h-3 w-3/5 max-w-[6rem]" />
-          <Skeleton className="h-3 w-full max-w-[8rem]" />
+    <Card
+      className={cn(
+        'relative flex min-w-0 gap-0 overflow-hidden py-0',
+        'max-md:aspect-auto max-md:min-h-[4.75rem] max-md:flex-row max-md:items-center',
+        'md:max-lg:flex-col md:max-lg:aspect-auto',
+        'lg:aspect-square lg:flex-col',
+        className,
+      )}
+    >
+      <Skeleton className="absolute right-2 top-2 h-9 w-9 shrink-0 rounded-md max-md:top-1/2 max-md:-translate-y-1/2 md:h-11 md:w-11 lg:h-8 lg:w-8" />
+      <CardContent className="flex w-full min-w-0 flex-1 flex-col max-md:flex-row max-md:items-center max-md:gap-3 max-md:p-3 max-md:pr-12 max-md:pt-3 md:max-lg:items-center md:max-lg:gap-3 md:max-lg:p-4 md:max-lg:px-4 md:max-lg:pb-5 md:max-lg:pt-12 lg:h-full lg:min-h-0 lg:items-center lg:gap-2 lg:p-4 lg:pt-10 xl:p-4 xl:pt-10">
+        <Skeleton className="h-11 w-11 shrink-0 rounded-full md:max-lg:h-16 md:max-lg:w-16 lg:h-14 lg:w-14 xl:h-[4.5rem] xl:w-[4.5rem]" />
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 px-1 max-md:items-start md:max-lg:items-center lg:items-center">
+          <Skeleton className="h-3.5 w-4/5 max-w-[9rem] max-md:w-full max-md:max-w-none" />
+          <Skeleton className="h-3 w-3/5 max-w-[6rem] max-md:w-3/4 md:max-lg:max-w-[10rem]" />
+          <Skeleton className="h-3 w-full max-w-[8rem] max-md:w-full max-md:max-w-none" />
         </div>
       </CardContent>
     </Card>
@@ -214,17 +222,25 @@ export function ClientCardListSkeleton({ count = 5, className }: ListSkeletonPro
   )
 }
 
-/** Card da equipe (grid quadrado, até 6 colunas em telas largas) */
+/** Card da equipe (mobile lista; tablet altura auto; lg+ quadrado na grade) */
 export function TeamMemberCardSkeleton({ className }: { className?: string }) {
   return (
-    <Card className={cn('relative flex aspect-square flex-col overflow-hidden', className)}>
-      <Skeleton className="absolute right-2 top-2 h-8 w-8 shrink-0 rounded-md" />
-      <CardContent className="flex h-full flex-col items-center gap-2 p-3 pt-9 sm:p-4 sm:pt-10">
-        <Skeleton className="h-12 w-12 shrink-0 rounded-full sm:h-14 sm:w-14 md:h-[4.5rem] md:w-[4.5rem]" />
-        <div className="flex w-full flex-1 flex-col items-center justify-center gap-2 px-1">
-          <Skeleton className="h-3.5 w-4/5 max-w-[9rem]" />
-          <Skeleton className="h-3 w-3/5 max-w-[6rem]" />
-          <Skeleton className="h-3 w-full max-w-[8rem]" />
+    <Card
+      className={cn(
+        'relative flex min-w-0 gap-0 overflow-hidden py-0',
+        'max-md:aspect-auto max-md:min-h-[4.75rem] max-md:flex-row max-md:items-center',
+        'md:max-lg:flex-col md:max-lg:aspect-auto',
+        'lg:aspect-square lg:flex-col',
+        className,
+      )}
+    >
+      <Skeleton className="absolute right-2 top-2 h-9 w-9 shrink-0 rounded-md max-md:top-1/2 max-md:-translate-y-1/2 md:h-11 md:w-11 lg:h-8 lg:w-8" />
+      <CardContent className="flex w-full min-w-0 flex-1 flex-col max-md:flex-row max-md:items-center max-md:gap-3 max-md:p-3 max-md:pr-12 max-md:pt-3 md:max-lg:items-center md:max-lg:gap-3 md:max-lg:p-4 md:max-lg:px-4 md:max-lg:pb-5 md:max-lg:pt-12 lg:h-full lg:min-h-0 lg:items-center lg:gap-2 lg:p-4 lg:pt-10 xl:p-4 xl:pt-10">
+        <Skeleton className="h-11 w-11 shrink-0 rounded-full md:max-lg:h-16 md:max-lg:w-16 lg:h-14 lg:w-14 xl:h-[4.5rem] xl:w-[4.5rem]" />
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 px-1 max-md:items-start md:max-lg:items-center lg:items-center">
+          <Skeleton className="h-3.5 w-4/5 max-w-[9rem] max-md:w-full max-md:max-w-none" />
+          <Skeleton className="h-3 w-3/5 max-w-[6rem] max-md:w-2/3 md:max-lg:max-w-[10rem]" />
+          <Skeleton className="h-3 w-full max-w-[8rem] max-md:w-full max-md:max-w-none" />
         </div>
       </CardContent>
     </Card>
