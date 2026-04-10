@@ -1,14 +1,22 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Clock, Scissors, User } from 'lucide-react'
+import { useMemo, useState, type ReactNode } from 'react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  MousePointerClick,
+  Scissors,
+  User,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import { DIAS_SEMANA_ABREV } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
@@ -37,6 +45,36 @@ interface DateNavigatorCalendarProps {
   disabled?: (date: Date) => boolean
   appointments?: CalendarAppointmentChip[]
   onMoveAppointment?: (appointmentId: string, nextDate: Date) => Promise<void> | void
+  /**
+   * Conteúdo de detalhe/ações no mesmo modal do dia (lista “+N mais” ou chip).
+   * `onBackToList` existe quando há mais de um agendamento naquele dia.
+   */
+  renderAppointmentDetail?: (ctx: {
+    appointmentId: string
+    onClose: () => void
+    onBackToList?: () => void
+  }) => ReactNode
+}
+
+function chipTitleText(
+  appointment: CalendarAppointmentChip,
+  hasDetailSlot?: boolean,
+) {
+  const parts = [
+    appointment.horario,
+    appointment.clienteNome,
+    appointment.comandaNumero != null ? `Comanda ${appointment.comandaNumero}` : '',
+  ].filter(Boolean)
+  if (hasDetailSlot) {
+    parts.push('Clique para check-in e ações')
+  }
+  return parts.length ? parts.join(' · ') : hasDetailSlot ? 'Clique para check-in e ações' : undefined
+}
+
+type DayAgendaModalState = {
+  date: Date
+  /** null = lista do dia; definido = detalhe embutido no mesmo modal */
+  selectedId: string | null
 }
 
 function hashAppointmentId(id: string): number {
@@ -133,6 +171,7 @@ export function DateNavigatorCalendar({
   disabled,
   appointments = [],
   onMoveAppointment,
+  renderAppointmentDetail,
 }: DateNavigatorCalendarProps) {
   const appointmentsByDay = useMemo(() => {
     const grouped = new Map<string, typeof appointments>()
@@ -159,7 +198,7 @@ export function DateNavigatorCalendar({
   const selected = value ?? new Date()
   const [view, setView] = useState<CalendarView>('month')
   const [anchorDate, setAnchorDate] = useState<Date>(selected)
-  const [moreDayModal, setMoreDayModal] = useState<Date | null>(null)
+  const [dayAgendaModal, setDayAgendaModal] = useState<DayAgendaModalState | null>(null)
   const today = new Date()
 
   const monthDays = useMemo(() => {
@@ -211,9 +250,9 @@ export function DateNavigatorCalendar({
     setAnchorDate(date)
   }
 
-  const moreModalDateKey = moreDayModal ? toDateKey(moreDayModal) : null
-  const moreModalAppointments = moreModalDateKey
-    ? (appointmentsByDay.get(moreModalDateKey) ?? [])
+  const dayModalDateKey = dayAgendaModal ? toDateKey(dayAgendaModal.date) : null
+  const dayModalAppointments = dayModalDateKey
+    ? (appointmentsByDay.get(dayModalDateKey) ?? [])
     : []
 
   const selectedDayKey = toDateKey(selected)
@@ -318,7 +357,7 @@ export function DateNavigatorCalendar({
                     const target = event.target as HTMLElement
                     if (target.closest('[data-appointment-chip]')) return
                     if (hasOverflow) {
-                      setMoreDayModal(date)
+                      setDayAgendaModal({ date, selectedId: null })
                       return
                     }
                     handlePickDate(date)
@@ -327,7 +366,7 @@ export function DateNavigatorCalendar({
                     if (isDisabled) return
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault()
-                      if (hasOverflow) setMoreDayModal(date)
+                      if (hasOverflow) setDayAgendaModal({ date, selectedId: null })
                       else handlePickDate(date)
                     }
                   }}
@@ -363,16 +402,11 @@ export function DateNavigatorCalendar({
                           onClick={(event) => {
                             event.stopPropagation()
                             handlePickDate(date)
+                            if (renderAppointmentDetail) {
+                              setDayAgendaModal({ date, selectedId: appointment.id })
+                            }
                           }}
-                          title={
-                            [
-                              appointment.horario,
-                              appointment.clienteNome,
-                              appointment.comandaNumero != null ? `Comanda ${appointment.comandaNumero}` : '',
-                            ]
-                              .filter(Boolean)
-                              .join(' · ') || undefined
-                          }
+                          title={chipTitleText(appointment, Boolean(renderAppointmentDetail))}
                         >
                           {appointment.horario ? `${appointment.horario} ` : ''}
                           {appointment.clienteNome ?? appointment.servicoNome ?? 'Agendamento'}
@@ -434,7 +468,7 @@ export function DateNavigatorCalendar({
                     const target = event.target as HTMLElement
                     if (target.closest('[data-appointment-chip]')) return
                     if (hasOverflow) {
-                      setMoreDayModal(date)
+                      setDayAgendaModal({ date, selectedId: null })
                       return
                     }
                     handlePickDate(date)
@@ -443,7 +477,7 @@ export function DateNavigatorCalendar({
                     if (isDisabled) return
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault()
-                      if (hasOverflow) setMoreDayModal(date)
+                      if (hasOverflow) setDayAgendaModal({ date, selectedId: null })
                       else handlePickDate(date)
                     }
                   }}
@@ -481,16 +515,11 @@ export function DateNavigatorCalendar({
                           onClick={(event) => {
                             event.stopPropagation()
                             handlePickDate(date)
+                            if (renderAppointmentDetail) {
+                              setDayAgendaModal({ date, selectedId: appointment.id })
+                            }
                           }}
-                          title={
-                            [
-                              appointment.horario,
-                              appointment.clienteNome,
-                              appointment.comandaNumero != null ? `Comanda ${appointment.comandaNumero}` : '',
-                            ]
-                              .filter(Boolean)
-                              .join(' · ') || undefined
-                          }
+                          title={chipTitleText(appointment, Boolean(renderAppointmentDetail))}
                         >
                           {appointment.horario ? `${appointment.horario} ` : ''}
                           {appointment.clienteNome ?? appointment.servicoNome ?? 'Agendamento'}
@@ -530,6 +559,19 @@ export function DateNavigatorCalendar({
                   ? '1 agendamento'
                   : `${dayViewAppointments.length} agendamentos`}
             </p>
+            {renderAppointmentDetail && dayViewAppointments.length > 0 ? (
+              <p className="mx-auto mt-2 flex max-w-xl items-start gap-2 rounded-lg border border-border/80 bg-muted/40 px-3 py-2 text-left text-xs leading-relaxed text-muted-foreground">
+                <MousePointerClick
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary"
+                  aria-hidden
+                />
+                <span>
+                  <span className="font-medium text-foreground">Toque num horário</span>
+                  {' · '}
+                  check-in, concluir, cancelar ou falta.
+                </span>
+              </p>
+            ) : null}
           </div>
           {dayViewAppointments.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
@@ -545,11 +587,20 @@ export function DateNavigatorCalendar({
                   className={cn(
                     'px-3 py-3 sm:px-4',
                     onMoveAppointment && 'cursor-grab active:cursor-grabbing',
+                    renderAppointmentDetail && 'cursor-pointer hover:bg-muted/45',
                     (a.status === 'cancelado' || a.status === 'faltou') &&
                       'bg-zinc-100/90 text-zinc-600 opacity-[0.78] line-through decoration-zinc-500/80 dark:bg-zinc-900/50 dark:text-zinc-400',
                     a.status === 'em_atendimento' &&
                       'border-l-4 border-l-emerald-500 bg-emerald-50/70 dark:border-l-emerald-400 dark:bg-emerald-950/30',
                   )}
+                  onClick={
+                    renderAppointmentDetail
+                      ? () => {
+                          handlePickDate(selected)
+                          setDayAgendaModal({ date: selected, selectedId: a.id })
+                        }
+                      : undefined
+                  }
                 >
                   <div className="grid min-w-0 gap-2 sm:grid-cols-[4.5rem_1fr] sm:items-start sm:gap-3">
                     <div className="flex items-center gap-1.5 text-sm font-semibold tabular-nums sm:flex-col sm:items-start sm:gap-0 sm:pt-0.5">
@@ -589,69 +640,144 @@ export function DateNavigatorCalendar({
         </div>
       )}
 
-      <Dialog open={moreDayModal !== null} onOpenChange={(open) => !open && setMoreDayModal(null)}>
-        <DialogContent
-          className="flex max-h-[min(90vh,640px)] w-full max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-lg"
-          showCloseButton
+      <Sheet
+        open={dayAgendaModal !== null}
+        onOpenChange={(open) => {
+          if (!open) setDayAgendaModal(null)
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="flex h-full max-h-[100dvh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl md:max-w-2xl"
         >
-          <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4 pr-14 text-left">
-            <DialogTitle className="text-base leading-snug">
-              {moreDayModal ? formatDayTitlePt(moreDayModal) : ''}
-            </DialogTitle>
-            <p className="text-sm font-normal text-muted-foreground">
-              {moreModalAppointments.length === 1
-                ? '1 agendamento'
-                : `${moreModalAppointments.length} agendamentos`}
-            </p>
-          </DialogHeader>
-          <ul className="min-h-0 flex-1 list-none overflow-y-auto overscroll-contain px-4 py-2">
-            {moreModalAppointments.map((a) => (
-              <li
-                key={a.id}
-                className={cn(
-                  'border-b border-border/60 py-3 last:border-b-0',
+          <SheetHeader className="shrink-0 space-y-1 border-b border-border/80 px-6 py-4 pr-14 text-left">
+            {dayAgendaModal?.selectedId && renderAppointmentDetail ? (
+              <>
+                <SheetTitle className="text-base leading-snug pr-2">
+                  Detalhes do agendamento
+                </SheetTitle>
+                <SheetDescription asChild>
+                  <p className="text-sm text-muted-foreground">
+                    {formatDayTitlePt(dayAgendaModal.date)}
+                  </p>
+                </SheetDescription>
+              </>
+            ) : (
+              <>
+                <SheetTitle className="text-base leading-snug pr-2">
+                  {dayAgendaModal ? formatDayTitlePt(dayAgendaModal.date) : ''}
+                </SheetTitle>
+                <SheetDescription asChild>
+                  <p className="text-sm text-muted-foreground">
+                    {dayModalAppointments.length === 1
+                      ? '1 agendamento neste dia'
+                      : `${dayModalAppointments.length} agendamentos neste dia`}
+                  </p>
+                </SheetDescription>
+              </>
+            )}
+          </SheetHeader>
+          {dayAgendaModal &&
+          !dayAgendaModal.selectedId &&
+          renderAppointmentDetail &&
+          dayModalAppointments.length > 0 ? (
+            <div
+              className="flex shrink-0 items-start gap-2.5 border-b border-border/70 bg-muted/45 px-6 py-2.5"
+              role="note"
+            >
+              <MousePointerClick
+                className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                aria-hidden
+              />
+              <p className="text-left text-xs leading-relaxed text-muted-foreground">
+                <span className="font-medium text-foreground">Selecione um horário</span>
+                {' · '}
+                abre as ações: check-in, concluir, cancelar ou marcar falta.
+              </p>
+            </div>
+          ) : null}
+          {dayAgendaModal?.selectedId && renderAppointmentDetail ? (
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-2">
+              {renderAppointmentDetail({
+                appointmentId: dayAgendaModal.selectedId,
+                onClose: () => setDayAgendaModal(null),
+                onBackToList:
+                  dayModalAppointments.length > 1
+                    ? () =>
+                        setDayAgendaModal((m) => (m ? { ...m, selectedId: null } : null))
+                    : undefined,
+              })}
+            </div>
+          ) : (
+            <ul className="min-h-0 flex-1 list-none overflow-y-auto overscroll-contain px-4 py-2">
+              {dayModalAppointments.map((a) => {
+                const rowClass = cn(
+                  'border-b border-border/60 last:border-b-0',
                   (a.status === 'cancelado' || a.status === 'faltou') &&
                     'bg-zinc-50/90 text-zinc-600 opacity-[0.78] line-through decoration-zinc-500/80 dark:bg-zinc-900/35 dark:text-zinc-400',
                   a.status === 'em_atendimento' &&
                     'border-l-4 border-l-emerald-500 bg-emerald-50/60 pl-3 dark:border-l-emerald-400 dark:bg-emerald-950/25',
-                )}
-              >
-                <div className="grid min-w-0 gap-2 sm:grid-cols-[4.5rem_1fr] sm:items-start sm:gap-3">
-                  <div className="flex items-center gap-1.5 text-sm font-semibold tabular-nums sm:flex-col sm:items-start sm:gap-0 sm:pt-0.5">
-                    <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground sm:hidden" aria-hidden />
-                    <span>{a.horario?.slice(0, 5) ?? '—'}</span>
-                  </div>
-                  <div className="flex min-w-0 flex-col gap-1.5 text-sm">
-                    <div className="flex items-start gap-2">
-                      <User className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                      <span className="min-w-0 font-medium leading-snug">
-                        {a.clienteNome ?? 'Cliente'}
-                      </span>
+                )
+                const inner = (
+                  <div className="grid min-w-0 gap-2 px-1 py-3 sm:grid-cols-[4.5rem_1fr] sm:items-start sm:gap-3 sm:px-0">
+                    <div className="flex items-center gap-1.5 text-sm font-semibold tabular-nums sm:flex-col sm:items-start sm:gap-0 sm:pt-0.5">
+                      <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground sm:hidden" aria-hidden />
+                      <span>{a.horario?.slice(0, 5) ?? '—'}</span>
                     </div>
-                    <div className="flex items-start gap-2 text-muted-foreground">
-                      <Scissors className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
-                      <span className="min-w-0 leading-snug">
-                        <span className="sr-only">Barbeiro: </span>
-                        {a.barbeiroNome ?? 'Profissional'}
-                      </span>
+                    <div className="flex min-w-0 flex-col gap-1.5 text-sm">
+                      <div className="flex items-start gap-2">
+                        <User className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        <span className="min-w-0 font-medium leading-snug">
+                          {a.clienteNome ?? 'Cliente'}
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2 text-muted-foreground">
+                        <Scissors className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                        <span className="min-w-0 leading-snug">
+                          <span className="sr-only">Barbeiro: </span>
+                          {a.barbeiroNome ?? 'Profissional'}
+                        </span>
+                      </div>
+                      {a.servicoNome && (
+                        <p className="pl-[1.375rem] text-xs leading-snug text-muted-foreground">
+                          {a.servicoNome}
+                        </p>
+                      )}
+                      {a.status === 'em_atendimento' && a.comandaNumero != null && (
+                        <p className="pl-[1.375rem] text-xs font-semibold text-emerald-800 dark:text-emerald-200">
+                          Comanda nº {a.comandaNumero}
+                        </p>
+                      )}
                     </div>
-                    {a.servicoNome && (
-                      <p className="pl-[1.375rem] text-xs leading-snug text-muted-foreground">
-                        {a.servicoNome}
-                      </p>
-                    )}
-                    {a.status === 'em_atendimento' && a.comandaNumero != null && (
-                      <p className="pl-[1.375rem] text-xs font-semibold text-emerald-800 dark:text-emerald-200">
-                        Comanda nº {a.comandaNumero}
-                      </p>
-                    )}
                   </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </DialogContent>
-      </Dialog>
+                )
+                return (
+                  <li key={a.id} className={rowClass}>
+                    {renderAppointmentDetail ? (
+                      <button
+                        type="button"
+                        className="w-full rounded-md text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        title={chipTitleText(a, true)}
+                        onClick={() => {
+                          setDayAgendaModal((prev) => {
+                            if (!prev) return null
+                            handlePickDate(prev.date)
+                            return { ...prev, selectedId: a.id }
+                          })
+                        }}
+                      >
+                        {inner}
+                      </button>
+                    ) : (
+                      <div>{inner}</div>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

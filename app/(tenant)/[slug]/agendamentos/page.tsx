@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { AppointmentListSkeleton } from '@/components/shared/loading-skeleton'
@@ -523,6 +524,71 @@ export default function AdminAgendamentosPage() {
                   comandaNumero: comandaMapEfetivo[agendamento.id],
                 }))}
                 onMoveAppointment={handleMoveAppointment}
+                renderAppointmentDetail={({ appointmentId, onClose, onBackToList }) => {
+                  const a = displayAgendamentos.find((x) => x.id === appointmentId)
+                  if (!a) {
+                    return (
+                      <p className="text-sm text-muted-foreground">Agendamento não encontrado.</p>
+                    )
+                  }
+                  return (
+                    <div className="space-y-0">
+                      <div className="flex flex-wrap items-center gap-2 pb-3">
+                        {onBackToList ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="-ml-2 h-8 px-2"
+                            onClick={onBackToList}
+                          >
+                            <ChevronLeft className="mr-1 h-4 w-4" />
+                            Lista do dia
+                          </Button>
+                        ) : null}
+                        {a.status === 'agendado' && !useDemoData ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => {
+                              onClose()
+                              setEditingAppointment(a)
+                              setAppointmentFormOpen(true)
+                            }}
+                          >
+                            <Pencil className="mr-1.5 h-4 w-4" />
+                            Editar
+                          </Button>
+                        ) : null}
+                      </div>
+                      <Separator className="mb-3" />
+                      <AppointmentCard
+                        appointment={a}
+                        inSheet
+                        comandaNumero={comandaMapEfetivo[a.id]}
+                        onCheckIn={handleCheckIn}
+                        onComplete={(id) => {
+                          handleStatusChange(id, 'concluido')
+                          onClose()
+                        }}
+                        onCancel={(id, motivo) => {
+                          void handleCancelAppointment(id, motivo)
+                          onClose()
+                        }}
+                        onNoShow={(id) => {
+                          handleStatusChange(id, 'faltou')
+                          onClose()
+                        }}
+                        onMarkPaid={(id) => {
+                          handleMarkPaid(id)
+                          onClose()
+                        }}
+                      />
+                    </div>
+                  )
+                }}
               />
             </CardContent>
           </Card>

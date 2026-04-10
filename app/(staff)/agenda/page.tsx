@@ -9,6 +9,7 @@ import { AppointmentDayGrid } from '@/components/domain/appointment-day-grid'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 import {
   Dialog,
   DialogContent,
@@ -347,6 +348,57 @@ export default function BarbeiroAgendaPage() {
                   comandaNumero: comandaNumeroPorAgendamento[agendamento.id],
                 }))}
                 onMoveAppointment={handleMoveAppointment}
+                renderAppointmentDetail={({ appointmentId, onClose, onBackToList }) => {
+                  const a = agendamentos.find((x) => x.id === appointmentId)
+                  if (!a) {
+                    return (
+                      <p className="text-sm text-muted-foreground">Agendamento não encontrado.</p>
+                    )
+                  }
+                  return (
+                    <div className="space-y-0">
+                      {onBackToList ? (
+                        <>
+                          <div className="pb-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="-ml-2 h-8 px-2"
+                              onClick={onBackToList}
+                            >
+                              <ChevronLeft className="mr-1 h-4 w-4" />
+                              Lista do dia
+                            </Button>
+                          </div>
+                          <Separator className="mb-3" />
+                        </>
+                      ) : null}
+                      <AppointmentCard
+                        appointment={a}
+                        inSheet
+                        comandaNumero={comandaNumeroPorAgendamento[a.id]}
+                        onCheckIn={handleCheckIn}
+                        onComplete={(id) => {
+                          handleStatusChange(id, 'concluido')
+                          onClose()
+                        }}
+                        onCancel={(id, motivo) => {
+                          void handleCancelAppointment(id, motivo)
+                          onClose()
+                        }}
+                        onNoShow={(id) => {
+                          handleStatusChange(id, 'faltou')
+                          onClose()
+                        }}
+                        onMarkPaid={(id) => {
+                          handleMarkPaid(id)
+                          onClose()
+                        }}
+                      />
+                    </div>
+                  )
+                }}
               />
             </CardContent>
           </Card>

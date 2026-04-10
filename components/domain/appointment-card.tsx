@@ -1,9 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { Clock, User, Scissors, Check, X, UserX, ClipboardCheck } from 'lucide-react'
+import { Clock, User, Scissors, Check, X, UserX, ClipboardCheck, MoreHorizontal } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -28,6 +34,8 @@ interface AppointmentCardProps {
   onNoShow?: (id: string) => void
   onMarkPaid?: (id: string) => void
   showActions?: boolean
+  /** Painel lateral / sheet: menos sombra e contraste com o fundo do painel. */
+  inSheet?: boolean
   className?: string
 }
 
@@ -40,6 +48,7 @@ export function AppointmentCard({
   onNoShow,
   onMarkPaid,
   showActions = true,
+  inSheet = false,
   className,
 }: AppointmentCardProps) {
   const [cancelOpen, setCancelOpen] = useState(false)
@@ -52,9 +61,18 @@ export function AppointmentCard({
     appointment.status === 'cancelado' || appointment.status === 'faltou'
   const canMarkPaid =
     appointment.status === 'concluido' && appointment.status_pagamento === 'pendente'
-  const hasFlowActions = Boolean(onComplete || onCancel || onNoShow)
   const showCheckIn = Boolean(onCheckIn && isAgendado)
-  const showFlowRow = (isAgendado || isEmAtendimento) && hasFlowActions
+  /** Com check-in no fluxo, concluir só após em atendimento (sem atalho em agendado). */
+  const showCompleteButton =
+    Boolean(onComplete) &&
+    (isEmAtendimento || (isAgendado && !onCheckIn))
+  const showNoShowButton = Boolean(onNoShow) && isAgendado
+  const showCancelMenu = Boolean(onCancel)
+  const showFlowRow =
+    (isAgendado || isEmAtendimento) &&
+    (showCompleteButton || showNoShowButton || showCancelMenu)
+  /** Com check-in visível, a linha de ações é secundária (faltou + menu). */
+  const flowRowIsSecondary = showCheckIn && isAgendado && showFlowRow
 
   const handleConfirmCancel = () => {
     const m = cancelMotivo.trim()
@@ -78,6 +96,11 @@ export function AppointmentCard({
       <Card
         className={cn(
           'flex h-full flex-col overflow-hidden',
+          inSheet && 'shadow-none',
+          inSheet &&
+            !isCancelado &&
+            !isEmAtendimento &&
+            'ring-1 ring-border/60 border-border/70 bg-muted/25 dark:bg-muted/15 dark:ring-border/50',
           isCancelado &&
             'border-zinc-300/80 bg-zinc-100/85 opacity-[0.82] dark:border-zinc-600 dark:bg-zinc-900/40',
           isEmAtendimento &&
@@ -85,7 +108,7 @@ export function AppointmentCard({
           className,
         )}
       >
-        <CardContent className="flex flex-1 flex-col p-4">
+        <CardContent className={cn('flex flex-1 flex-col', inSheet ? 'p-3 sm:p-4' : 'p-4')}>
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
               <div
@@ -172,7 +195,7 @@ export function AppointmentCard({
               <Button
                 size="sm"
                 variant="secondary"
-                className="w-full border-emerald-400/70 bg-emerald-50 text-emerald-950 hover:bg-emerald-100 dark:border-emerald-600 dark:bg-emerald-950/45 dark:text-emerald-50 dark:hover:bg-emerald-900/55"
+                className="min-h-9 w-full border-emerald-400/70 bg-emerald-50 text-emerald-950 hover:bg-emerald-100 dark:border-emerald-600 dark:bg-emerald-950/45 dark:text-emerald-50 dark:hover:bg-emerald-900/55"
                 disabled={checkInBusy}
                 onClick={() => void handleCheckIn()}
               >
@@ -183,40 +206,65 @@ export function AppointmentCard({
           )}
 
           {showActions && showFlowRow && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {onComplete && (
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="min-w-0 flex-1 bg-success text-success-foreground hover:bg-success/90"
-                  onClick={() => onComplete(appointment.id)}
-                >
-                  <Check className="mr-1.5 h-4 w-4" />
-                  Concluir
-                </Button>
+            <div
+              className={cn(
+                flowRowIsSecondary && 'mt-4 border-t border-border/70 pt-4 dark:border-border/50',
+                !flowRowIsSecondary && 'mt-3',
               )}
-              {onNoShow && isAgendado && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="min-w-0 flex-1"
-                  onClick={() => onNoShow(appointment.id)}
-                >
-                  <UserX className="mr-1.5 h-4 w-4" />
-                  Faltou
-                </Button>
-              )}
-              {onCancel && (
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="min-w-0 flex-1"
-                  onClick={() => setCancelOpen(true)}
-                >
-                  <X className="mr-1.5 h-4 w-4" />
-                  Cancelar
-                </Button>
-              )}
+            >
+              {flowRowIsSecondary ? (
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Mais opções
+                </p>
+              ) : null}
+              <div className="flex flex-wrap items-stretch gap-2">
+                {showCompleteButton && (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="min-h-9 min-w-0 flex-1 bg-success text-success-foreground hover:bg-success/90"
+                    onClick={() => onComplete!(appointment.id)}
+                  >
+                    <Check className="mr-1.5 h-4 w-4" />
+                    Concluir
+                  </Button>
+                )}
+                {showNoShowButton && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="min-h-9 min-w-0 flex-1"
+                    onClick={() => onNoShow!(appointment.id)}
+                  >
+                    <UserX className="mr-1.5 h-4 w-4" />
+                    Faltou
+                  </Button>
+                )}
+                {showCancelMenu && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="min-h-9 min-w-9 shrink-0"
+                        aria-label="Mais ações do agendamento"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onSelect={() => setCancelOpen(true)}
+                      >
+                        <X className="size-4" />
+                        Cancelar agendamento
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
             </div>
           )}
 
