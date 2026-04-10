@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS public.barbeiros (
   telefone TEXT,
   email TEXT,
   ativo BOOLEAN DEFAULT TRUE,
+  funcao_equipe TEXT NOT NULL DEFAULT 'barbeiro' CHECK (funcao_equipe IN ('barbeiro', 'barbeiro_lider', 'moderador')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

@@ -208,18 +208,18 @@ export function ClientCardListSkeleton({ count = 5, className }: ListSkeletonPro
   )
 }
 
-/** Card da equipe (avatar + nome + menu) */
+/** Card da equipe (grid quadrado, até 6 colunas em telas largas) */
 export function TeamMemberCardSkeleton({ className }: { className?: string }) {
   return (
-    <Card className={cn('flex h-full flex-col', className)}>
-      <CardContent className="flex flex-1 items-center gap-3 p-4">
-        <Skeleton className="h-12 w-12 shrink-0 rounded-full" />
-        <div className="min-w-0 flex-1 space-y-2">
-          <Skeleton className="h-4 w-40" />
-          <Skeleton className="h-3 w-48" />
-          <Skeleton className="h-3 w-36" />
+    <Card className={cn('relative flex aspect-square flex-col overflow-hidden', className)}>
+      <Skeleton className="absolute right-2 top-2 h-8 w-8 shrink-0 rounded-md" />
+      <CardContent className="flex h-full flex-col items-center justify-center gap-2 p-3 pt-9 sm:p-4 sm:pt-10">
+        <Skeleton className="h-14 w-14 shrink-0 rounded-full sm:h-[4.5rem] sm:w-[4.5rem]" />
+        <div className="flex w-full flex-col items-center gap-2 px-1">
+          <Skeleton className="h-3.5 w-4/5 max-w-[9rem]" />
+          <Skeleton className="h-3 w-3/5 max-w-[6rem]" />
+          <Skeleton className="h-3 w-full max-w-[8rem]" />
         </div>
-        <Skeleton className="h-8 w-8 shrink-0 rounded-md" />
       </CardContent>
     </Card>
   )

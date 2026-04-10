@@ -62,6 +62,9 @@ export interface Servico {
   updated_at: string
 }
 
+/** Papel do membro na equipe da barbearia (tabela `barbeiros`). */
+export type EquipeFuncao = 'barbeiro' | 'barbeiro_lider' | 'moderador'
+
 export interface Barbeiro {
   id: string
   barbearia_id: string
@@ -71,6 +74,8 @@ export interface Barbeiro {
   telefone?: string
   email?: string
   ativo: boolean
+  /** Bases antigas podem omitir; tratar como `barbeiro`. */
+  funcao_equipe?: EquipeFuncao
   created_at: string
   updated_at: string
   // Relacionamentos

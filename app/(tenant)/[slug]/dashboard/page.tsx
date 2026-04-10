@@ -123,6 +123,7 @@ export default function AdminDashboardPage() {
               .select('*', { count: 'exact', head: true })
               .eq('barbearia_id', barbeariaData.id)
               .eq('ativo', true)
+              .or('funcao_equipe.eq.barbeiro,funcao_equipe.eq.barbeiro_lider,funcao_equipe.is.null')
 
             setStats({
               agendamentosHoje: todayCount || 0,

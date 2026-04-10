@@ -78,6 +78,7 @@ export default function AgendarPage() {
           .select('*')
           .eq('barbearia_id', barbearia.id)
           .eq('ativo', true)
+          .or('funcao_equipe.eq.barbeiro,funcao_equipe.eq.barbeiro_lider,funcao_equipe.is.null')
           .order('nome')
         
         if (barbeirosData) setBarbeiros(barbeirosData)

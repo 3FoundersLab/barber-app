@@ -55,6 +55,7 @@ export default function AdminAgendamentosPage() {
             .select('*')
             .eq('barbearia_id', barbeariaIdResolved)
             .eq('ativo', true)
+            .or('funcao_equipe.eq.barbeiro,funcao_equipe.eq.barbeiro_lider,funcao_equipe.is.null')
             .order('nome')
           
           if (barbeirosData) setBarbeiros(barbeirosData)
