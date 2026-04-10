@@ -7,8 +7,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
-  Monitor,
-  Smartphone,
   UserX,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -454,11 +452,7 @@ export function AppointmentDayGrid({
                           ) : a.status === 'faltou' ? (
                             <UserX className="h-3 w-3" aria-hidden />
                           ) : (
-                            <>
-                              <ServicoAgendaIcon nome={a.servico?.nome} />
-                              <Smartphone className="h-3 w-3 opacity-80" aria-hidden />
-                              <Monitor className="h-3 w-3 opacity-60" aria-hidden />
-                            </>
+                            <ServicoAgendaIcon nome={a.servico?.nome} />
                           )}
                         </span>
                         <span className="truncate text-[11px] font-semibold leading-tight">
