@@ -13,7 +13,7 @@ interface EstoqueProdutoCardProps {
   produto: EstoqueProduto
   onEdit: (produto: EstoqueProduto) => void
   onExcluir: (produto: EstoqueProduto) => void
-  onDeltaQuantidade: (id: number, delta: number) => void
+  onDeltaQuantidade: (id: string, delta: number) => void
   className?: string
 }
 

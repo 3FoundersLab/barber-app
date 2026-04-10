@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { LayoutList, Plus, Search } from 'lucide-react'
 import { EstoqueProdutoCard } from '@/components/domain/estoque-produto-card'
 import { PageContent } from '@/components/shared/page-container'
@@ -38,13 +38,22 @@ import {
   estoqueIconeCategoria,
 } from '@/lib/estoque-categoria-icons'
 import { ESTOQUE_PRODUTOS_MOCK } from '@/lib/estoque-produto-mock'
+import { mapEstoqueRowToProduto, type EstoqueProdutoRow } from '@/lib/map-estoque-produto'
 import { nivelEstoquePorQuantidade } from '@/lib/estoque-produto-utils'
+import { createClient } from '@/lib/supabase/client'
+import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import type { EstoqueProduto, EstoqueStatusFiltro } from '@/types/estoque-produto'
+import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 
 export default function TenantEstoquePage() {
-  const { base } = useTenantAdminBase()
-  const [produtos, setProdutos] = useState<EstoqueProduto[]>(ESTOQUE_PRODUTOS_MOCK)
+  const { slug, base } = useTenantAdminBase()
+  const [barbeariaId, setBarbeariaId] = useState<string | null>(null)
+  const [produtos, setProdutos] = useState<EstoqueProduto[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [seeding, setSeeding] = useState(false)
+
   const [busca, setBusca] = useState('')
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('todas')
   const [statusFiltro, setStatusFiltro] = useState<EstoqueStatusFiltro>('todos')
@@ -56,6 +65,70 @@ export default function TenantEstoquePage() {
   const [formQuantidade, setFormQuantidade] = useState('')
   const [formMinimo, setFormMinimo] = useState('')
   const [formPrecoCusto, setFormPrecoCusto] = useState('')
+  const [formPrecoVenda, setFormPrecoVenda] = useState('')
+
+  useEffect(() => {
+    async function init() {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
+      const id = await resolveAdminBarbeariaId(supabase, user.id, { slug })
+      setBarbeariaId(id)
+    }
+    void init()
+  }, [slug])
+
+  const loadProdutos = useCallback(async () => {
+    if (!barbeariaId) return
+    setIsLoading(true)
+    setError(null)
+    const supabase = createClient()
+    const { data, error: qErr } = await supabase
+      .from('estoque_produtos')
+      .select('*')
+      .eq('barbearia_id', barbeariaId)
+      .order('nome')
+
+    if (qErr) {
+      setError(
+        'Não foi possível carregar o estoque. Execute scripts/032_comandas_estoque.sql no Supabase (tabela estoque_produtos).',
+      )
+      setProdutos([])
+    } else {
+      setProdutos((data ?? []).map((r) => mapEstoqueRowToProduto(r as EstoqueProdutoRow)))
+    }
+    setIsLoading(false)
+  }, [barbeariaId])
+
+  useEffect(() => {
+    void loadProdutos()
+  }, [loadProdutos])
+
+  const seedExemplo = async () => {
+    if (!barbeariaId) return
+    setSeeding(true)
+    setError(null)
+    const supabase = createClient()
+    for (const m of ESTOQUE_PRODUTOS_MOCK) {
+      const { error: insE } = await supabase.from('estoque_produtos').insert({
+        barbearia_id: barbeariaId,
+        nome: m.nome,
+        categoria: m.categoria,
+        quantidade: m.quantidade,
+        minimo: m.minimo,
+        preco_custo: m.precoCusto ?? null,
+        preco_venda: m.precoVenda,
+      })
+      if (insE) {
+        setError(insE.message)
+        break
+      }
+    }
+    await loadProdutos()
+    setSeeding(false)
+  }
 
   const abrirEdicao = (p: EstoqueProduto) => {
     setEditando(p)
@@ -64,6 +137,7 @@ export default function TenantEstoquePage() {
     setFormQuantidade(String(p.quantidade))
     setFormMinimo(String(p.minimo))
     setFormPrecoCusto(p.precoCusto != null ? String(p.precoCusto) : '')
+    setFormPrecoVenda(String(p.precoVenda))
     setDialogOpen(true)
   }
 
@@ -79,77 +153,96 @@ export default function TenantEstoquePage() {
     setFormQuantidade('0')
     setFormMinimo('0')
     setFormPrecoCusto('')
+    setFormPrecoVenda('')
     setDialogOpen(true)
   }
 
-  const salvarProduto = () => {
+  const parseDecimal = (raw: string) => {
+    const t = raw.trim()
+    if (t === '') return null
+    const n = Number(t.replace(',', '.'))
+    return Number.isFinite(n) ? Math.round(n * 100) / 100 : null
+  }
+
+  const salvarProduto = async () => {
     const nome = formNome.trim()
-    if (!nome || !formCategoria) return
+    if (!nome || !formCategoria || !barbeariaId) return
 
     const q = Math.max(0, Math.floor(Number(formQuantidade) || 0))
     const m = Math.max(0, Math.floor(Number(formMinimo) || 0))
-    const custoRaw = formPrecoCusto.trim()
-    let precoCusto: number | undefined
-    if (custoRaw === '') {
-      precoCusto = undefined
-    } else {
-      const n = Number(custoRaw.replace(',', '.'))
-      if (Number.isFinite(n)) {
-        precoCusto = Math.round(n * 100) / 100
-      } else if (editando) {
-        precoCusto = editando.precoCusto
-      } else {
-        precoCusto = undefined
-      }
+    const custoParsed = parseDecimal(formPrecoCusto)
+    const vendaParsed = parseDecimal(formPrecoVenda)
+    const precoVenda = vendaParsed != null && vendaParsed >= 0 ? vendaParsed : 0
+    let precoCusto: number | null = null
+    if (formPrecoCusto.trim() !== '') {
+      if (custoParsed != null) precoCusto = custoParsed
+      else if (editando?.precoCusto != null) precoCusto = editando.precoCusto
     }
+
+    const supabase = createClient()
 
     if (editando) {
-      setProdutos((prev) =>
-        prev.map((p) =>
-          p.id === editando.id
-            ? {
-                ...p,
-                nome,
-                categoria: formCategoria,
-                quantidade: q,
-                minimo: m,
-                precoCusto,
-              }
-            : p,
-        ),
-      )
+      const { error: upE } = await supabase
+        .from('estoque_produtos')
+        .update({
+          nome,
+          categoria: formCategoria,
+          quantidade: q,
+          minimo: m,
+          preco_custo: precoCusto,
+          preco_venda: precoVenda,
+        })
+        .eq('id', editando.id)
+        .eq('barbearia_id', barbeariaId)
+      if (upE) {
+        setError(upE.message)
+        return
+      }
     } else {
-      setProdutos((prev) => {
-        const nextId = prev.reduce((max, p) => Math.max(max, p.id), 0) + 1
-        return [
-          ...prev,
-          {
-            id: nextId,
-            nome,
-            categoria: formCategoria,
-            quantidade: q,
-            minimo: m,
-            precoCusto,
-          },
-        ]
+      const { error: insE } = await supabase.from('estoque_produtos').insert({
+        barbearia_id: barbeariaId,
+        nome,
+        categoria: formCategoria,
+        quantidade: q,
+        minimo: m,
+        preco_custo: precoCusto,
+        preco_venda: precoVenda,
       })
+      if (insE) {
+        setError(insE.message)
+        return
+      }
     }
     fecharDialog(false)
+    await loadProdutos()
   }
 
-  const confirmarExclusao = () => {
-    if (!produtoParaExcluir) return
-    const id = produtoParaExcluir.id
-    setProdutos((prev) => prev.filter((p) => p.id !== id))
+  const confirmarExclusao = async () => {
+    if (!produtoParaExcluir || !barbeariaId) return
+    const supabase = createClient()
+    const { error: delE } = await supabase
+      .from('estoque_produtos')
+      .delete()
+      .eq('id', produtoParaExcluir.id)
+      .eq('barbearia_id', barbeariaId)
+    if (delE) setError(delE.message)
     setProdutoParaExcluir(null)
+    await loadProdutos()
   }
 
-  const deltaQuantidade = (id: number, delta: number) => {
-    setProdutos((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, quantidade: Math.max(0, p.quantidade + delta) } : p,
-      ),
-    )
+  const deltaQuantidade = async (id: string, delta: number) => {
+    if (!barbeariaId) return
+    const p = produtos.find((x) => x.id === id)
+    if (!p) return
+    const next = Math.max(0, p.quantidade + delta)
+    const supabase = createClient()
+    const { error: upE } = await supabase
+      .from('estoque_produtos')
+      .update({ quantidade: next })
+      .eq('id', id)
+      .eq('barbearia_id', barbeariaId)
+    if (upE) setError(upE.message)
+    else await loadProdutos()
   }
 
   const filtradosOrdenados = useMemo(() => {
@@ -171,6 +264,16 @@ export default function TenantEstoquePage() {
       <TenantPanelPageHeader title="Estoque" profileHref={`${base}/configuracoes`} avatarFallback="A" />
 
       <PageContent className="space-y-4 md:space-y-5">
+        {error ? (
+          <Alert
+            variant="danger"
+            onClose={() => setError(null)}
+            autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+          >
+            <AlertTitle>{error}</AlertTitle>
+          </Alert>
+        ) : null}
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 lg:gap-6">
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -182,10 +285,24 @@ export default function TenantEstoquePage() {
               aria-label="Buscar produto"
             />
           </div>
-          <Button type="button" className="w-full shrink-0 sm:w-auto" size="sm" onClick={abrirNovoProduto}>
-            <Plus className="mr-1 h-4 w-4" />
-            Novo produto
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {!isLoading && produtos.length === 0 && barbeariaId ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="w-full sm:w-auto"
+                disabled={seeding}
+                onClick={() => void seedExemplo()}
+              >
+                {seeding ? 'Carregando…' : 'Carregar exemplo'}
+              </Button>
+            ) : null}
+            <Button type="button" className="w-full shrink-0 sm:w-auto" size="sm" onClick={abrirNovoProduto}>
+              <Plus className="mr-1 h-4 w-4" />
+              Novo produto
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:items-end">
@@ -251,41 +368,47 @@ export default function TenantEstoquePage() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Ordenação: quantidade do menor para o maior.
+          Ordenação: quantidade do menor para o maior. O preço de venda é usado nas comandas.
         </p>
 
-        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 md:gap-3.5 lg:grid-cols-4 lg:gap-4 xl:grid-cols-5 xl:gap-4 2xl:grid-cols-6">
-          {filtradosOrdenados.length > 0 ? (
-            filtradosOrdenados.map((p) => (
-              <EstoqueProdutoCard
-                key={p.id}
-                produto={p}
-                onEdit={abrirEdicao}
-                onExcluir={setProdutoParaExcluir}
-                onDeltaQuantidade={deltaQuantidade}
-              />
-            ))
-          ) : (
-            <Card className="border-dashed col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-5 2xl:col-span-6">
-              <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-                <p className="text-muted-foreground">Nenhum produto encontrado com os filtros atuais.</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-3"
-                  onClick={() => {
-                    setBusca('')
-                    setCategoriaFiltro('todas')
-                    setStatusFiltro('todos')
-                  }}
-                >
-                  Limpar filtros
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        {isLoading ? (
+          <Card>
+            <CardContent className="py-12 text-center text-sm text-muted-foreground">Carregando estoque…</CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 md:gap-3.5 lg:grid-cols-4 lg:gap-4 xl:grid-cols-5 xl:gap-4 2xl:grid-cols-6">
+            {filtradosOrdenados.length > 0 ? (
+              filtradosOrdenados.map((p) => (
+                <EstoqueProdutoCard
+                  key={p.id}
+                  produto={p}
+                  onEdit={abrirEdicao}
+                  onExcluir={setProdutoParaExcluir}
+                  onDeltaQuantidade={deltaQuantidade}
+                />
+              ))
+            ) : (
+              <Card className="border-dashed col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-5 2xl:col-span-6">
+                <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+                  <p className="text-muted-foreground">Nenhum produto encontrado com os filtros atuais.</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => {
+                      setBusca('')
+                      setCategoriaFiltro('todas')
+                      setStatusFiltro('todos')
+                    }}
+                  >
+                    Limpar filtros
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
       </PageContent>
 
       <Dialog open={dialogOpen} onOpenChange={fecharDialog}>
@@ -348,16 +471,29 @@ export default function TenantEstoquePage() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="estoque-custo">Preço de custo (R$, opcional)</Label>
-              <Input
-                id="estoque-custo"
-                type="text"
-                inputMode="decimal"
-                placeholder="Ex: 24,90"
-                value={formPrecoCusto}
-                onChange={(e) => setFormPrecoCusto(e.target.value)}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="estoque-custo">Preço de custo (R$, opcional)</Label>
+                <Input
+                  id="estoque-custo"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="Ex: 24,90"
+                  value={formPrecoCusto}
+                  onChange={(e) => setFormPrecoCusto(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="estoque-venda">Preço de venda (R$)</Label>
+                <Input
+                  id="estoque-venda"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="Ex: 39,90"
+                  value={formPrecoVenda}
+                  onChange={(e) => setFormPrecoVenda(e.target.value)}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -366,7 +502,7 @@ export default function TenantEstoquePage() {
             </Button>
             <Button
               type="button"
-              onClick={salvarProduto}
+              onClick={() => void salvarProduto()}
               disabled={!formNome.trim() || !formCategoria}
             >
               Salvar
@@ -394,7 +530,7 @@ export default function TenantEstoquePage() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={confirmarExclusao}
+              onClick={() => void confirmarExclusao()}
             >
               Excluir
             </AlertDialogAction>

@@ -1,12 +1,14 @@
-/** Item de estoque no painel da barbearia (UI; persistência virá depois). */
+/** Item de estoque no painel da barbearia (persistido em `estoque_produtos`). */
 export interface EstoqueProduto {
-  id: number
+  id: string
   nome: string
   categoria: string
   quantidade: number
   minimo: number
   /** Custo unitário opcional (R$) */
   precoCusto?: number
+  /** Preço de venda na comanda (R$) */
+  precoVenda: number
 }
 
 export type EstoqueNivel = 'normal' | 'baixo' | 'critico'

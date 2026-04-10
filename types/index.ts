@@ -220,6 +220,17 @@ export interface ListState<T> {
 
 export type { EstoqueNivel, EstoqueProduto, EstoqueStatusFiltro } from './estoque-produto'
 
+export type {
+  Comanda,
+  ComandaDescontoModo,
+  ComandaFormaPagamento,
+  ComandaProdutoDraft,
+  ComandaProdutoLinha,
+  ComandaServicoDraft,
+  ComandaServicoLinha,
+  ComandaStatus,
+} from './comanda'
+
 // Navigation
 export interface NavItem {
   label: string
