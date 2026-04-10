@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
@@ -35,6 +35,7 @@ import { signOutWithPersistenceClear } from '@/lib/supabase/sign-out-client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { fetchLatestAssinaturaWithPlano, type AssinaturaComPlano } from '@/lib/tenant-assinatura-query'
 import { clearProfileCache, setProfileCache } from '@/lib/profile-cache'
+import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
 import {
   deserializeBarbeariaEndereco,
   emptyBarbeariaEnderecoParts,
@@ -69,6 +70,15 @@ function timeToDb(value: string): string | null {
   return v.length === 5 ? `${v}:00` : v
 }
 
+/** PostgREST quando a coluna ainda não existe no banco (migração não aplicada). */
+function isBarbeariaHorarioColumnError(err: { message?: string } | null): boolean {
+  const m = err?.message ?? ''
+  return (
+    /horario_abertura|horario_fechamento/i.test(m) &&
+    /column|schema cache|does not exist|PGRST204/i.test(m)
+  )
+}
+
 const profileAvatarUploadPremiumClass = cn(
   'space-y-3 border-t border-zinc-200/80 pt-5 dark:border-white/[0.06]',
   '[&_.text-muted-foreground]:text-muted-foreground [&_label]:text-foreground dark:[&_label]:text-zinc-300',
@@ -82,6 +92,20 @@ export default function AdminConfiguracoesPage() {
   const router = useRouter()
   const reduceMotion = useReducedMotion() === true
   const { slug, base } = useTenantAdminBase()
+  const saveFeedbackAnchorRef = useRef<HTMLDivElement>(null)
+
+  const scheduleScrollToSaveFeedback = useCallback(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = saveFeedbackAnchorRef.current
+        if (!el) return
+        el.scrollIntoView({
+          behavior: reduceMotion ? 'auto' : 'smooth',
+          block: 'start',
+        })
+      })
+    })
+  }, [reduceMotion])
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [barbearia, setBarbearia] = useState<Barbearia | null>(null)
@@ -90,6 +114,8 @@ export default function AdminConfiguracoesPage() {
   const [isSavingBarbearia, setIsSavingBarbearia] = useState(false)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [warning, setWarning] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const [nomePerfil, setNomePerfil] = useState('')
   const [telefonePerfil, setTelefonePerfil] = useState('')
@@ -108,6 +134,8 @@ export default function AdminConfiguracoesPage() {
     async function load() {
       const supabase = createClient()
       setError(null)
+      setSuccessMessage(null)
+      setWarning(null)
 
       await supabase.auth.refreshSession()
 
@@ -129,7 +157,7 @@ export default function AdminConfiguracoesPage() {
         .maybeSingle()
 
       if (profileErr) {
-        setError(profileErr.message || 'Não foi possível carregar o perfil')
+        setError(toUserFriendlyErrorMessage(profileErr, { fallback: 'Não foi possível carregar o perfil' }))
         setIsLoading(false)
         return
       }
@@ -152,7 +180,7 @@ export default function AdminConfiguracoesPage() {
           .eq('id', barbeariaIdResolved)
           .maybeSingle()
         if (bErr) {
-          setError(bErr.message || 'Não foi possível carregar a barbearia')
+          setError(toUserFriendlyErrorMessage(bErr, { fallback: 'Não foi possível carregar a barbearia' }))
         } else {
           b = bDirect
         }
@@ -182,35 +210,78 @@ export default function AdminConfiguracoesPage() {
   const handleSaveBarbearia = async () => {
     if (!barbearia) return
 
+    const nomeBarbearia = formBarbearia.nome.trim()
+    if (!nomeBarbearia) {
+      setSuccessMessage(null)
+      setError('Informe o nome da barbearia.')
+      scheduleScrollToSaveFeedback()
+      return
+    }
+
     const abre = formBarbearia.horario_abertura.trim()
     const fecha = formBarbearia.horario_fechamento.trim()
     if (abre && fecha && abre >= fecha) {
+      setSuccessMessage(null)
       setError('O horário de abertura deve ser anterior ao horário de fechamento.')
+      scheduleScrollToSaveFeedback()
       return
     }
 
     setIsSavingBarbearia(true)
     setError(null)
+    setWarning(null)
+    setSuccessMessage(null)
     const supabase = createClient()
 
-    const { data: updatedB, error: updateError } = await supabase
+    const basePayload = {
+      nome: nomeBarbearia,
+      endereco: serializeBarbeariaEndereco(formBarbearia.enderecoParts),
+      telefone: formBarbearia.telefone || null,
+      email: formBarbearia.email || null,
+    }
+
+    const withHorarios = {
+      ...basePayload,
+      horario_abertura: timeToDb(formBarbearia.horario_abertura),
+      horario_fechamento: timeToDb(formBarbearia.horario_fechamento),
+    }
+
+    let { data: updatedB, error: updateError } = await supabase
       .from('barbearias')
-      .update({
-        nome: formBarbearia.nome,
-        endereco: serializeBarbeariaEndereco(formBarbearia.enderecoParts),
-        telefone: formBarbearia.telefone || null,
-        email: formBarbearia.email || null,
-        horario_abertura: timeToDb(formBarbearia.horario_abertura),
-        horario_fechamento: timeToDb(formBarbearia.horario_fechamento),
-      })
+      .update(withHorarios)
       .eq('id', barbearia.id)
       .select('*')
       .single()
 
-    if (updateError) {
-      setError('Não foi possível salvar os dados da barbearia')
+    if (updateError && isBarbeariaHorarioColumnError(updateError)) {
+      const retry = await supabase
+        .from('barbearias')
+        .update(basePayload)
+        .eq('id', barbearia.id)
+        .select('*')
+        .single()
+      updatedB = retry.data
+      updateError = retry.error
+      if (!retry.error && retry.data) {
+        setBarbearia(retry.data)
+        setSuccessMessage('Dados da barbearia salvos com sucesso.')
+        setWarning(
+          'Os horários de abertura/fechamento não foram gravados: o banco ainda não possui as colunas. Execute a migração `036_barbearias_horario_funcionamento.sql` (ou `20260410160000_barbearias_horario_funcionamento.sql`) no Supabase.',
+        )
+        scheduleScrollToSaveFeedback()
+      } else if (retry.error) {
+        setError(retry.error.message || 'Não foi possível salvar os dados da barbearia.')
+        scheduleScrollToSaveFeedback()
+      }
+    } else if (updateError) {
+      setError(
+        toUserFriendlyErrorMessage(updateError, { fallback: 'Não foi possível salvar os dados da barbearia.' }),
+      )
+      scheduleScrollToSaveFeedback()
     } else if (updatedB) {
       setBarbearia(updatedB)
+      setSuccessMessage('Dados da barbearia salvos com sucesso.')
+      scheduleScrollToSaveFeedback()
     }
 
     setIsSavingBarbearia(false)
@@ -220,12 +291,16 @@ export default function AdminConfiguracoesPage() {
     if (!profile) return
     const trimmedNome = nomePerfil.trim()
     if (!trimmedNome) {
+      setSuccessMessage(null)
       setError('Informe seu nome')
+      scheduleScrollToSaveFeedback()
       return
     }
 
     setIsSavingProfile(true)
     setError(null)
+    setWarning(null)
+    setSuccessMessage(null)
     const supabase = createClient()
 
     const { data: updated, error: updateError } = await supabase
@@ -240,13 +315,20 @@ export default function AdminConfiguracoesPage() {
       .single()
 
     if (updateError || !updated) {
-      setError('Não foi possível salvar os dados da conta')
+      setError(
+        updateError
+          ? toUserFriendlyErrorMessage(updateError, { fallback: 'Não foi possível salvar os dados da conta.' })
+          : 'Não foi possível salvar os dados da conta.',
+      )
+      scheduleScrollToSaveFeedback()
       setIsSavingProfile(false)
       return
     }
 
     setProfile(updated)
     setProfileCache(profile.id, updated)
+    setSuccessMessage('Dados da conta salvos com sucesso.')
+    scheduleScrollToSaveFeedback()
     setIsSavingProfile(false)
   }
 
@@ -320,16 +402,46 @@ export default function AdminConfiguracoesPage() {
                   </Alert>
                 ) : null}
 
-                {error ? (
-                  <Alert
-                    variant="danger"
-                    onClose={() => setError(null)}
-                    autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
-                    className={superProfileDangerAlertClass}
-                  >
-                    <AlertTitle>{error}</AlertTitle>
-                  </Alert>
-                ) : null}
+                <div
+                  ref={saveFeedbackAnchorRef}
+                  className="scroll-mt-24 space-y-3 outline-none md:scroll-mt-28"
+                  aria-live="polite"
+                  aria-relevant="additions text"
+                >
+                  {error ? (
+                    <Alert
+                      variant="danger"
+                      onClose={() => setError(null)}
+                      autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+                      className={superProfileDangerAlertClass}
+                    >
+                      <AlertTitle>{error}</AlertTitle>
+                    </Alert>
+                  ) : null}
+
+                  {successMessage ? (
+                    <Alert
+                      variant="success"
+                      className="text-left"
+                      onClose={() => setSuccessMessage(null)}
+                      autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+                    >
+                      <AlertTitle>{successMessage}</AlertTitle>
+                    </Alert>
+                  ) : null}
+
+                  {warning ? (
+                    <Alert
+                      variant="warning"
+                      className="text-left"
+                      onClose={() => setWarning(null)}
+                      autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+                    >
+                      <AlertTitle>Aviso</AlertTitle>
+                      <AlertDescription>{warning}</AlertDescription>
+                    </Alert>
+                  ) : null}
+                </div>
 
                 {profile ? (
                   <div

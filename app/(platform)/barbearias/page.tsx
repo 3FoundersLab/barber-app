@@ -31,6 +31,7 @@ import {
   PaginationItem,
 } from '@/components/ui/pagination'
 import { createClient } from '@/lib/supabase/client'
+import { userFriendlyMessageFromApiJson } from '@/lib/to-user-friendly-error'
 import { SUPER_ADMIN_BARBEARIA_STORAGE_KEY } from '@/lib/resolve-admin-barbearia-id'
 import { tenantBarbeariaDashboardPath } from '@/lib/routes'
 import type { Assinatura, Barbearia } from '@/types'
@@ -165,11 +166,7 @@ export default function SuperBarbeariasPage() {
       return
     }
 
-    setError(
-      typeof json.error === 'string'
-        ? json.error
-        : 'Não foi possível acessar esta barbearia',
-    )
+    setError(userFriendlyMessageFromApiJson(json, 'Não foi possível acessar esta barbearia'))
   }
 
   const comPlanoIds = useMemo(

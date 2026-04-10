@@ -47,6 +47,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { normalizeEmailInput } from '@/lib/format-contato'
 import { createClient } from '@/lib/supabase/client'
+import { userFriendlyMessageFromApiJson } from '@/lib/to-user-friendly-error'
 import { ROLE_LABELS } from '@/lib/constants'
 import type { Barbearia, Profile, UserRole } from '@/types'
 import { cn } from '@/lib/utils'
@@ -225,9 +226,9 @@ export default function SuperUsuariosPage() {
           setLinksNotice(
             'Configure SUPABASE_SERVICE_ROLE_KEY no servidor para listar vínculos de todos os usuários, ou aplique o script SQL scripts/013_barbearia_users_select_super_admin_is_fn.sql no Supabase.',
           )
-        } else if (!res.ok && typeof json.error === 'string') {
+        } else if (!res.ok) {
           apiFailed = true
-          setLinksNotice(json.error)
+          setLinksNotice(userFriendlyMessageFromApiJson(json, 'Não foi possível carregar os vínculos pelo servidor.'))
         }
       } catch {
         apiFailed = true
@@ -295,7 +296,7 @@ export default function SuperUsuariosPage() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setError(typeof json.error === 'string' ? json.error : 'Não foi possível criar o usuário.')
+        setError(userFriendlyMessageFromApiJson(json, 'Não foi possível criar o usuário.'))
         setIsSaving(false)
         return
       }
@@ -342,11 +343,7 @@ export default function SuperUsuariosPage() {
         created_user?: boolean
       }
       if (!res.ok) {
-        setError(
-          typeof json.error === 'string'
-            ? json.error
-            : 'Não foi possível vincular o usuário à barbearia.',
-        )
+        setError(userFriendlyMessageFromApiJson(json, 'Não foi possível vincular o usuário à barbearia.'))
         setLinkSaving(false)
         return
       }
@@ -433,7 +430,7 @@ export default function SuperUsuariosPage() {
       })
       const json = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) {
-        setError(typeof json.error === 'string' ? json.error : 'Não foi possível salvar as alterações.')
+        setError(userFriendlyMessageFromApiJson(json, 'Não foi possível salvar as alterações.'))
         setIsSavingEdit(false)
         return
       }
@@ -462,11 +459,7 @@ export default function SuperUsuariosPage() {
       })
       const json = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) {
-        setError(
-          typeof json.error === 'string'
-            ? json.error
-            : 'Não foi possível atualizar o status do usuário.',
-        )
+        setError(userFriendlyMessageFromApiJson(json, 'Não foi possível atualizar o status do usuário.'))
         setTogglingAtivoId(null)
         return
       }
@@ -489,11 +482,7 @@ export default function SuperUsuariosPage() {
       )
       const json = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) {
-        setError(
-          typeof json.error === 'string'
-            ? json.error
-            : 'Não foi possível revogar o acesso à barbearia.',
-        )
+        setError(userFriendlyMessageFromApiJson(json, 'Não foi possível revogar o acesso à barbearia.'))
         setRevokingLinkId(null)
         return
       }

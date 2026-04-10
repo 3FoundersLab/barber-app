@@ -28,6 +28,8 @@ import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { CadastroPlanoGridSkeleton } from '@/components/shared/loading-skeleton'
 import { createClient } from '@/lib/supabase/client'
+import { mapSupabaseAuthErrorToMessage } from '@/lib/map-supabase-auth-error'
+import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
 import { resolveBarbeariaSlugForUser } from '@/lib/resolve-admin-barbearia-slug'
 import { rpcGetMyBarbeariaSlug } from '@/lib/barbearia-rpc'
 import { formatCurrency } from '@/lib/constants'
@@ -316,7 +318,11 @@ export default function CadastroBarbeariaPage() {
         })
 
         if (rpcErrorLogged) {
-          setError(rpcErrorLogged.message || 'Nao foi possivel finalizar o cadastro da barbearia')
+          setError(
+            toUserFriendlyErrorMessage(rpcErrorLogged, {
+              fallback: 'Não foi possível finalizar o cadastro da barbearia.',
+            }),
+          )
           return
         }
 
@@ -362,7 +368,7 @@ export default function CadastroBarbeariaPage() {
       })
 
       if (signUpError) {
-        setError(signUpError.message || 'Nao foi possivel criar o usuario responsavel')
+        setError(mapSupabaseAuthErrorToMessage(signUpError))
         return
       }
 
@@ -398,7 +404,11 @@ export default function CadastroBarbeariaPage() {
       })
 
       if (rpcError) {
-        setError(rpcError.message || 'Nao foi possivel finalizar o cadastro da barbearia')
+        setError(
+          toUserFriendlyErrorMessage(rpcError, {
+            fallback: 'Não foi possível finalizar o cadastro da barbearia.',
+          }),
+        )
         return
       }
 

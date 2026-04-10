@@ -43,6 +43,7 @@ import {
   getAgendaDemoUnavailableBlocks,
 } from '@/lib/agenda-demo-data'
 import { ensureComandaForAgendamento } from '@/lib/ensure-comanda-agendamento'
+import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
 import { cn } from '@/lib/utils'
 import type { Agendamento, Barbeiro } from '@/types'
 
@@ -330,7 +331,7 @@ export default function AdminAgendamentosPage() {
     const supabase = createClient()
     const ensured = await ensureComandaForAgendamento(supabase, row)
     if (!ensured.ok) {
-      setError(ensured.message)
+      setError(toUserFriendlyErrorMessage(ensured.message, { fallback: 'Não foi possível preparar a comanda.' }))
       return
     }
 
@@ -340,7 +341,7 @@ export default function AdminAgendamentosPage() {
       .eq('id', id)
 
     if (updErr) {
-      setError('Não foi possível registrar o check-in')
+      setError(toUserFriendlyErrorMessage(updErr, { fallback: 'Não foi possível registrar o check-in' }))
       return
     }
 
@@ -371,7 +372,7 @@ export default function AdminAgendamentosPage() {
       .eq('id', id)
 
     if (cancelErr) {
-      setError('Não foi possível cancelar o agendamento')
+      setError(toUserFriendlyErrorMessage(cancelErr, { fallback: 'Não foi possível cancelar o agendamento' }))
       loadAgendamentos()
       return
     }
@@ -492,7 +493,7 @@ export default function AdminAgendamentosPage() {
       .eq('id', appointmentId)
 
     if (updateError) {
-      setError('Não foi possível mover o agendamento')
+      setError(toUserFriendlyErrorMessage(updateError, { fallback: 'Não foi possível mover o agendamento' }))
       loadAgendamentos()
       return
     }

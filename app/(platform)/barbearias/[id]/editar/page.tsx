@@ -13,6 +13,7 @@ import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/
 import { Spinner } from '@/components/ui/spinner'
 import { SuperBarbeariaFormCardSkeleton } from '@/components/shared/loading-skeleton'
 import { createClient } from '@/lib/supabase/client'
+import { userFriendlyMessageFromApiJson } from '@/lib/to-user-friendly-error'
 import { deserializeBarbeariaEndereco, serializeBarbeariaEndereco } from '@/lib/barbearia-endereco'
 import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
 import {
@@ -90,9 +91,10 @@ export default function SuperBarbeariaEditarPage() {
       const json = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) {
         setError(
-          typeof json.error === 'string'
-            ? json.error
-            : 'Não foi possível salvar. Verifique SUPABASE_SERVICE_ROLE_KEY no servidor.',
+          userFriendlyMessageFromApiJson(
+            json,
+            'Não foi possível salvar. Verifique a configuração do servidor ou tente de novo.',
+          ),
         )
         setIsSaving(false)
         return

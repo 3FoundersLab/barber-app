@@ -42,6 +42,7 @@ import { ESTOQUE_PRODUTOS_MOCK } from '@/lib/estoque-produto-mock'
 import { mapEstoqueRowToProduto, type EstoqueProdutoRow } from '@/lib/map-estoque-produto'
 import { nivelEstoquePorQuantidade } from '@/lib/estoque-produto-utils'
 import { createClient } from '@/lib/supabase/client'
+import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import type { EstoqueProduto, EstoqueStatusFiltro } from '@/types/estoque-produto'
@@ -139,7 +140,7 @@ export default function TenantEstoquePage() {
         preco_venda: m.precoVenda,
       })
       if (insE) {
-        setError(insE.message)
+        setError(toUserFriendlyErrorMessage(insE, { fallback: 'Não foi possível adicionar o produto de exemplo.' }))
         break
       }
     }
@@ -208,7 +209,7 @@ export default function TenantEstoquePage() {
         .eq('id', editando.id)
         .eq('barbearia_id', barbeariaId)
       if (upE) {
-        setError(upE.message)
+        setError(toUserFriendlyErrorMessage(upE, { fallback: 'Não foi possível atualizar o produto.' }))
         return
       }
     } else {
@@ -222,7 +223,7 @@ export default function TenantEstoquePage() {
         preco_venda: precoVenda,
       })
       if (insE) {
-        setError(insE.message)
+        setError(toUserFriendlyErrorMessage(insE, { fallback: 'Não foi possível cadastrar o produto.' }))
         return
       }
     }
@@ -238,7 +239,9 @@ export default function TenantEstoquePage() {
       .delete()
       .eq('id', produtoParaExcluir.id)
       .eq('barbearia_id', barbeariaId)
-    if (delE) setError(delE.message)
+    if (delE) {
+      setError(toUserFriendlyErrorMessage(delE, { fallback: 'Não foi possível excluir o produto.' }))
+    }
     setProdutoParaExcluir(null)
     await loadProdutos()
   }
@@ -254,7 +257,9 @@ export default function TenantEstoquePage() {
       .update({ quantidade: next })
       .eq('id', id)
       .eq('barbearia_id', barbeariaId)
-    if (upE) setError(upE.message)
+    if (upE) {
+      setError(toUserFriendlyErrorMessage(upE, { fallback: 'Não foi possível atualizar a quantidade.' }))
+    }
     else await loadProdutos()
   }
 

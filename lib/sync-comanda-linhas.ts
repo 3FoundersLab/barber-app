@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
 
 export interface ServicoLinhaPayload {
   servico_id: string
@@ -68,7 +69,10 @@ export async function syncComandaLinhas(
       .update({ quantidade: atual + q })
       .eq('id', row.produto_estoque_id)
     if (eRest) {
-      return { ok: false, message: eRest.message || 'Erro ao restaurar estoque.' }
+      return {
+        ok: false,
+        message: toUserFriendlyErrorMessage(eRest, { fallback: 'Erro ao restaurar estoque.' }),
+      }
     }
   }
 
@@ -96,11 +100,17 @@ export async function syncComandaLinhas(
 
   const { error: delP } = await supabase.from('comanda_produtos').delete().eq('comanda_id', comandaId)
   if (delP) {
-    return { ok: false, message: delP.message || 'Erro ao limpar linhas de produtos.' }
+    return {
+      ok: false,
+      message: toUserFriendlyErrorMessage(delP, { fallback: 'Erro ao limpar linhas de produtos.' }),
+    }
   }
   const { error: delS } = await supabase.from('comanda_servicos').delete().eq('comanda_id', comandaId)
   if (delS) {
-    return { ok: false, message: delS.message || 'Erro ao limpar linhas de serviços.' }
+    return {
+      ok: false,
+      message: toUserFriendlyErrorMessage(delS, { fallback: 'Erro ao limpar linhas de serviços.' }),
+    }
   }
 
   if (servicos.length > 0) {
@@ -114,7 +124,10 @@ export async function syncComandaLinhas(
       })),
     )
     if (insS) {
-      return { ok: false, message: insS.message || 'Erro ao salvar serviços na comanda.' }
+      return {
+        ok: false,
+        message: toUserFriendlyErrorMessage(insS, { fallback: 'Erro ao salvar serviços na comanda.' }),
+      }
     }
   }
 
@@ -137,7 +150,10 @@ export async function syncComandaLinhas(
       .update({ quantidade: disponivel - need })
       .eq('id', p.produto_estoque_id)
     if (eDec) {
-      return { ok: false, message: eDec.message || 'Erro ao baixar estoque.' }
+      return {
+        ok: false,
+        message: toUserFriendlyErrorMessage(eDec, { fallback: 'Erro ao baixar estoque.' }),
+      }
     }
   }
 
@@ -152,7 +168,10 @@ export async function syncComandaLinhas(
       })),
     )
     if (insP) {
-      return { ok: false, message: insP.message || 'Erro ao salvar produtos na comanda.' }
+      return {
+        ok: false,
+        message: toUserFriendlyErrorMessage(insP, { fallback: 'Erro ao salvar produtos na comanda.' }),
+      }
     }
   }
 

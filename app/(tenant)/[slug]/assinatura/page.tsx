@@ -16,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { AdminConfiguracoesPageSkeleton } from '@/components/shared/loading-skeleton'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import { createClient } from '@/lib/supabase/client'
+import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { fetchLatestAssinaturaWithPlano, type AssinaturaComPlano } from '@/lib/tenant-assinatura-query'
 import type { Barbearia } from '@/types'
@@ -50,7 +51,11 @@ export default function TenantAssinaturaPage() {
 
       const { data: b, error: bErr } = await supabase.from('barbearias').select('*').eq('id', barbeariaId).maybeSingle()
       if (bErr || !b) {
-        setError(bErr?.message ?? 'Não foi possível carregar a barbearia')
+        setError(
+          bErr
+            ? toUserFriendlyErrorMessage(bErr, { fallback: 'Não foi possível carregar a barbearia' })
+            : 'Não foi possível carregar a barbearia',
+        )
         setIsLoading(false)
         return
       }

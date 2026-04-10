@@ -10,6 +10,7 @@ import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
+import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { formatTime } from '@/lib/constants'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
@@ -137,7 +138,7 @@ export default function TenantComandasPage() {
         referencia_data: a.data,
       })
       if (insE) {
-        setError(insE.message || 'Erro ao criar comanda para um agendamento.')
+        setError(toUserFriendlyErrorMessage(insE, { fallback: 'Erro ao criar comanda para um agendamento.' }))
         break
       }
     }

@@ -22,6 +22,7 @@ import { DateNavigatorCalendar } from '@/components/shared/date-navigator-calend
 import { DIAS_SEMANA_ABREV, formatDate, formatDateWeekdayLong } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { ensureComandaForAgendamento } from '@/lib/ensure-comanda-agendamento'
+import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
 import type { Agendamento, Barbeiro, Profile } from '@/types'
 
 export default function BarbeiroAgendaPage() {
@@ -167,7 +168,7 @@ export default function BarbeiroAgendaPage() {
     const supabase = createClient()
     const ensured = await ensureComandaForAgendamento(supabase, row)
     if (!ensured.ok) {
-      setError(ensured.message)
+      setError(toUserFriendlyErrorMessage(ensured.message, { fallback: 'Não foi possível preparar a comanda.' }))
       return
     }
 

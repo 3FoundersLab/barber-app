@@ -27,6 +27,7 @@ import {
 import { maskTelefoneBr } from '@/lib/format-contato'
 import { createClient } from '@/lib/supabase/client'
 import { setProfileCache } from '@/lib/profile-cache'
+import { userFriendlyMessageFromApiJson } from '@/lib/to-user-friendly-error'
 import { ProfileAvatarUpload } from '@/components/shared/profile-avatar-upload'
 import { cn } from '@/lib/utils'
 import type { Profile } from '@/types'
@@ -108,9 +109,10 @@ export default function SuperEditarPerfilPage() {
 
     if (!res.ok || !json.profile) {
       setError(
-        typeof json.error === 'string'
-          ? json.error
-          : 'Não foi possível salvar o perfil. Verifique SUPABASE_SERVICE_ROLE_KEY no servidor.',
+        userFriendlyMessageFromApiJson(
+          json,
+          'Não foi possível salvar o perfil. Verifique a configuração do servidor ou tente de novo.',
+        ),
       )
       setIsSaving(false)
       return

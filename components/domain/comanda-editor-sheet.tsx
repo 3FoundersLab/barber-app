@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { calcularTotaisComanda } from '@/lib/comanda-totais'
 import { mapEstoqueRowToProduto, type EstoqueProdutoRow } from '@/lib/map-estoque-produto'
 import { restaurarEstoqueELimparProdutosComanda, syncComandaLinhas } from '@/lib/sync-comanda-linhas'
+import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
 import { estoqueCirculoCategoriaClass, estoqueIconeCategoria } from '@/lib/estoque-categoria-icons'
 import { formatCurrency, formatTime } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
@@ -258,7 +259,9 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
         forma_pagamento: formaPagamento || null,
       })
       .eq('id', comanda.id)
-    if (e) throw new Error(e.message)
+    if (e) {
+      throw new Error(toUserFriendlyErrorMessage(e, { fallback: 'Não foi possível salvar o cabeçalho da comanda.' }))
+    }
   }
 
   const handleSalvar = async () => {
@@ -269,7 +272,7 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
       const supabase = createClient()
       const sync = await syncComandaLinhas(supabase, comanda.id, montarPayloadServicos(), montarPayloadProdutos())
       if (!sync.ok) {
-        setError(sync.message)
+        setError(toUserFriendlyErrorMessage(sync.message, { fallback: 'Não foi possível salvar a comanda.' }))
         setSaving(false)
         return
       }
@@ -277,7 +280,7 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
       await loadData()
       onSaved()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao salvar.')
+      setError(toUserFriendlyErrorMessage(err, { fallback: 'Erro ao salvar.' }))
     }
     setSaving(false)
   }
@@ -294,18 +297,20 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
       const supabase = createClient()
       const sync = await syncComandaLinhas(supabase, comanda.id, montarPayloadServicos(), montarPayloadProdutos())
       if (!sync.ok) {
-        setError(sync.message)
+        setError(toUserFriendlyErrorMessage(sync.message, { fallback: 'Não foi possível salvar a comanda.' }))
         setSaving(false)
         return
       }
       await persistirCabecalho()
       const { error: e } = await supabase.from('comandas').update({ status: 'fechada' }).eq('id', comanda.id)
-      if (e) throw new Error(e.message)
+      if (e) {
+        throw new Error(toUserFriendlyErrorMessage(e, { fallback: 'Não foi possível fechar a comanda.' }))
+      }
       await loadData()
       onSaved()
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao fechar.')
+      setError(toUserFriendlyErrorMessage(err, { fallback: 'Erro ao fechar.' }))
     }
     setSaving(false)
   }
@@ -318,16 +323,18 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
       const supabase = createClient()
       const r = await restaurarEstoqueELimparProdutosComanda(supabase, comanda.id)
       if (!r.ok) {
-        setError(r.message)
+        setError(toUserFriendlyErrorMessage(r.message, { fallback: 'Não foi possível cancelar a comanda.' }))
         setSaving(false)
         return
       }
       const { error: e } = await supabase.from('comandas').update({ status: 'cancelada' }).eq('id', comanda.id)
-      if (e) throw new Error(e.message)
+      if (e) {
+        throw new Error(toUserFriendlyErrorMessage(e, { fallback: 'Não foi possível cancelar a comanda.' }))
+      }
       onSaved()
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao cancelar.')
+      setError(toUserFriendlyErrorMessage(err, { fallback: 'Erro ao cancelar.' }))
     }
     setSaving(false)
   }

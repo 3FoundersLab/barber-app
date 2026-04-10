@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Agendamento } from '@/types'
+import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
 
 type AgendamentoComandaRow = Pick<
   Agendamento,
@@ -21,7 +22,10 @@ export async function ensureComandaForAgendamento(
     .maybeSingle()
 
   if (selErr) {
-    return { ok: false, message: selErr.message || 'Não foi possível verificar a comanda.' }
+    return {
+      ok: false,
+      message: toUserFriendlyErrorMessage(selErr, { fallback: 'Não foi possível verificar a comanda.' }),
+    }
   }
 
   if (existing?.numero != null && Number.isFinite(Number(existing.numero))) {
@@ -45,7 +49,9 @@ export async function ensureComandaForAgendamento(
   if (insErr || inserted?.numero == null) {
     return {
       ok: false,
-      message: insErr?.message || 'Não foi possível criar a comanda.',
+      message: insErr
+        ? toUserFriendlyErrorMessage(insErr, { fallback: 'Não foi possível criar a comanda.' })
+        : 'Não foi possível criar a comanda.',
     }
   }
 
