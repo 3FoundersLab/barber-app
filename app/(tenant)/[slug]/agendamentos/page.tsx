@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
@@ -8,7 +8,6 @@ import {
   CalendarOff,
   ChevronLeft,
   ChevronRight,
-  Pencil,
   Plus,
   User,
   Users,
@@ -70,6 +69,16 @@ const PERIODO_LABEL: Record<PeriodoKey, string> = {
   noite: 'Noite',
 }
 
+/** Permite abrir o formulário completo (cliente, barbeiro, serviço, data, horário…). */
+function allowsAdminEditAppointment(a: Agendamento, demoActive: boolean): boolean {
+  if (demoActive) return false
+  return (
+    a.status === 'agendado' ||
+    a.status === 'em_atendimento' ||
+    a.status === 'concluido'
+  )
+}
+
 export default function AdminAgendamentosPage() {
   const { slug, base } = useTenantAdminBase()
   const router = useRouter()
@@ -107,6 +116,12 @@ export default function AdminAgendamentosPage() {
     setEditingAppointment(null)
     setAppointmentFormOpen(true)
   }
+
+  const beginEditAppointment = useCallback((row: Agendamento) => {
+    setEditingAppointment(row)
+    setDetailAppointment(null)
+    setAppointmentFormOpen(true)
+  }, [])
 
   const parseLocalYMD = (ymd: string) => {
     const [y, m, d] = ymd.split('-').map(Number)
@@ -647,8 +662,8 @@ export default function AdminAgendamentosPage() {
                   }
                   return (
                     <div className="space-y-0">
-                      <div className="flex flex-wrap items-center gap-2 pb-3">
-                        {onBackToList ? (
+                      {onBackToList ? (
+                        <div className="flex flex-wrap items-center gap-2 pb-3">
                           <Button
                             type="button"
                             variant="ghost"
@@ -659,25 +674,9 @@ export default function AdminAgendamentosPage() {
                             <ChevronLeft className="mr-1 h-4 w-4" />
                             Lista do dia
                           </Button>
-                        ) : null}
-                        {a.status === 'agendado' && !useDemoData ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8"
-                            onClick={() => {
-                              onClose()
-                              setEditingAppointment(a)
-                              setAppointmentFormOpen(true)
-                            }}
-                          >
-                            <Pencil className="mr-1.5 h-4 w-4" />
-                            Editar
-                          </Button>
-                        ) : null}
-                      </div>
-                      <Separator className="mb-3" />
+                        </div>
+                      ) : null}
+                      {onBackToList ? <Separator className="mb-3" /> : null}
                       <AppointmentCard
                         appointment={a}
                         inSheet
@@ -699,6 +698,15 @@ export default function AdminAgendamentosPage() {
                           handleMarkPaid(id)
                           onClose()
                         }}
+                        onEdit={
+                          allowsAdminEditAppointment(a, useDemoData)
+                            ? (id) => {
+                                if (id !== a.id) return
+                                onClose()
+                                beginEditAppointment(a)
+                              }
+                            : undefined
+                        }
                       />
                     </div>
                   )
@@ -846,13 +854,10 @@ export default function AdminAgendamentosPage() {
                               onNoShow={(id) => handleStatusChange(id, 'faltou')}
                               onMarkPaid={handleMarkPaid}
                               onEdit={
-                                agendamento.status === 'agendado' && !useDemoData
+                                allowsAdminEditAppointment(agendamento, useDemoData)
                                   ? (id) => {
                                       const row = displayAgendamentos.find((x) => x.id === id)
-                                      if (row) {
-                                        setEditingAppointment(row)
-                                        setAppointmentFormOpen(true)
-                                      }
+                                      if (row) beginEditAppointment(row)
                                     }
                                   : undefined
                               }
@@ -941,28 +946,13 @@ export default function AdminAgendamentosPage() {
 
       <Dialog open={detailAppointment !== null} onOpenChange={(open) => !open && setDetailAppointment(null)}>
         <DialogContent className="max-w-md sm:max-w-lg" showCloseButton>
-          <DialogHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
+          <DialogHeader>
             <DialogTitle>Detalhes do agendamento</DialogTitle>
-            {detailAppointment?.status === 'agendado' && !useDemoData && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={() => {
-                  setEditingAppointment(detailAppointment)
-                  setDetailAppointment(null)
-                  setAppointmentFormOpen(true)
-                }}
-              >
-                <Pencil className="mr-1.5 h-4 w-4" />
-                Editar
-              </Button>
-            )}
           </DialogHeader>
           {detailAppointment && (
             <AppointmentCard
               appointment={detailAppointment}
+              inSheet
               comandaNumero={comandaMapEfetivo[detailAppointment.id]}
               onCheckIn={handleCheckIn}
               onComplete={(id) => {
@@ -981,6 +971,14 @@ export default function AdminAgendamentosPage() {
                 handleMarkPaid(id)
                 setDetailAppointment(null)
               }}
+              onEdit={
+                allowsAdminEditAppointment(detailAppointment, useDemoData)
+                  ? (id) => {
+                      if (id !== detailAppointment.id) return
+                      beginEditAppointment(detailAppointment)
+                    }
+                  : undefined
+              }
             />
           )}
         </DialogContent>
