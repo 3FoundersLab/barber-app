@@ -434,20 +434,28 @@ export default function BarbeiroAgendaPage() {
                 <AlertTitle>{error}</AlertTitle>
               </Alert>
             ) : isLoading ? (
-              <AppointmentListSkeleton count={3} />
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                <AppointmentListSkeleton count={3} className="contents" />
+              </div>
             ) : appointmentsOfSelectedDate.length > 0 ? (
-              appointmentsOfSelectedDate.map((agendamento) => (
-                <AppointmentCard
-                  key={agendamento.id}
-                  appointment={agendamento}
-                  comandaNumero={comandaNumeroPorAgendamento[agendamento.id]}
-                  onCheckIn={handleCheckIn}
-                  onComplete={(id) => handleStatusChange(id, 'concluido')}
-                  onCancel={(id, motivo) => void handleCancelAppointment(id, motivo)}
-                  onNoShow={(id) => handleStatusChange(id, 'faltou')}
-                  onMarkPaid={handleMarkPaid}
-                />
-              ))
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {appointmentsOfSelectedDate.map((agendamento) => (
+                  <AppointmentCard
+                    key={agendamento.id}
+                    appointment={agendamento}
+                    comandaNumero={comandaNumeroPorAgendamento[agendamento.id]}
+                    onCardClick={(id) => {
+                      const row = agendamentos.find((x) => x.id === id) ?? null
+                      setDetailAppointment(row)
+                    }}
+                    onCheckIn={handleCheckIn}
+                    onComplete={(id) => handleStatusChange(id, 'concluido')}
+                    onCancel={(id, motivo) => void handleCancelAppointment(id, motivo)}
+                    onNoShow={(id) => handleStatusChange(id, 'faltou')}
+                    onMarkPaid={handleMarkPaid}
+                  />
+                ))}
+              </div>
             ) : (
               <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center justify-center py-8 text-center">

@@ -234,7 +234,7 @@ export default function AdminFinanceiroPage() {
             <AlertTitle>{error}</AlertTitle>
           </Alert>
         ) : isLoading ? (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3 xl:gap-5">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             <AppointmentListSkeleton count={6} className="contents" />
           </div>
         ) : agendamentos.length > 0 ? (
@@ -244,7 +244,7 @@ export default function AdminFinanceiroPage() {
                 <h2 className="border-b pb-1 text-sm font-semibold capitalize text-foreground md:text-base">
                   {formatDateHeading(dateKey)}
                 </h2>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3 xl:gap-5">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {items.map((agendamento) => (
                     <AppointmentCard
                       key={agendamento.id}

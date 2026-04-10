@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Calendar, ChevronLeft, ChevronRight, Pencil, Plus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Calendar, CalendarOff, ChevronLeft, ChevronRight, Pencil, Plus } from 'lucide-react'
 import { PageContent } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { AppointmentAdminFormDialog } from '@/components/domain/appointment-admin-form-dialog'
@@ -34,10 +35,35 @@ import {
   getAgendaDemoUnavailableBlocks,
 } from '@/lib/agenda-demo-data'
 import { ensureComandaForAgendamento } from '@/lib/ensure-comanda-agendamento'
+import { cn } from '@/lib/utils'
 import type { Agendamento, Barbeiro } from '@/types'
+
+type ListQuickFocus = 'todos' | 'hoje' | 'amanha' | 'em_atendimento'
+
+type PeriodoKey = 'manha' | 'tarde' | 'noite'
+
+function parseHorarioMinutes(horario: string): number {
+  const [h, m] = horario.slice(0, 5).split(':').map(Number)
+  return h * 60 + (m || 0)
+}
+
+function periodoFromHorario(horario: string): PeriodoKey {
+  const mins = parseHorarioMinutes(horario)
+  if (mins < 12 * 60) return 'manha'
+  if (mins < 18 * 60) return 'tarde'
+  return 'noite'
+}
+
+const PERIODO_ORDER: PeriodoKey[] = ['manha', 'tarde', 'noite']
+const PERIODO_LABEL: Record<PeriodoKey, string> = {
+  manha: 'Manhã',
+  tarde: 'Tarde',
+  noite: 'Noite',
+}
 
 export default function AdminAgendamentosPage() {
   const { slug, base } = useTenantAdminBase()
+  const router = useRouter()
 
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedBarbeiro, setSelectedBarbeiro] = useState<string>('all')
@@ -61,6 +87,7 @@ export default function AdminAgendamentosPage() {
   const [demoComandaNumeroPorAgendamento, setDemoComandaNumeroPorAgendamento] = useState<
     Record<string, number>
   >({})
+  const [listQuickFocus, setListQuickFocus] = useState<ListQuickFocus>('todos')
 
   useEffect(() => {
     setFabPortalHost(document.body)
@@ -212,6 +239,9 @@ export default function AdminAgendamentosPage() {
       d.setDate(d.getDate() - 1)
       return d
     })
+    if (viewMode === 'list' && listQuickFocus !== 'em_atendimento') {
+      setListQuickFocus('todos')
+    }
   }
 
   const handleNextDay = () => {
@@ -220,10 +250,16 @@ export default function AdminAgendamentosPage() {
       d.setDate(d.getDate() + 1)
       return d
     })
+    if (viewMode === 'list' && listQuickFocus !== 'em_atendimento') {
+      setListQuickFocus('todos')
+    }
   }
 
   const handleToday = () => {
     setSelectedDate(new Date())
+    if (viewMode === 'list') {
+      setListQuickFocus('hoje')
+    }
   }
 
   const handleStatusChange = async (id: string, status: 'concluido' | 'faltou') => {
@@ -339,6 +375,38 @@ export default function AdminAgendamentosPage() {
     () => displayAgendamentos.filter((agendamento) => agendamento.data === selectedDateKey),
     [displayAgendamentos, selectedDateKey],
   )
+
+  const listFilteredSorted = useMemo(() => {
+    let list = appointmentsOfSelectedDate
+    if (listQuickFocus === 'em_atendimento') {
+      list = list.filter((a) => a.status === 'em_atendimento')
+    }
+    return [...list].sort((a, b) => a.horario.localeCompare(b.horario))
+  }, [appointmentsOfSelectedDate, listQuickFocus])
+
+  const listByPeriod = useMemo(() => {
+    const buckets: Record<PeriodoKey, Agendamento[]> = { manha: [], tarde: [], noite: [] }
+    for (const a of listFilteredSorted) {
+      buckets[periodoFromHorario(a.horario)].push(a)
+    }
+    return PERIODO_ORDER.map((key) => ({
+      key,
+      label: PERIODO_LABEL[key],
+      items: buckets[key],
+    }))
+  }, [listFilteredSorted])
+
+  const nextAppointmentId = useMemo(() => {
+    if (listQuickFocus === 'em_atendimento') return null
+    const todayKey = formatDateKey(new Date())
+    if (selectedDateKey !== todayKey) return null
+    const nowMins = new Date().getHours() * 60 + new Date().getMinutes()
+    const upcoming = listFilteredSorted.filter((a) => a.status === 'agendado')
+    for (const a of upcoming) {
+      if (parseHorarioMinutes(a.horario) >= nowMins) return a.id
+    }
+    return null
+  }, [selectedDateKey, listFilteredSorted, listQuickFocus])
 
   const barbeirosNaGrade = useMemo(() => {
     if (selectedBarbeiro === 'all') return displayBarbeiros
@@ -460,7 +528,13 @@ export default function AdminAgendamentosPage() {
             return (
               <button
                 key={day.toISOString()}
-                onClick={() => setSelectedDate(day)}
+                type="button"
+                onClick={() => {
+                  setSelectedDate(day)
+                  if (viewMode === 'list' && listQuickFocus !== 'em_atendimento') {
+                    setListQuickFocus('todos')
+                  }
+                }}
                 className={`flex flex-1 flex-col items-center rounded-lg py-2 transition-colors ${
                   isSelected
                     ? 'bg-primary text-primary-foreground'
@@ -629,43 +703,156 @@ export default function AdminAgendamentosPage() {
 
         {/* Lista de cartões (modo lista) */}
         {viewMode === 'list' && (
-          <div
-            className={
-              !error && (isLoading || appointmentsOfSelectedDate.length > 0)
-                ? 'grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3 xl:gap-5'
-                : 'space-y-3'
-            }
-          >
-            {error ? (
-              <Alert
-                variant="danger"
-                onClose={() => setError(null)}
-                autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+          <div className="space-y-5">
+            <div
+              className="flex flex-wrap gap-2"
+              role="toolbar"
+              aria-label="Filtros rápidos da lista"
+            >
+              <Button
+                type="button"
+                size="sm"
+                variant={listQuickFocus === 'todos' ? 'default' : 'outline'}
+                className={cn(
+                  'rounded-full',
+                  listQuickFocus === 'todos' && 'shadow-sm',
+                )}
+                onClick={() => setListQuickFocus('todos')}
               >
-                <AlertTitle>{error}</AlertTitle>
-              </Alert>
-            ) : isLoading ? (
-              <AppointmentListSkeleton count={6} className="contents" />
-            ) : appointmentsOfSelectedDate.length > 0 ? (
-              appointmentsOfSelectedDate.map((agendamento) => (
-                <AppointmentCard
-                  key={agendamento.id}
-                  appointment={agendamento}
-                  comandaNumero={comandaMapEfetivo[agendamento.id]}
-                  onCheckIn={handleCheckIn}
-                  onComplete={(id) => handleStatusChange(id, 'concluido')}
-                  onCancel={(id, motivo) => void handleCancelAppointment(id, motivo)}
-                  onNoShow={(id) => handleStatusChange(id, 'faltou')}
-                  onMarkPaid={handleMarkPaid}
-                />
-              ))
-            ) : (
-              <Card className="border-dashed">
-                <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                  <p className="text-muted-foreground">Nenhum agendamento para este dia</p>
-                </CardContent>
-              </Card>
-            )}
+                Todos
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={listQuickFocus === 'hoje' ? 'default' : 'outline'}
+                className={cn('rounded-full', listQuickFocus === 'hoje' && 'shadow-sm')}
+                onClick={() => {
+                  setSelectedDate(new Date())
+                  setListQuickFocus('hoje')
+                }}
+              >
+                Hoje
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={listQuickFocus === 'amanha' ? 'default' : 'outline'}
+                className={cn('rounded-full', listQuickFocus === 'amanha' && 'shadow-sm')}
+                onClick={() => {
+                  const t = new Date()
+                  t.setDate(t.getDate() + 1)
+                  setSelectedDate(t)
+                  setListQuickFocus('amanha')
+                }}
+              >
+                Amanhã
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={listQuickFocus === 'em_atendimento' ? 'default' : 'outline'}
+                className={cn(
+                  'rounded-full',
+                  listQuickFocus === 'em_atendimento' && 'shadow-sm',
+                )}
+                onClick={() => setListQuickFocus('em_atendimento')}
+              >
+                Em atendimento
+              </Button>
+            </div>
+
+            <div
+              className={
+                !error && (isLoading || listFilteredSorted.length > 0)
+                  ? 'space-y-10'
+                  : 'space-y-3'
+              }
+            >
+              {error ? (
+                <Alert
+                  variant="danger"
+                  onClose={() => setError(null)}
+                  autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+                >
+                  <AlertTitle>{error}</AlertTitle>
+                </Alert>
+              ) : isLoading ? (
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                  <AppointmentListSkeleton count={6} className="contents" />
+                </div>
+              ) : listFilteredSorted.length > 0 ? (
+                listByPeriod.map(
+                  ({ key, label, items }) =>
+                    items.length === 0 ? null : (
+                      <section key={key} className="space-y-4">
+                        <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                          {label}
+                        </h3>
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                          {items.map((agendamento) => (
+                            <AppointmentCard
+                              key={agendamento.id}
+                              appointment={agendamento}
+                              comandaNumero={comandaMapEfetivo[agendamento.id]}
+                              isNext={agendamento.id === nextAppointmentId}
+                              onCardClick={(id) => {
+                                const row = displayAgendamentos.find((x) => x.id === id) ?? null
+                                setDetailAppointment(row)
+                              }}
+                              onCheckIn={handleCheckIn}
+                              onComplete={(id) => handleStatusChange(id, 'concluido')}
+                              onCancel={(id, motivo) => void handleCancelAppointment(id, motivo)}
+                              onNoShow={(id) => handleStatusChange(id, 'faltou')}
+                              onMarkPaid={handleMarkPaid}
+                              onEdit={
+                                agendamento.status === 'agendado' && !useDemoData
+                                  ? (id) => {
+                                      const row = displayAgendamentos.find((x) => x.id === id)
+                                      if (row) {
+                                        setEditingAppointment(row)
+                                        setAppointmentFormOpen(true)
+                                      }
+                                    }
+                                  : undefined
+                              }
+                              onViewHistory={() => {
+                                const nome = agendamento.cliente?.nome?.trim()
+                                if (nome) {
+                                  router.push(
+                                    `${base}/clientes?q=${encodeURIComponent(nome)}`,
+                                  )
+                                } else {
+                                  router.push(`${base}/clientes`)
+                                }
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </section>
+                    ),
+                )
+              ) : (
+                <Card className="border-dashed border-2 bg-muted/20 shadow-none">
+                  <CardContent className="flex flex-col items-center justify-center gap-3 py-14 text-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
+                      <CalendarOff className="h-7 w-7 text-muted-foreground" aria-hidden />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-base font-semibold text-foreground">
+                        {listQuickFocus === 'em_atendimento'
+                          ? 'Ninguém em atendimento agora'
+                          : 'Nenhum agendamento neste dia'}
+                      </p>
+                      <p className="max-w-sm text-sm text-muted-foreground">
+                        {listQuickFocus === 'em_atendimento'
+                          ? 'Quando um cliente fizer check-in, o card aparece aqui com este filtro.'
+                          : 'Escolha outro dia na barra acima ou crie um novo agendamento pelo botão +.'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         )}
 

@@ -34,29 +34,30 @@ export function CardSkeleton({ className }: { className?: string }) {
   )
 }
 
-/** Alinha ao `AppointmentCard` (admin/financeiro/agenda): horário, cliente, status e ações */
+/** Alinha ao `AppointmentCard` (admin/financeiro/agenda): header com avatar, corpo e footer de ações */
 export function AppointmentCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('overflow-hidden rounded-lg border bg-card', className)}>
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-3">
+    <div className={cn('overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[0_4px_20px_rgba(0,0,0,0.08)]', className)}>
+      <div className="p-5">
+        <div className="mb-4 rounded-xl bg-muted/40 px-4 py-4">
           <div className="flex items-start gap-3">
-            <Skeleton className="h-12 w-12 shrink-0 rounded-lg" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-28" />
-              <Skeleton className="h-3 w-20" />
+            <Skeleton className="size-10 shrink-0 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-7 w-20 rounded-lg" />
             </div>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <Skeleton className="h-5 w-16 rounded-full" />
-            <Skeleton className="h-5 w-14 rounded-full" />
             <Skeleton className="h-4 w-14" />
           </div>
         </div>
-        <div className="mt-3 flex gap-2">
-          <Skeleton className="h-8 flex-1 rounded-md" />
-          <Skeleton className="h-8 flex-1 rounded-md" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-[85%] max-w-[200px]" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-6 w-28" />
+        </div>
+        <div className="mt-4 flex gap-2 border-t border-border/60 pt-4">
+          <Skeleton className="h-9 flex-1 rounded-md" />
+          <Skeleton className="h-9 w-20 rounded-md" />
+          <Skeleton className="h-9 w-9 shrink-0 rounded-md" />
         </div>
       </div>
     </div>

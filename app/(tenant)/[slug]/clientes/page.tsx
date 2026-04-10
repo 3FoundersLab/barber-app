@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react'
 import { PageContent, PageTitle } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
@@ -73,6 +74,7 @@ function pageNumberItems(current: number, total: number): (number | 'ellipsis')[
 
 export default function AdminClientesPage() {
   const { slug, base } = useTenantAdminBase()
+  const searchParams = useSearchParams()
 
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -95,6 +97,11 @@ export default function AdminClientesPage() {
   useEffect(() => {
     loadClientes()
   }, [slug])
+
+  useEffect(() => {
+    const q = searchParams.get('q')?.trim()
+    if (q) setSearchTerm(q)
+  }, [searchParams])
 
   useEffect(() => {
     setPage(1)
