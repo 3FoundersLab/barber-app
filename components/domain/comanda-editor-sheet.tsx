@@ -1,8 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Minus, Plus, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import {
+  COMANDA_DEMO_ID_FECHADA,
+  getDemoEditorStateFechada,
+  getDemoEstoqueParaComanda,
+  getDemoProdutoLinhasIniciais,
+  getDemoServicoQtyInicial,
+  getDemoServicosCatalogo,
+} from '@/lib/comanda-demo-data'
 import { calcularTotaisComanda } from '@/lib/comanda-totais'
 import { mapEstoqueRowToProduto, type EstoqueProdutoRow } from '@/lib/map-estoque-produto'
 import { restaurarEstoqueELimparProdutosComanda, syncComandaLinhas } from '@/lib/sync-comanda-linhas'
@@ -48,9 +56,17 @@ interface ComandaEditorSheetProps {
   onOpenChange: (open: boolean) => void
   comanda: Comanda | null
   onSaved: () => void
+  /** Comanda fictícia: carrega catálogo/linhas locais e não persiste alterações. */
+  demoMode?: boolean
 }
 
-export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: ComandaEditorSheetProps) {
+export function ComandaEditorSheet({
+  open,
+  onOpenChange,
+  comanda,
+  onSaved,
+  demoMode = false,
+}: ComandaEditorSheetProps) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -73,18 +89,56 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
   /** Quantidade já reservada na comanda ao abrir (para calcular teto: estoque DB + committed). */
   const [committedProduto, setCommittedProduto] = useState<Record<string, number>>({})
 
+  const comandaRef = useRef(comanda)
+  comandaRef.current = comanda
+
   const loadData = useCallback(async () => {
-    if (!comanda) return
+    const c = comandaRef.current
+    if (!c) return
     setLoading(true)
     setError(null)
+
+    if (demoMode) {
+      const catalog = getDemoServicosCatalogo(c.barbearia_id)
+      setServicosCatalogo(catalog)
+      setEstoqueList(getDemoEstoqueParaComanda())
+
+      if (c.id === COMANDA_DEMO_ID_FECHADA) {
+        const st = getDemoEditorStateFechada(c.barbearia_id)
+        setServicoQty(st.servicoQty)
+        setProdutoLinhas(st.produtoLinhas)
+        setCommittedProduto(st.committed)
+      } else {
+        const qty: Record<string, number> = {}
+        for (const s of catalog) qty[s.id] = 0
+        Object.assign(qty, getDemoServicoQtyInicial())
+        setServicoQty(qty)
+        const { linhas, committed } = getDemoProdutoLinhasIniciais()
+        setProdutoLinhas(linhas)
+        setCommittedProduto(committed)
+      }
+
+      setMesa(c.mesa ?? '')
+      setDescontoModo(c.desconto_modo)
+      setDescontoValor(
+        c.desconto_modo === 'nenhum' ? '' : String(num(c.desconto_valor)),
+      )
+      setTaxaServicoAplicar(c.taxa_servico_aplicar)
+      setTaxaServicoPct(String(num(c.taxa_servico_percentual) || 10))
+      setFormaPagamento((c.forma_pagamento as ComandaFormaPagamento) || '')
+      setBuscaProduto('')
+      setLoading(false)
+      return
+    }
+
     const supabase = createClient()
 
     const [{ data: servRows, error: e1 }, { data: estRows, error: e2 }, { data: linS, error: e3 }, { data: linP, error: e4 }] =
       await Promise.all([
-        supabase.from('servicos').select('*').eq('barbearia_id', comanda.barbearia_id).eq('ativo', true).order('nome'),
-        supabase.from('estoque_produtos').select('*').eq('barbearia_id', comanda.barbearia_id).order('nome'),
-        supabase.from('comanda_servicos').select('*').eq('comanda_id', comanda.id),
-        supabase.from('comanda_produtos').select('*').eq('comanda_id', comanda.id),
+        supabase.from('servicos').select('*').eq('barbearia_id', c.barbearia_id).eq('ativo', true).order('nome'),
+        supabase.from('estoque_produtos').select('*').eq('barbearia_id', c.barbearia_id).order('nome'),
+        supabase.from('comanda_servicos').select('*').eq('comanda_id', c.id),
+        supabase.from('comanda_produtos').select('*').eq('comanda_id', c.id),
       ])
 
     if (e1 || e2 || e3 || e4) {
@@ -104,8 +158,8 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
       const sid = row.servico_id as string | null
       if (sid) qtyMap[sid] = Math.max(1, Math.floor(num(row.quantidade)))
     }
-    if ((linS ?? []).length === 0 && comanda.agendamento?.servico_id) {
-      const sid = comanda.agendamento.servico_id
+    if ((linS ?? []).length === 0 && c.agendamento?.servico_id) {
+      const sid = c.agendamento.servico_id
       if (sid && qtyMap[sid] !== undefined) qtyMap[sid] = Math.max(qtyMap[sid], 1)
     }
     setServicoQty(qtyMap)
@@ -127,21 +181,21 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
       })),
     )
 
-    setMesa(comanda.mesa ?? '')
-    setDescontoModo(comanda.desconto_modo)
+    setMesa(c.mesa ?? '')
+    setDescontoModo(c.desconto_modo)
     setDescontoValor(
-      comanda.desconto_modo === 'nenhum' ? '' : String(num(comanda.desconto_valor)),
+      c.desconto_modo === 'nenhum' ? '' : String(num(c.desconto_valor)),
     )
-    setTaxaServicoAplicar(comanda.taxa_servico_aplicar)
-    setTaxaServicoPct(String(num(comanda.taxa_servico_percentual) || 10))
-    setFormaPagamento((comanda.forma_pagamento as ComandaFormaPagamento) || '')
+    setTaxaServicoAplicar(c.taxa_servico_aplicar)
+    setTaxaServicoPct(String(num(c.taxa_servico_percentual) || 10))
+    setFormaPagamento((c.forma_pagamento as ComandaFormaPagamento) || '')
 
     setLoading(false)
-  }, [comanda])
+  }, [demoMode])
 
   useEffect(() => {
     if (open && comanda) void loadData()
-  }, [open, comanda, loadData])
+  }, [open, comanda?.id, demoMode, loadData])
 
   const subtotalServicos = useMemo(() => {
     let t = 0
@@ -178,11 +232,11 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
   const produtosFiltrados = useMemo(() => {
     const q = buscaProduto.trim().toLowerCase()
     return estoqueList.filter((p) => {
-      if (p.quantidade <= 0) return false
+      if (!demoMode && p.quantidade <= 0) return false
       if (q && !p.nome.toLowerCase().includes(q) && !p.categoria.toLowerCase().includes(q)) return false
       return true
     })
-  }, [estoqueList, buscaProduto])
+  }, [estoqueList, buscaProduto, demoMode])
 
   const setServicoQuantidade = (servicoId: string, value: number) => {
     setServicoQty((prev) => ({ ...prev, [servicoId]: Math.max(0, Math.floor(value)) }))
@@ -190,8 +244,8 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
 
   const addProduto = (p: EstoqueProduto) => {
     const preco = p.precoVenda > 0 ? p.precoVenda : p.precoCusto ?? 0
-    const c = committedProduto[p.id] ?? 0
-    const maxTotal = p.quantidade + c
+    const committed = committedProduto[p.id] ?? 0
+    const maxTotal = demoMode ? 9999 : p.quantidade + committed
     setProdutoLinhas((prev) => {
       const i = prev.findIndex((x) => x.produtoEstoqueId === p.id)
       if (i >= 0) {
@@ -214,7 +268,7 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
       const pid = next[index].produtoEstoqueId
       const est = estoqueList.find((e) => e.id === pid)
       const db = est?.quantidade ?? 0
-      const maxLinha = db + (committedProduto[pid] ?? 0)
+      const maxLinha = demoMode ? 9999 : db + (committedProduto[pid] ?? 0)
       next[index] = { ...next[index], quantidade: Math.max(1, Math.min(maxLinha, Math.floor(q))) }
       return next
     })
@@ -265,6 +319,10 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
   }
 
   const handleSalvar = async () => {
+    if (demoMode) {
+      setError('Desative "Dados fictícios" na página de comandas para salvar no sistema.')
+      return
+    }
     if (!comanda || comanda.status !== 'aberta') return
     setSaving(true)
     setError(null)
@@ -286,6 +344,10 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
   }
 
   const handleFecharComanda = async () => {
+    if (demoMode) {
+      setError('Desative "Dados fictícios" para fechar comandas reais.')
+      return
+    }
     if (!comanda || comanda.status !== 'aberta') return
     if (!formaPagamento) {
       setError('Selecione a forma de pagamento para fechar a comanda.')
@@ -316,6 +378,10 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
   }
 
   const handleCancelarComanda = async () => {
+    if (demoMode) {
+      setError('Desative "Dados fictícios" para cancelar comandas reais.')
+      return
+    }
     if (!comanda || comanda.status !== 'aberta') return
     setSaving(true)
     setError(null)
@@ -357,6 +423,11 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
               <SheetTitle className="flex flex-wrap items-center gap-2 pr-8">
                 Comanda #{comanda.numero}
                 {statusBadge(comanda.status)}
+                {demoMode ? (
+                  <Badge variant="outline" className="font-normal">
+                    Demonstração
+                  </Badge>
+                ) : null}
               </SheetTitle>
               <SheetDescription asChild>
                 <div className="space-y-1 text-sm text-muted-foreground">
@@ -388,6 +459,15 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
                 </div>
               ) : (
                 <div className="space-y-6">
+                  {demoMode ? (
+                    <Alert variant="info">
+                      <AlertTitle>
+                        Modo demonstração: você pode alterar quantidades, desconto e taxa para ver o total atualizar.
+                        Nada é gravado — desligue &quot;Dados fictícios&quot; na página de comandas para usar comandas
+                        reais.
+                      </AlertTitle>
+                    </Alert>
+                  ) : null}
                   {error ? (
                     <Alert variant="danger">
                       <AlertTitle>{error}</AlertTitle>
@@ -651,11 +731,30 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
                       <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                         Voltar
                       </Button>
-                      <Button type="button" onClick={() => void handleSalvar()} disabled={saving}>
+                      <Button
+                        type="button"
+                        onClick={() => void handleSalvar()}
+                        disabled={saving || demoMode}
+                        title={
+                          demoMode
+                            ? 'Desative dados fictícios na página de comandas para salvar'
+                            : undefined
+                        }
+                      >
                         {saving ? <Spinner className="mr-2 h-4 w-4" /> : null}
                         Salvar linhas e dados
                       </Button>
-                      <Button type="button" variant="secondary" onClick={() => void handleFecharComanda()} disabled={saving}>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => void handleFecharComanda()}
+                        disabled={saving || demoMode}
+                        title={
+                          demoMode
+                            ? 'Desative dados fictícios na página de comandas para fechar comanda real'
+                            : undefined
+                        }
+                      >
                         Fechar comanda
                       </Button>
                       <Button
@@ -663,7 +762,12 @@ export function ComandaEditorSheet({ open, onOpenChange, comanda, onSaved }: Com
                         variant="destructive"
                         className="sm:ml-auto"
                         onClick={() => void handleCancelarComanda()}
-                        disabled={saving}
+                        disabled={saving || demoMode}
+                        title={
+                          demoMode
+                            ? 'Desative dados fictícios na página de comandas para cancelar comanda real'
+                            : undefined
+                        }
                       >
                         Cancelar comanda
                       </Button>

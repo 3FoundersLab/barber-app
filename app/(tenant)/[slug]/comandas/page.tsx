@@ -9,11 +9,14 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { createClient } from '@/lib/supabase/client'
 import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { formatTime } from '@/lib/constants'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
+import { getDemoComandasParaLista } from '@/lib/comanda-demo-data'
 import type { Comanda } from '@/types/comanda'
 import { cn } from '@/lib/utils'
 
@@ -45,8 +48,17 @@ export default function TenantComandasPage() {
   const [error, setError] = useState<string | null>(null)
   const [editorOpen, setEditorOpen] = useState(false)
   const [comandaAtiva, setComandaAtiva] = useState<Comanda | null>(null)
+  const [useDemoData, setUseDemoData] = useState(false)
 
   const dateKey = useMemo(() => formatDateKey(selectedDate), [selectedDate])
+
+  /** Em modo demo não dependemos de `comandas` real: cada fetch recriaria objetos e resetaria o editor aberto. */
+  const comandasExibicao = useMemo(() => {
+    if (useDemoData && barbeariaId) return getDemoComandasParaLista(barbeariaId, dateKey)
+    return comandas
+  }, [useDemoData, barbeariaId, dateKey, useDemoData ? '__demo__' : comandas])
+
+  const showListLoading = isLoading && !useDemoData
 
   useEffect(() => {
     async function init() {
@@ -95,7 +107,15 @@ export default function TenantComandasPage() {
     void loadComandas()
   }, [loadComandas])
 
+  useEffect(() => {
+    if (!useDemoData && comandaAtiva?.id.startsWith('demo-comanda')) {
+      setEditorOpen(false)
+      setComandaAtiva(null)
+    }
+  }, [useDemoData, comandaAtiva])
+
   const backfillComAgendamentos = async () => {
+    if (useDemoData) return
     if (!barbeariaId) return
     setSyncing(true)
     setError(null)
@@ -172,9 +192,35 @@ export default function TenantComandasPage() {
 
   return (
     <TenantPanelPageContainer>
-      <TenantPanelPageHeader title="Comandas" profileHref={`${base}/configuracoes`} avatarFallback="A" />
+      <TenantPanelPageHeader
+        title="Comandas"
+        profileHref={`${base}/configuracoes`}
+        avatarFallback="A"
+        headingActions={
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-1.5">
+            <Switch
+              id="comandas-demo-data"
+              checked={useDemoData}
+              onCheckedChange={setUseDemoData}
+              aria-label="Usar dados fictícios de demonstração"
+            />
+            <Label htmlFor="comandas-demo-data" className="cursor-pointer text-xs font-medium">
+              Dados fictícios
+            </Label>
+          </div>
+        }
+      />
 
       <PageContent className="space-y-4 md:space-y-5">
+        {useDemoData ? (
+          <Alert variant="info">
+            <AlertTitle>
+              Modo demonstração: duas comandas de exemplo (uma aberta e uma fechada). Abra para mostrar o fluxo
+              completo do sistema aos clientes. Desligue o interruptor para ver as comandas reais da barbearia.
+            </AlertTitle>
+          </Alert>
+        ) : null}
+
         {error ? (
           <Alert
             variant="danger"
@@ -206,7 +252,8 @@ export default function TenantComandasPage() {
             variant="secondary"
             size="sm"
             className="gap-2"
-            disabled={!barbeariaId || syncing}
+            disabled={!barbeariaId || syncing || useDemoData}
+            title={useDemoData ? 'Desative dados fictícios para sincronizar com agendamentos reais' : undefined}
             onClick={() => void backfillComAgendamentos()}
           >
             {syncing ? (
@@ -223,11 +270,11 @@ export default function TenantComandasPage() {
           anteriores sem comanda. Ao salvar produtos na comanda, o estoque é baixado.
         </p>
 
-        {isLoading ? (
+        {showListLoading ? (
           <Card>
             <CardContent className="py-12 text-center text-sm text-muted-foreground">Carregando…</CardContent>
           </Card>
-        ) : comandas.length === 0 ? (
+        ) : comandasExibicao.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
               <ClipboardList className="h-10 w-10 text-muted-foreground" />
@@ -239,12 +286,19 @@ export default function TenantComandasPage() {
           </Card>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {comandas.map((c) => (
+            {comandasExibicao.map((c) => (
               <Card key={c.id} className="overflow-hidden">
                 <CardContent className="space-y-3 p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="text-lg font-semibold tabular-nums">#{c.numero}</p>
+                      <p className="flex flex-wrap items-center gap-2 text-lg font-semibold tabular-nums">
+                        #{c.numero}
+                        {useDemoData ? (
+                          <Badge variant="outline" className="text-[10px] font-normal">
+                            Demo
+                          </Badge>
+                        ) : null}
+                      </p>
                       <p className="text-sm font-medium">{c.cliente?.nome ?? 'Cliente'}</p>
                       <p className="text-xs text-muted-foreground">{c.barbeiro?.nome ?? 'Barbeiro'}</p>
                     </div>
@@ -278,6 +332,7 @@ export default function TenantComandasPage() {
         }}
         comanda={comandaAtiva}
         onSaved={() => void loadComandas()}
+        demoMode={useDemoData}
       />
     </TenantPanelPageContainer>
   )
