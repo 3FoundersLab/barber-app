@@ -419,6 +419,7 @@ export default function BarbeiroAgendaPage() {
                 appointments={appointmentsOfSelectedDate}
                 comandaByAgendamentoId={comandaNumeroPorAgendamento}
                 onBlockClick={setDetailAppointment}
+                referenceDate={selectedDate}
               />
             )}
           </>
