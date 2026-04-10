@@ -38,6 +38,7 @@ import { fetchSessionProfile } from '@/lib/supabase/fetch-session-profile'
 import { resolveBarbeariaSlugForUser } from '@/lib/resolve-admin-barbearia-slug'
 import { rpcUserIsMemberOfBarbearia } from '@/lib/barbearia-rpc'
 import { tenantBarbeariaDashboardPath } from '@/lib/routes'
+import { clearTenantUnidadeSessionStorage } from '@/lib/tenant-unidade-session'
 import { cn } from '@/lib/utils'
 
 /** Mesma imagem principal da hero da landing. */
@@ -164,6 +165,8 @@ function LoginPageContent() {
           await signOutWithPersistenceClear(supabase)
           return
         }
+
+        clearTenantUnidadeSessionStorage()
 
         if (profile?.role === 'super_admin') {
           router.push('/dashboard')
