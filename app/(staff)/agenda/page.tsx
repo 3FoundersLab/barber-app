@@ -505,10 +505,6 @@ export default function BarbeiroAgendaPage() {
                     key={agendamento.id}
                     appointment={agendamento}
                     comandaNumero={comandaNumeroPorAgendamento[agendamento.id]}
-                    onCardClick={(id) => {
-                      const row = agendamentos.find((x) => x.id === id) ?? null
-                      setDetailAppointment(row)
-                    }}
                     onCheckIn={handleCheckIn}
                     onComplete={(id) => handleStatusChange(id, 'concluido')}
                     onCancel={(id, motivo) => void handleCancelAppointment(id, motivo)}

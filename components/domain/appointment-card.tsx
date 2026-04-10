@@ -136,12 +136,18 @@ export function AppointmentCard({
   const showCancelMenu = Boolean(onCancel)
   const primaryFooterAction =
     showCheckIn ? 'checkin' : showCompleteButton ? 'complete' : null
-  const showFooterRow =
-    showActions &&
-    (primaryFooterAction !== null || showNoShowButton || showCancelMenu || onEdit || onViewHistory)
 
   const hasDropdownItems =
     Boolean(onEdit) || Boolean(onViewHistory) || showCancelMenu
+  /** Menu ⋮ fica junto de “Marcar como pago”; não repetir no rodapé principal. */
+  const showDropdownInPrimaryFooter =
+    hasDropdownItems && !(canMarkPaid && onMarkPaid)
+  /** Rodapé com ações principais (não inclui só ⋮ quando ele vai para “Marcar como pago”). */
+  const showPrimaryFooterStrip =
+    showActions &&
+    (primaryFooterAction !== null ||
+      showNoShowButton ||
+      (hasDropdownItems && showDropdownInPrimaryFooter))
 
   const clienteNome = appointment.cliente?.nome || 'Cliente'
   const clienteAvatar = appointment.cliente?.profile?.avatar
@@ -196,6 +202,53 @@ export function AppointmentCard({
   const stopActivate = (e: React.SyntheticEvent) => {
     e.stopPropagation()
   }
+
+  const renderMoreOptionsDropdown = () => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="min-h-9 min-w-9 shrink-0"
+          aria-label="Mais opções do agendamento"
+        >
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        {onEdit ? (
+          <DropdownMenuItem
+            onSelect={() => {
+              onEdit(appointment.id)
+            }}
+          >
+            <Pencil className="size-4" />
+            Editar
+          </DropdownMenuItem>
+        ) : null}
+        {onViewHistory ? (
+          <DropdownMenuItem
+            onSelect={() => {
+              onViewHistory(appointment.id)
+            }}
+          >
+            <History className="size-4" />
+            Ver histórico
+          </DropdownMenuItem>
+        ) : null}
+        {showCancelMenu ? (
+          <>
+            {(onEdit || onViewHistory) && <DropdownMenuSeparator />}
+            <DropdownMenuItem variant="destructive" onSelect={() => setCancelOpen(true)}>
+              <X className="size-4" />
+              Cancelar
+            </DropdownMenuItem>
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 
   return (
     <>
@@ -376,125 +429,91 @@ export function AppointmentCard({
             </p>
           </div>
 
-          {/* Footer ações */}
-          {showFooterRow ? (
+          {/* Footer ações — primário + ⋮ na mesma linha; “Marcar como pago” idem */}
+          {showPrimaryFooterStrip ? (
             <div
               className={cn(
-                'mt-0 flex flex-col gap-2 border-t border-border/60 px-5 pt-4 @md/appt-card:flex-row @md/appt-card:flex-wrap @md/appt-card:items-stretch dark:border-border/50',
+                'mt-0 border-t border-border/60 px-5 pt-4 dark:border-border/50',
                 inSheet && 'px-4 sm:px-5',
               )}
               onClick={stopActivate}
               onKeyDown={stopActivate}
             >
-              {primaryFooterAction === 'checkin' ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={checkInBusy}
-                  onClick={() => void handleCheckIn()}
-                  className="min-h-9 w-full bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700 @md/appt-card:min-w-[7.5rem] @md/appt-card:flex-1 dark:bg-emerald-600 dark:hover:bg-emerald-500"
-                >
-                  <ClipboardCheck className="mr-1.5 size-4 shrink-0" />
-                  Check-in
-                </Button>
-              ) : null}
-              {primaryFooterAction === 'complete' ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => onComplete!(appointment.id)}
-                  className="min-h-9 w-full bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700 @md/appt-card:min-w-[7.5rem] @md/appt-card:flex-1 dark:bg-emerald-600 dark:hover:bg-emerald-500"
-                >
-                  <Check className="mr-1.5 size-4 shrink-0" />
-                  Concluir
-                </Button>
-              ) : null}
-
-              {showNoShowButton || hasDropdownItems ? (
-                <div className="flex w-full min-w-0 gap-2 @md/appt-card:contents">
-                  {showNoShowButton ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setNoShowOpen(true)}
-                      className="min-h-9 min-w-0 flex-1 border-red-300/80 bg-transparent text-red-700 hover:bg-red-50 @md/appt-card:w-auto @md/appt-card:flex-1 dark:border-red-500/50 dark:text-red-400 dark:hover:bg-red-950/40"
-                    >
-                      <UserX className="mr-1.5 size-4 shrink-0" />
-                      Faltou
-                    </Button>
-                  ) : null}
-                  {hasDropdownItems ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="min-h-9 min-w-9 shrink-0"
-                          aria-label="Mais opções do agendamento"
-                        >
-                          <MoreHorizontal className="size-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-52">
-                        {onEdit ? (
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              onEdit(appointment.id)
-                            }}
-                          >
-                            <Pencil className="size-4" />
-                            Editar
-                          </DropdownMenuItem>
-                        ) : null}
-                        {onViewHistory ? (
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              onViewHistory(appointment.id)
-                            }}
-                          >
-                            <History className="size-4" />
-                            Ver histórico
-                          </DropdownMenuItem>
-                        ) : null}
-                        {showCancelMenu ? (
-                          <>
-                            {(onEdit || onViewHistory) && <DropdownMenuSeparator />}
-                            <DropdownMenuItem variant="destructive" onSelect={() => setCancelOpen(true)}>
-                              <X className="size-4" />
-                              Cancelar
-                            </DropdownMenuItem>
-                          </>
-                        ) : null}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : null}
-                </div>
-              ) : null}
+              <div
+                className={cn(
+                  'flex w-full min-w-0 flex-wrap items-stretch gap-2',
+                  !primaryFooterAction &&
+                    !showNoShowButton &&
+                    hasDropdownItems &&
+                    showDropdownInPrimaryFooter &&
+                    'justify-end',
+                )}
+              >
+                {primaryFooterAction === 'checkin' ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={checkInBusy}
+                    onClick={() => void handleCheckIn()}
+                    className="min-h-9 min-w-0 flex-1 basis-[7.5rem] bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                  >
+                    <ClipboardCheck className="mr-1.5 size-4 shrink-0" />
+                    Check-in
+                  </Button>
+                ) : null}
+                {primaryFooterAction === 'complete' ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => onComplete!(appointment.id)}
+                    className="min-h-9 min-w-0 flex-1 basis-[7.5rem] bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                  >
+                    <Check className="mr-1.5 size-4 shrink-0" />
+                    Concluir
+                  </Button>
+                ) : null}
+                {showNoShowButton ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setNoShowOpen(true)}
+                    className="min-h-9 min-w-0 flex-1 basis-[6.5rem] border-red-300/80 bg-transparent text-red-700 hover:bg-red-50 dark:border-red-500/50 dark:text-red-400 dark:hover:bg-red-950/40"
+                  >
+                    <UserX className="mr-1.5 size-4 shrink-0" />
+                    Faltou
+                  </Button>
+                ) : null}
+                {hasDropdownItems && showDropdownInPrimaryFooter ? renderMoreOptionsDropdown() : null}
+              </div>
             </div>
           ) : null}
 
           {showActions && canMarkPaid && onMarkPaid ? (
             <div
               className={cn(
-                'mt-3 border-t border-border/60 px-5 pt-4 dark:border-border/50',
+                'mt-0 border-t border-border/60 px-5 pt-4 dark:border-border/50',
                 inSheet && 'px-4 sm:px-5',
               )}
+              onClick={stopActivate}
+              onKeyDown={stopActivate}
             >
               <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                 Pagamento pendente
               </p>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="min-h-9 w-full border-amber-500/45 bg-amber-50 text-amber-950 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-950/45 dark:text-amber-50 dark:hover:bg-amber-900/55"
-                onClick={() => setMarkPaidOpen(true)}
-              >
-                <Banknote className="mr-1.5 size-4 shrink-0" />
-                Marcar como pago
-              </Button>
+              <div className="flex w-full min-w-0 items-stretch gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="min-h-9 min-w-0 flex-1 border-amber-500/45 bg-amber-50 text-amber-950 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-950/45 dark:text-amber-50 dark:hover:bg-amber-900/55"
+                  onClick={() => setMarkPaidOpen(true)}
+                >
+                  <Banknote className="mr-1.5 size-4 shrink-0" />
+                  Marcar como pago
+                </Button>
+                {hasDropdownItems ? renderMoreOptionsDropdown() : null}
+              </div>
             </div>
           ) : null}
         </CardContent>

@@ -897,10 +897,6 @@ export default function AdminAgendamentosPage() {
                               listLayout
                               comandaNumero={comandaMapEfetivo[agendamento.id]}
                               isNext={agendamento.id === nextAppointmentId}
-                              onCardClick={(id) => {
-                                const row = displayAgendamentos.find((x) => x.id === id) ?? null
-                                setDetailAppointment(row)
-                              }}
                               onCheckIn={handleCheckIn}
                               onComplete={(id) => handleStatusChange(id, 'concluido')}
                               onCancel={(id, motivo) => void handleCancelAppointment(id, motivo)}
