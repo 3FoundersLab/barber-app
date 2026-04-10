@@ -3,7 +3,17 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, useReducedMotion } from 'framer-motion'
-import { ChevronLeft, LogOut, Mail, Phone, Save, Store, User } from 'lucide-react'
+import {
+  ChevronLeft,
+  Clock,
+  CreditCard,
+  LogOut,
+  Mail,
+  Phone,
+  Save,
+  Store,
+  User,
+} from 'lucide-react'
 import { PageContent } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { TenantAssinaturaSummary } from '@/components/shared/tenant-assinatura-summary'
@@ -16,6 +26,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Spinner } from '@/components/ui/spinner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ProfileAvatarUpload } from '@/components/shared/profile-avatar-upload'
@@ -46,6 +57,17 @@ import {
 } from '@/components/landing/landing-classes'
 import { cn } from '@/lib/utils'
 import type { Barbearia, Profile } from '@/types'
+
+function timeFromDb(value: string | null | undefined): string {
+  if (!value) return ''
+  return value.slice(0, 5)
+}
+
+function timeToDb(value: string): string | null {
+  const v = value.trim()
+  if (!v) return null
+  return v.length === 5 ? `${v}:00` : v
+}
 
 const profileAvatarUploadPremiumClass = cn(
   'space-y-3 border-t border-zinc-200/80 pt-5 dark:border-white/[0.06]',
@@ -78,6 +100,8 @@ export default function AdminConfiguracoesPage() {
     enderecoParts: emptyBarbeariaEnderecoParts(),
     telefone: '',
     email: '',
+    horario_abertura: '',
+    horario_fechamento: '',
   })
 
   useEffect(() => {
@@ -141,6 +165,8 @@ export default function AdminConfiguracoesPage() {
           enderecoParts: deserializeBarbeariaEndereco(b.endereco ?? null),
           telefone: maskTelefoneBr(b.telefone || ''),
           email: normalizeEmailInput(b.email || ''),
+          horario_abertura: timeFromDb(b.horario_abertura),
+          horario_fechamento: timeFromDb(b.horario_fechamento),
         })
 
         const assinaturaData = await fetchLatestAssinaturaWithPlano(supabase, b.id)
@@ -156,6 +182,13 @@ export default function AdminConfiguracoesPage() {
   const handleSaveBarbearia = async () => {
     if (!barbearia) return
 
+    const abre = formBarbearia.horario_abertura.trim()
+    const fecha = formBarbearia.horario_fechamento.trim()
+    if (abre && fecha && abre >= fecha) {
+      setError('O horário de abertura deve ser anterior ao horário de fechamento.')
+      return
+    }
+
     setIsSavingBarbearia(true)
     setError(null)
     const supabase = createClient()
@@ -167,6 +200,8 @@ export default function AdminConfiguracoesPage() {
         endereco: serializeBarbeariaEndereco(formBarbearia.enderecoParts),
         telefone: formBarbearia.telefone || null,
         email: formBarbearia.email || null,
+        horario_abertura: timeToDb(formBarbearia.horario_abertura),
+        horario_fechamento: timeToDb(formBarbearia.horario_fechamento),
       })
       .eq('id', barbearia.id)
       .select('*')
@@ -241,7 +276,7 @@ export default function AdminConfiguracoesPage() {
       />
 
       <PageContent className="relative flex-1">
-        <div className="mx-auto w-full max-w-lg md:max-w-xl">
+        <div className="mx-auto w-full max-w-2xl md:max-w-3xl lg:max-w-4xl">
           <motion.div
             initial={reduceMotion ? false : { opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
@@ -325,181 +360,94 @@ export default function AdminConfiguracoesPage() {
                   </div>
                 ) : null}
 
-                <section className={cn(superProfileGlassCardClass, 'overflow-hidden')}>
-                  <header className="border-b border-zinc-200/80 px-5 py-4 dark:border-white/[0.06] md:px-6">
-                    <div className="flex items-center gap-2 text-foreground">
-                      <User className="size-4 text-primary opacity-90" aria-hidden />
-                      <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                        Dados pessoais
-                      </h2>
-                    </div>
-                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                      Informações de contato e foto exibida no menu da conta.
-                    </p>
-                  </header>
+                <Tabs defaultValue="conta" className="w-full gap-5">
+                  <TabsList
+                    className={cn(
+                      'grid h-auto w-full grid-cols-3 gap-1 rounded-xl border border-zinc-200/80 bg-zinc-50/90 p-1 shadow-none',
+                      'dark:border-white/[0.08] dark:bg-white/[0.05]',
+                    )}
+                  >
+                    <TabsTrigger
+                      value="conta"
+                      className="gap-1.5 text-xs sm:text-sm"
+                      disabled={!profile}
+                    >
+                      <User className="size-3.5 opacity-90 sm:size-4" aria-hidden />
+                      Conta
+                    </TabsTrigger>
+                    <TabsTrigger value="barbearia" className="gap-1.5 text-xs sm:text-sm">
+                      <Store className="size-3.5 opacity-90 sm:size-4" aria-hidden />
+                      Barbearia
+                    </TabsTrigger>
+                    <TabsTrigger value="assinatura" className="gap-1.5 text-xs sm:text-sm">
+                      <CreditCard className="size-3.5 opacity-90 sm:size-4" aria-hidden />
+                      Assinatura
+                    </TabsTrigger>
+                  </TabsList>
 
-                  <div className="space-y-5 p-5 md:p-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="emailPerfil"
-                        className="flex items-center gap-1.5 text-sm font-medium text-foreground dark:text-zinc-300"
-                      >
-                        <Mail className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                        Email
-                      </Label>
-                      <Input
-                        id="emailPerfil"
-                        value={profile?.email || ''}
-                        disabled
-                        className={cn(
-                          superProfileInputClass,
-                          'cursor-not-allowed bg-zinc-100 text-muted-foreground dark:bg-white/[0.06] dark:text-zinc-400',
-                        )}
-                      />
-                      <p className="text-xs leading-relaxed text-muted-foreground">
-                        O email não pode ser alterado aqui.
-                      </p>
-                    </div>
+                  <TabsContent value="conta" className="mt-0 space-y-6 outline-none">
+                    <section className={cn(superProfileGlassCardClass, 'overflow-hidden')}>
+                      <header className="border-b border-zinc-200/80 px-5 py-4 dark:border-white/[0.06] md:px-6">
+                        <div className="flex items-center gap-2 text-foreground">
+                          <User className="size-4 text-primary opacity-90" aria-hidden />
+                          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                            Dados pessoais
+                          </h2>
+                        </div>
+                        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                          Informações de contato e foto exibida no menu da conta.
+                        </p>
+                      </header>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="nomePerfil" className={superProfileLabelClass}>
-                        Nome
-                      </Label>
-                      <Input
-                        id="nomePerfil"
-                        value={nomePerfil}
-                        onChange={(e) => setNomePerfil(e.target.value)}
-                        placeholder="Nome de exibição"
-                        autoComplete="name"
-                        className={superProfileInputClass}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="telefonePerfil"
-                        className="flex items-center gap-1.5 text-sm font-medium text-foreground dark:text-zinc-300"
-                      >
-                        <Phone className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                        Telefone
-                      </Label>
-                      <Input
-                        id="telefonePerfil"
-                        value={telefonePerfil}
-                        onChange={(e) => setTelefonePerfil(maskTelefoneBr(e.target.value))}
-                        placeholder="(00) 00000-0000"
-                        inputMode="tel"
-                        autoComplete="tel"
-                        className={superProfileInputClass}
-                      />
-                    </div>
-
-                    {profile?.id ? (
-                      <ProfileAvatarUpload
-                        userId={profile.id}
-                        avatarUrl={avatar}
-                        onAvatarUrlChange={setAvatar}
-                        fallbackLetter={fallbackLetter}
-                        disabled={isSavingProfile}
-                        onError={setError}
-                        className={profileAvatarUploadPremiumClass}
-                      />
-                    ) : null}
-                  </div>
-                </section>
-
-                <Button
-                  type="button"
-                  className={cn(
-                    landingPrimaryCtaClass,
-                    landingButtonLift,
-                    'h-12 w-full text-xs uppercase tracking-wide sm:text-sm',
-                  )}
-                  onClick={handleSaveProfile}
-                  disabled={isSavingProfile || !profile}
-                >
-                  {isSavingProfile ? (
-                    <Spinner className="mr-2 h-4 w-4" />
-                  ) : (
-                    <Save className="mr-2 h-4 w-4" />
-                  )}
-                  Salvar dados da conta
-                </Button>
-
-                <section className={cn(superProfileGlassCardClass, 'overflow-hidden')}>
-                  <header className="border-b border-zinc-200/80 px-5 py-4 dark:border-white/[0.06] md:px-6">
-                    <div className="flex items-center gap-2 text-foreground">
-                      <Store className="size-4 text-primary opacity-90" aria-hidden />
-                      <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                        Dados da barbearia
-                      </h2>
-                    </div>
-                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                      Nome, endereço e contato exibidos para clientes e no painel.
-                    </p>
-                  </header>
-
-                  <div className="space-y-5 p-5 md:p-6">
-                    {barbearia ? (
-                      <>
+                      <div className="space-y-5 p-5 md:p-6">
                         <div className="space-y-2">
-                          <Label htmlFor="slug" className={superProfileLabelClass}>
-                            Identificador (slug)
+                          <Label
+                            htmlFor="emailPerfil"
+                            className="flex items-center gap-1.5 text-sm font-medium text-foreground dark:text-zinc-300"
+                          >
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                            Email
                           </Label>
                           <Input
-                            id="slug"
-                            value={barbearia.slug}
-                            readOnly
+                            id="emailPerfil"
+                            value={profile?.email || ''}
                             disabled
                             className={cn(
                               superProfileInputClass,
-                              'cursor-not-allowed bg-zinc-100 font-mono text-sm text-muted-foreground dark:bg-white/[0.06] dark:text-zinc-400',
+                              'cursor-not-allowed bg-zinc-100 text-muted-foreground dark:bg-white/[0.06] dark:text-zinc-400',
                             )}
                           />
+                          <p className="text-xs leading-relaxed text-muted-foreground">
+                            O email não pode ser alterado aqui.
+                          </p>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="nomeBarbearia" className={superProfileLabelClass} required>
-                            Nome da barbearia
+                          <Label htmlFor="nomePerfil" className={superProfileLabelClass}>
+                            Nome
                           </Label>
                           <Input
-                            id="nomeBarbearia"
-                            value={formBarbearia.nome}
-                            onChange={(e) => setFormBarbearia({ ...formBarbearia, nome: e.target.value })}
-                            placeholder="Nome da barbearia"
-                            aria-required="true"
+                            id="nomePerfil"
+                            value={nomePerfil}
+                            onChange={(e) => setNomePerfil(e.target.value)}
+                            placeholder="Nome de exibição"
+                            autoComplete="name"
                             className={superProfileInputClass}
                           />
                         </div>
 
-                        <BarbeariaEnderecoFields
-                          idPrefix="cfg-barbearia"
-                          value={formBarbearia.enderecoParts}
-                          onChange={(enderecoParts) =>
-                            setFormBarbearia((prev) => ({ ...prev, enderecoParts }))
-                          }
-                          disabled={isSavingBarbearia}
-                          inputClassName={superProfileInputClass}
-                          labelClassName={cn(superProfileLabelClass, 'flex items-center gap-1.5')}
-                        />
-
                         <div className="space-y-2">
                           <Label
-                            htmlFor="telefoneBarbearia"
+                            htmlFor="telefonePerfil"
                             className="flex items-center gap-1.5 text-sm font-medium text-foreground dark:text-zinc-300"
                           >
                             <Phone className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                            Telefone de contato
+                            Telefone
                           </Label>
                           <Input
-                            id="telefoneBarbearia"
-                            value={formBarbearia.telefone}
-                            onChange={(e) =>
-                              setFormBarbearia({
-                                ...formBarbearia,
-                                telefone: maskTelefoneBr(e.target.value),
-                              })
-                            }
+                            id="telefonePerfil"
+                            value={telefonePerfil}
+                            onChange={(e) => setTelefonePerfil(maskTelefoneBr(e.target.value))}
                             placeholder="(00) 00000-0000"
                             inputMode="tel"
                             autoComplete="tel"
@@ -507,96 +455,273 @@ export default function AdminConfiguracoesPage() {
                           />
                         </div>
 
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="emailBarbearia"
-                            className="flex items-center gap-1.5 text-sm font-medium text-foreground dark:text-zinc-300"
-                          >
-                            <Mail className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                            Email de contato da barbearia
-                          </Label>
-                          <Input
-                            id="emailBarbearia"
-                            type="email"
-                            value={formBarbearia.email}
-                            onChange={(e) =>
-                              setFormBarbearia({
-                                ...formBarbearia,
-                                email: normalizeEmailInput(e.target.value),
-                              })
-                            }
-                            placeholder="Opcional — contato@barbearia.com"
-                            inputMode="email"
-                            autoComplete="email"
-                            className={superProfileInputClass}
+                        {profile?.id ? (
+                          <ProfileAvatarUpload
+                            userId={profile.id}
+                            avatarUrl={avatar}
+                            onAvatarUrlChange={setAvatar}
+                            fallbackLetter={fallbackLetter}
+                            disabled={isSavingProfile}
+                            onError={setError}
+                            className={profileAvatarUploadPremiumClass}
                           />
-                        </div>
-                      </>
-                    ) : (
-                      <p className="text-sm leading-relaxed text-muted-foreground">
-                        Quando o cadastro estiver sincronizado, o nome, telefone e demais dados da barbearia aparecerão
-                        aqui para edição.
-                      </p>
-                    )}
-                  </div>
-                </section>
+                        ) : null}
+                      </div>
+                    </section>
 
-                {barbearia ? (
-                  <Button
-                    type="button"
-                    className={cn(
-                      landingPrimaryCtaClass,
-                      landingButtonLift,
-                      'h-12 w-full text-xs uppercase tracking-wide sm:text-sm',
-                    )}
-                    onClick={handleSaveBarbearia}
-                    disabled={isSavingBarbearia}
-                  >
-                    {isSavingBarbearia ? (
-                      <Spinner className="mr-2 h-4 w-4" />
-                    ) : (
-                      <Save className="mr-2 h-4 w-4" />
-                    )}
-                    Salvar dados da barbearia
-                  </Button>
-                ) : null}
-
-                {assinatura ? <TenantAssinaturaSummary assinatura={assinatura} variant="premium" /> : null}
-
-                <section className={cn(superProfileGlassCardClass, 'px-5 py-4 md:px-6')}>
-                  <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    <Store className="size-4 text-sky-600 dark:text-sky-400/90" aria-hidden />
-                    Acesso
-                  </h2>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    Você gerencia apenas a barbearia vinculada à sua conta. Alterações nesta tela não mudam o plano nem
-                    as permissões definidas pela plataforma.
-                  </p>
-                </section>
-
-                <section className={cn(superProfileGlassCardClass, 'overflow-hidden')}>
-                  <header className="border-b border-zinc-200/80 px-5 py-4 dark:border-white/[0.06] md:px-6">
-                    <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Sessão</h2>
-                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                      Encerre o login neste dispositivo.
-                    </p>
-                  </header>
-                  <div className="p-5 md:p-6">
                     <Button
                       type="button"
-                      variant="outline"
                       className={cn(
-                        'w-full border-zinc-200 bg-zinc-50 text-destructive shadow-none transition-[background-color,border-color] duration-300',
-                        'hover:border-red-300 hover:bg-red-50 hover:text-destructive',
-                        'dark:border-white/12 dark:bg-white/[0.04] dark:hover:border-red-500/40 dark:hover:bg-red-950/35',
+                        landingPrimaryCtaClass,
+                        landingButtonLift,
+                        'h-12 w-full text-xs uppercase tracking-wide sm:text-sm',
                       )}
-                      onClick={handleLogout}
+                      onClick={handleSaveProfile}
+                      disabled={isSavingProfile || !profile}
                     >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sair da conta
+                      {isSavingProfile ? (
+                        <Spinner className="mr-2 h-4 w-4" />
+                      ) : (
+                        <Save className="mr-2 h-4 w-4" />
+                      )}
+                      Salvar dados da conta
                     </Button>
-                  </div>
-                </section>
+                  </TabsContent>
+
+                  <TabsContent value="barbearia" className="mt-0 space-y-6 outline-none">
+                    <section className={cn(superProfileGlassCardClass, 'overflow-hidden')}>
+                      <header className="border-b border-zinc-200/80 px-5 py-4 dark:border-white/[0.06] md:px-6">
+                        <div className="flex items-center gap-2 text-foreground">
+                          <Store className="size-4 text-primary opacity-90" aria-hidden />
+                          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                            Dados da barbearia
+                          </h2>
+                        </div>
+                        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                          Nome, contato, endereço e horário de funcionamento de referência.
+                        </p>
+                      </header>
+
+                      <div className="space-y-5 p-5 md:p-6">
+                        {barbearia ? (
+                          <>
+                            <div className="space-y-2">
+                              <Label htmlFor="slug" className={superProfileLabelClass}>
+                                Identificador (slug)
+                              </Label>
+                              <Input
+                                id="slug"
+                                value={barbearia.slug}
+                                readOnly
+                                disabled
+                                className={cn(
+                                  superProfileInputClass,
+                                  'cursor-not-allowed bg-zinc-100 font-mono text-sm text-muted-foreground dark:bg-white/[0.06] dark:text-zinc-400',
+                                )}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="nomeBarbearia" className={superProfileLabelClass} required>
+                                Nome da barbearia
+                              </Label>
+                              <Input
+                                id="nomeBarbearia"
+                                value={formBarbearia.nome}
+                                onChange={(e) => setFormBarbearia({ ...formBarbearia, nome: e.target.value })}
+                                placeholder="Nome da barbearia"
+                                aria-required="true"
+                                className={superProfileInputClass}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label
+                                htmlFor="telefoneBarbearia"
+                                className="flex items-center gap-1.5 text-sm font-medium text-foreground dark:text-zinc-300"
+                              >
+                                <Phone className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                                Telefone de contato
+                              </Label>
+                              <Input
+                                id="telefoneBarbearia"
+                                value={formBarbearia.telefone}
+                                onChange={(e) =>
+                                  setFormBarbearia({
+                                    ...formBarbearia,
+                                    telefone: maskTelefoneBr(e.target.value),
+                                  })
+                                }
+                                placeholder="(00) 00000-0000"
+                                inputMode="tel"
+                                autoComplete="tel"
+                                className={superProfileInputClass}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label
+                                htmlFor="emailBarbearia"
+                                className="flex items-center gap-1.5 text-sm font-medium text-foreground dark:text-zinc-300"
+                              >
+                                <Mail className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                                Email de contato da barbearia
+                              </Label>
+                              <Input
+                                id="emailBarbearia"
+                                type="email"
+                                value={formBarbearia.email}
+                                onChange={(e) =>
+                                  setFormBarbearia({
+                                    ...formBarbearia,
+                                    email: normalizeEmailInput(e.target.value),
+                                  })
+                                }
+                                placeholder="Opcional — contato@barbearia.com"
+                                inputMode="email"
+                                autoComplete="email"
+                                className={superProfileInputClass}
+                              />
+                            </div>
+
+                            <BarbeariaEnderecoFields
+                              idPrefix="cfg-barbearia"
+                              value={formBarbearia.enderecoParts}
+                              onChange={(enderecoParts) =>
+                                setFormBarbearia((prev) => ({ ...prev, enderecoParts }))
+                              }
+                              disabled={isSavingBarbearia}
+                              inputClassName={superProfileInputClass}
+                              labelClassName={cn(superProfileLabelClass, 'flex items-center gap-1.5')}
+                            />
+
+                            <div
+                              className="rounded-lg border border-zinc-200/80 bg-zinc-50/50 p-4 dark:border-white/[0.08] dark:bg-white/[0.03]"
+                              role="group"
+                              aria-labelledby="cfg-horario-funcionamento-label"
+                            >
+                              <p
+                                id="cfg-horario-funcionamento-label"
+                                className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground dark:text-zinc-300"
+                              >
+                                <Clock className="size-4 text-muted-foreground" aria-hidden />
+                                Horário de funcionamento
+                              </p>
+                              <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
+                                Opcional. Referência para equipe e clientes; não substitui os horários individuais da
+                                equipe.
+                              </p>
+                              <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="space-y-2">
+                                  <Label htmlFor="horarioAbertura" className={superProfileLabelClass}>
+                                    Abre às
+                                  </Label>
+                                  <Input
+                                    id="horarioAbertura"
+                                    type="time"
+                                    value={formBarbearia.horario_abertura}
+                                    onChange={(e) =>
+                                      setFormBarbearia((prev) => ({
+                                        ...prev,
+                                        horario_abertura: e.target.value,
+                                      }))
+                                    }
+                                    disabled={isSavingBarbearia}
+                                    className={superProfileInputClass}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="horarioFechamento" className={superProfileLabelClass}>
+                                    Fecha às
+                                  </Label>
+                                  <Input
+                                    id="horarioFechamento"
+                                    type="time"
+                                    value={formBarbearia.horario_fechamento}
+                                    onChange={(e) =>
+                                      setFormBarbearia((prev) => ({
+                                        ...prev,
+                                        horario_fechamento: e.target.value,
+                                      }))
+                                    }
+                                    disabled={isSavingBarbearia}
+                                    className={superProfileInputClass}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-sm leading-relaxed text-muted-foreground">
+                            Quando o cadastro estiver sincronizado, o nome, telefone e demais dados da barbearia
+                            aparecerão aqui para edição.
+                          </p>
+                        )}
+                      </div>
+                    </section>
+
+                    {barbearia ? (
+                      <Button
+                        type="button"
+                        className={cn(
+                          landingPrimaryCtaClass,
+                          landingButtonLift,
+                          'h-12 w-full text-xs uppercase tracking-wide sm:text-sm',
+                        )}
+                        onClick={handleSaveBarbearia}
+                        disabled={isSavingBarbearia}
+                      >
+                        {isSavingBarbearia ? (
+                          <Spinner className="mr-2 h-4 w-4" />
+                        ) : (
+                          <Save className="mr-2 h-4 w-4" />
+                        )}
+                        Salvar dados da barbearia
+                      </Button>
+                    ) : null}
+                  </TabsContent>
+
+                  <TabsContent value="assinatura" className="mt-0 space-y-6 outline-none">
+                    {assinatura ? <TenantAssinaturaSummary assinatura={assinatura} variant="premium" /> : null}
+
+                    <section className={cn(superProfileGlassCardClass, 'px-5 py-4 md:px-6')}>
+                      <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        <Store className="size-4 text-sky-600 dark:text-sky-400/90" aria-hidden />
+                        Acesso
+                      </h2>
+                      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                        Você gerencia apenas a barbearia vinculada à sua conta. Alterações nesta tela não mudam o plano nem
+                        as permissões definidas pela plataforma.
+                      </p>
+                    </section>
+
+                    <section className={cn(superProfileGlassCardClass, 'overflow-hidden')}>
+                      <header className="border-b border-zinc-200/80 px-5 py-4 dark:border-white/[0.06] md:px-6">
+                        <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                          Sessão
+                        </h2>
+                        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                          Encerre o login neste dispositivo.
+                        </p>
+                      </header>
+                      <div className="p-5 md:p-6">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn(
+                            'w-full border-zinc-200 bg-zinc-50 text-destructive shadow-none transition-[background-color,border-color] duration-300',
+                            'hover:border-red-300 hover:bg-red-50 hover:text-destructive',
+                            'dark:border-white/12 dark:bg-white/[0.04] dark:hover:border-red-500/40 dark:hover:bg-red-950/35',
+                          )}
+                          onClick={handleLogout}
+                        >
+                          <LogOut className="mr-2 h-4 w-4" />
+                          Sair da conta
+                        </Button>
+                      </div>
+                    </section>
+                  </TabsContent>
+                </Tabs>
               </>
             )}
           </motion.div>

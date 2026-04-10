@@ -36,6 +36,10 @@ export interface Barbearia {
   endereco?: string
   telefone?: string
   email?: string
+  /** TIME do Postgres, ex.: "09:00:00" */
+  horario_abertura?: string | null
+  /** TIME do Postgres, ex.: "20:00:00" */
+  horario_fechamento?: string | null
   /** Self-service até aprovação do super admin; omitido em bases antigas = ativa */
   status_cadastro?: BarbeariaStatusCadastro
   /** false = desativada pelo super admin; omitido em bases antigas = ativa */
