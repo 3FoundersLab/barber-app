@@ -36,6 +36,7 @@ import { formatCurrency } from '@/lib/constants'
 import { linhasBeneficiosPlano } from '@/lib/plano-beneficios'
 import { maskTelefoneBr, normalizeEmailInput, telefoneDigits } from '@/lib/format-contato'
 import { tenantBarbeariaDashboardPath } from '@/lib/routes'
+import { clearTenantUnidadeSessionStorage } from '@/lib/tenant-unidade-session'
 import {
   emptyBarbeariaEnderecoParts,
   serializeBarbeariaEndereco,
@@ -299,6 +300,7 @@ export default function CadastroBarbeariaPage() {
 
         if (jaTemVinculo) {
           const dest = await resolveBarbeariaSlugForUser(supabase, loggedInUser.id)
+          clearTenantUnidadeSessionStorage()
           if (dest?.slug) {
             router.push(tenantBarbeariaDashboardPath(dest.slug))
           } else {
@@ -338,6 +340,7 @@ export default function CadastroBarbeariaPage() {
         await supabase.auth.refreshSession()
         setSuccess('Barbearia cadastrada com sucesso! Redirecionando para o painel...')
         setTimeout(() => {
+          clearTenantUnidadeSessionStorage()
           router.push(tenantBarbeariaDashboardPath(slug))
         }, 900)
         return
@@ -425,6 +428,7 @@ export default function CadastroBarbeariaPage() {
 
       setSuccess('Barbearia cadastrada com sucesso! Redirecionando para o painel...')
       setTimeout(() => {
+        clearTenantUnidadeSessionStorage()
         router.push(tenantBarbeariaDashboardPath(slug))
       }, 900)
     } catch {

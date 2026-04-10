@@ -102,13 +102,15 @@ export default function AdminSlugLayout({ children }: { children: React.ReactNod
         <AdminDrawer
           basePath={base}
           limitedNav={pagamentoPendenteAdmin}
-          headerHint={<TenantUnidadeVinculoHint />}
+          headerHint={<TenantUnidadeVinculoHint tenantSlug={slug} />}
         />
         <DesktopSidebar
           appearance="super"
           appBrand={{ href: `${base}/dashboard`, collapsible: true }}
           tabs={adminNav}
-          belowHeader={({ collapsed }) => <TenantUnidadeVinculoHint collapsed={collapsed} />}
+          belowHeader={({ collapsed }) => (
+            <TenantUnidadeVinculoHint tenantSlug={slug} collapsed={collapsed} />
+          )}
           footer={({ collapsed }) =>
             collapsed ? (
               <SuperLogoutButton variant="nav" compact className="hover:bg-zinc-100/85 dark:hover:bg-white/[0.06]" />

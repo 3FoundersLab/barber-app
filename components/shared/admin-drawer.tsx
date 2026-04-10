@@ -49,7 +49,7 @@ export function AdminDrawer({
           'border-zinc-200/80 bg-white/95 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95',
         )}
       >
-        <SheetHeader className="border-b border-zinc-200/80 px-4 py-4 dark:border-zinc-800">
+        <SheetHeader className="px-4 py-4">
           <SheetTitle>Painel da barbearia</SheetTitle>
           {headerHint ? <div className="mt-2">{headerHint}</div> : null}
         </SheetHeader>

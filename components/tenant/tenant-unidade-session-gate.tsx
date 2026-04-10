@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Building2, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,7 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { tenantBarbeariaDashboardPath } from '@/lib/routes'
-import { getSessionConfirmedTenantSlug, setSessionConfirmedTenantSlug } from '@/lib/tenant-unidade-session'
+import {
+  hasTenantUnidadeGateCompleted,
+  markTenantUnidadeGateCompleted,
+  setSessionConfirmedTenantSlug,
+} from '@/lib/tenant-unidade-session'
 import { signOutWithPersistenceClear } from '@/lib/supabase/sign-out-client'
 import { clearProfileCache } from '@/lib/profile-cache'
 
@@ -43,12 +47,16 @@ type TenantUnidadeSessionGateProps = {
 }
 
 /**
- * Com **uma** unidade vinculada: confirma a sessão automaticamente (sem modal ao logar).
- * Com **várias**: bloqueio até confirmar a unidade da URL ou escolher outra válida.
+ * Com **uma** unidade: entra direto (sem modal).
+ * Com **várias**: modal **uma vez** após o login (flag em sessionStorage); navegar no painel não reabre.
  * Sem vínculos: não exibe gate e não bloqueia navegação.
  */
 export function TenantUnidadeSessionGate({ slug }: TenantUnidadeSessionGateProps) {
   const router = useRouter()
+  const routerRef = useRef(router)
+  useLayoutEffect(() => {
+    routerRef.current = router
+  })
   const titleId = useId()
   const primaryRef = useRef<HTMLButtonElement>(null)
   const [phase, setPhase] = useState<GatePhase>('checking')
@@ -97,8 +105,9 @@ export function TenantUnidadeSessionGate({ slug }: TenantUnidadeSessionGateProps
     if (list.length === 1) {
       const only = list[0]
       setSessionConfirmedTenantSlug(only.slug)
+      markTenantUnidadeGateCompleted()
       if (only.slug !== slug) {
-        router.replace(tenantBarbeariaDashboardPath(only.slug))
+        routerRef.current.replace(tenantBarbeariaDashboardPath(only.slug))
       }
       setPhase('idle')
       return
@@ -111,15 +120,14 @@ export function TenantUnidadeSessionGate({ slug }: TenantUnidadeSessionGateProps
       return
     }
 
-    const confirmed = getSessionConfirmedTenantSlug()
-    if (confirmed === slug) {
+    if (hasTenantUnidadeGateCompleted()) {
       setPhase('idle')
       return
     }
 
     setSelectedSlug(slug)
     setPhase('confirm')
-  }, [router, slug])
+  }, [slug])
 
   useEffect(() => {
     void runGateCheck()
@@ -150,12 +158,13 @@ export function TenantUnidadeSessionGate({ slug }: TenantUnidadeSessionGateProps
   const handleConfirmarUnidade = useCallback(() => {
     if (!selectedUnidade) return
     setSessionConfirmedTenantSlug(selectedUnidade.slug)
+    markTenantUnidadeGateCompleted()
     if (selectedUnidade.slug !== slug) {
-      router.replace(tenantBarbeariaDashboardPath(selectedUnidade.slug))
+      routerRef.current.replace(tenantBarbeariaDashboardPath(selectedUnidade.slug))
     } else {
       setPhase('idle')
     }
-  }, [router, selectedUnidade, slug])
+  }, [selectedUnidade, slug])
 
   const handleLogout = useCallback(async () => {
     const supabase = createClient()
@@ -192,7 +201,7 @@ export function TenantUnidadeSessionGate({ slug }: TenantUnidadeSessionGateProps
               ? loadError
               : phase === 'url-forbidden'
                 ? 'Você não tem acesso à unidade deste endereço. Escolha uma das suas unidades abaixo ou saia da conta.'
-                : 'Para usar o painel, confirme em qual unidade você está trabalhando nesta sessão. Os menus ficam bloqueados até você continuar.'}
+                : 'Após entrar no sistema, confirme em qual unidade você está trabalhando. Isso só é pedido uma vez por sessão; ao navegar no painel o modal não volta a aparecer.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-0">

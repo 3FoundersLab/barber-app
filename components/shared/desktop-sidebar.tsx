@@ -289,13 +289,7 @@ export function DesktopSidebar({
         {header}
 
         {belowHeader ? (
-          <div
-            className={cn(
-              'border-b px-2.5 py-2 md:px-3',
-              isSuper && 'border-zinc-200/80 dark:border-zinc-800',
-              !isSuper && 'border-border/70',
-            )}
-          >
+          <div className="px-2.5 py-2 md:px-3">
             {resolveFooter(belowHeader, !wide)}
           </div>
         ) : null}
