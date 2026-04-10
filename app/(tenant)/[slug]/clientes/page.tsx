@@ -5,6 +5,16 @@ import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react'
 import { PageContent, PageTitle } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { ClienteCard } from '@/components/domain/cliente-card'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -73,6 +83,7 @@ export default function AdminClientesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null)
+  const [clienteParaExcluir, setClienteParaExcluir] = useState<Cliente | null>(null)
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -166,11 +177,16 @@ export default function AdminClientesPage() {
     setIsDialogOpen(true)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este cliente?')) return
+  const solicitarExclusaoCliente = (id: string) => {
+    const c = clientes.find((x) => x.id === id)
+    if (c) setClienteParaExcluir(c)
+  }
 
+  const confirmarExclusaoCliente = async () => {
+    if (!clienteParaExcluir) return
     const supabase = createClient()
-    await supabase.from('clientes').delete().eq('id', id)
+    await supabase.from('clientes').delete().eq('id', clienteParaExcluir.id)
+    setClienteParaExcluir(null)
     loadClientes()
   }
 
@@ -264,7 +280,7 @@ export default function AdminClientesPage() {
                 key={cliente.id}
                 cliente={cliente}
                 onEdit={handleEdit}
-                onDelete={handleDelete}
+                onDelete={solicitarExclusaoCliente}
               />
             ))
           ) : (
@@ -417,6 +433,33 @@ export default function AdminClientesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={clienteParaExcluir != null}
+        onOpenChange={(open) => {
+          if (!open) setClienteParaExcluir(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir cliente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {clienteParaExcluir
+                ? `“${clienteParaExcluir.nome}” será removido dos clientes. Esta ação não pode ser desfeita.`
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => void confirmarExclusaoCliente()}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TenantPanelPageContainer>
   )
 }

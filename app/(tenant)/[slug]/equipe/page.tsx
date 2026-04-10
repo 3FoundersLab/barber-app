@@ -5,6 +5,16 @@ import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { PageContent, PageTitle } from '@/components/shared/page-container'
 import { TeamMemberCard } from '@/components/domain/team-member-card'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
@@ -78,6 +88,7 @@ export default function TenantEquipePage() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [editingBarbeiro, setEditingBarbeiro] = useState<Barbeiro | null>(null)
+  const [barbeiroParaExcluir, setBarbeiroParaExcluir] = useState<Barbeiro | null>(null)
 
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null)
   const [formData, setFormData] = useState({
@@ -192,11 +203,19 @@ export default function TenantEquipePage() {
     setIsDialogOpen(true)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este membro da equipe?')) return
+  const solicitarExclusaoBarbeiro = (id: string) => {
+    const b = barbeiros.find((x) => x.id === id)
+    if (b) setBarbeiroParaExcluir(b)
+  }
 
+  const confirmarExclusaoBarbeiro = async () => {
+    if (!barbeiroParaExcluir) return
     const supabase = createClient()
-    const { error: deleteError } = await supabase.from('barbeiros').delete().eq('id', id)
+    const { error: deleteError } = await supabase
+      .from('barbeiros')
+      .delete()
+      .eq('id', barbeiroParaExcluir.id)
+    setBarbeiroParaExcluir(null)
     if (deleteError) {
       setError('Não foi possível excluir o membro')
       return
@@ -368,7 +387,7 @@ export default function TenantEquipePage() {
                 key={barbeiro.id}
                 barbeiro={barbeiro}
                 onEdit={handleEdit}
-                onDelete={handleDelete}
+                onDelete={solicitarExclusaoBarbeiro}
               />
             ))
           ) : (
@@ -565,6 +584,33 @@ export default function TenantEquipePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={barbeiroParaExcluir != null}
+        onOpenChange={(open) => {
+          if (!open) setBarbeiroParaExcluir(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir membro da equipe?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {barbeiroParaExcluir
+                ? `“${barbeiroParaExcluir.nome}” será removido da equipe. Esta ação não pode ser desfeita.`
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => void confirmarExclusaoBarbeiro()}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TenantPanelPageContainer>
   )
 }
