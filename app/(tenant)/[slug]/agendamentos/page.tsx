@@ -32,6 +32,7 @@ import {
   getAgendaDemoBarbeiros,
   getAgendaDemoUnavailableBlocks,
 } from '@/lib/agenda-demo-data'
+import { ensureComandaForAgendamento } from '@/lib/ensure-comanda-agendamento'
 import type { Agendamento, Barbeiro } from '@/types'
 
 export default function AdminAgendamentosPage() {
@@ -53,6 +54,12 @@ export default function AdminAgendamentosPage() {
   const [appointmentFormOpen, setAppointmentFormOpen] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState<Agendamento | null>(null)
   const [fabPortalHost, setFabPortalHost] = useState<Element | null>(null)
+  const [comandaNumeroPorAgendamento, setComandaNumeroPorAgendamento] = useState<Record<string, number>>(
+    {},
+  )
+  const [demoComandaNumeroPorAgendamento, setDemoComandaNumeroPorAgendamento] = useState<
+    Record<string, number>
+  >({})
 
   useEffect(() => {
     setFabPortalHost(document.body)
@@ -174,8 +181,26 @@ export default function AdminAgendamentosPage() {
     if (queryError) {
       setError('Não foi possível carregar os agendamentos')
       setAgendamentos([])
+      setComandaNumeroPorAgendamento({})
     } else if (data) {
       setAgendamentos(data)
+      const ids = data.map((r) => r.id)
+      if (ids.length === 0) {
+        setComandaNumeroPorAgendamento({})
+      } else {
+        const { data: comandasRows } = await supabase
+          .from('comandas')
+          .select('agendamento_id, numero')
+          .eq('barbearia_id', barbeariaId)
+          .in('agendamento_id', ids)
+        const map: Record<string, number> = {}
+        for (const c of comandasRows ?? []) {
+          if (c.agendamento_id != null && c.numero != null) {
+            map[c.agendamento_id] = Number(c.numero)
+          }
+        }
+        setComandaNumeroPorAgendamento(map)
+      }
     }
     setIsLoading(false)
   }
@@ -200,7 +225,7 @@ export default function AdminAgendamentosPage() {
     setSelectedDate(new Date())
   }
 
-  const handleStatusChange = async (id: string, status: 'concluido' | 'cancelado' | 'faltou') => {
+  const handleStatusChange = async (id: string, status: 'concluido' | 'faltou') => {
     if (useDemoData) {
       setDemoAgendamentos((prev) =>
         prev.map((a) => (a.id === id ? { ...a, status } : a)),
@@ -210,6 +235,74 @@ export default function AdminAgendamentosPage() {
     const supabase = createClient()
 
     await supabase.from('agendamentos').update({ status }).eq('id', id)
+
+    loadAgendamentos()
+  }
+
+  const handleCheckIn = async (id: string) => {
+    if (useDemoData) {
+      setDemoAgendamentos((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, status: 'em_atendimento' as const } : a)),
+      )
+      setDemoComandaNumeroPorAgendamento((prev) => {
+        if (prev[id] != null) return prev
+        const n = 100 + Math.floor(Math.random() * 899)
+        return { ...prev, [id]: n }
+      })
+      return
+    }
+
+    const row = agendamentos.find((a) => a.id === id)
+    if (!row || !barbeariaId) return
+
+    const supabase = createClient()
+    const ensured = await ensureComandaForAgendamento(supabase, row)
+    if (!ensured.ok) {
+      setError(ensured.message)
+      return
+    }
+
+    const { error: updErr } = await supabase
+      .from('agendamentos')
+      .update({ status: 'em_atendimento' })
+      .eq('id', id)
+
+    if (updErr) {
+      setError('Não foi possível registrar o check-in')
+      return
+    }
+
+    setComandaNumeroPorAgendamento((prev) => ({ ...prev, [id]: ensured.numero }))
+    setAgendamentos((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, status: 'em_atendimento' as const } : a)),
+    )
+  }
+
+  const handleCancelAppointment = async (id: string, motivo?: string) => {
+    if (useDemoData) {
+      setDemoAgendamentos((prev) =>
+        prev.map((a) =>
+          a.id === id
+            ? { ...a, status: 'cancelado' as const, motivo_cancelamento: motivo ?? null }
+            : a,
+        ),
+      )
+      return
+    }
+
+    const supabase = createClient()
+    await supabase.from('comandas').update({ status: 'cancelada' }).eq('agendamento_id', id)
+
+    const { error: cancelErr } = await supabase
+      .from('agendamentos')
+      .update({ status: 'cancelado', motivo_cancelamento: motivo?.trim() || null })
+      .eq('id', id)
+
+    if (cancelErr) {
+      setError('Não foi possível cancelar o agendamento')
+      loadAgendamentos()
+      return
+    }
 
     loadAgendamentos()
   }
@@ -238,6 +331,8 @@ export default function AdminAgendamentosPage() {
   )
 
   const displayAgendamentos = useDemoData ? demoAgendamentos : agendamentos
+
+  const comandaMapEfetivo = useDemoData ? demoComandaNumeroPorAgendamento : comandaNumeroPorAgendamento
 
   const appointmentsOfSelectedDate = useMemo(
     () => displayAgendamentos.filter((agendamento) => agendamento.data === selectedDateKey),
@@ -424,6 +519,8 @@ export default function AdminAgendamentosPage() {
                   clienteNome: agendamento.cliente?.nome,
                   barbeiroNome: agendamento.barbeiro?.nome,
                   servicoNome: agendamento.servico?.nome,
+                  status: agendamento.status,
+                  comandaNumero: comandaMapEfetivo[agendamento.id],
                 }))}
                 onMoveAppointment={handleMoveAppointment}
               />
@@ -455,6 +552,7 @@ export default function AdminAgendamentosPage() {
               <AppointmentDayGrid
                 barbeiros={barbeirosNaGrade}
                 appointments={appointmentsOfSelectedDate}
+                comandaByAgendamentoId={comandaMapEfetivo}
                 onBlockClick={setDetailAppointment}
                 timeRange={useDemoData ? { start: '09:00', end: '18:00' } : undefined}
                 unavailableBlocks={useDemoData ? getAgendaDemoUnavailableBlocks() : undefined}
@@ -487,8 +585,10 @@ export default function AdminAgendamentosPage() {
                 <AppointmentCard
                   key={agendamento.id}
                   appointment={agendamento}
+                  comandaNumero={comandaMapEfetivo[agendamento.id]}
+                  onCheckIn={handleCheckIn}
                   onComplete={(id) => handleStatusChange(id, 'concluido')}
-                  onCancel={(id) => handleStatusChange(id, 'cancelado')}
+                  onCancel={(id, motivo) => void handleCancelAppointment(id, motivo)}
                   onNoShow={(id) => handleStatusChange(id, 'faltou')}
                   onMarkPaid={handleMarkPaid}
                 />
@@ -569,12 +669,14 @@ export default function AdminAgendamentosPage() {
           {detailAppointment && (
             <AppointmentCard
               appointment={detailAppointment}
+              comandaNumero={comandaMapEfetivo[detailAppointment.id]}
+              onCheckIn={handleCheckIn}
               onComplete={(id) => {
                 handleStatusChange(id, 'concluido')
                 setDetailAppointment(null)
               }}
-              onCancel={(id) => {
-                handleStatusChange(id, 'cancelado')
+              onCancel={(id, motivo) => {
+                void handleCancelAppointment(id, motivo)
                 setDetailAppointment(null)
               }}
               onNoShow={(id) => {

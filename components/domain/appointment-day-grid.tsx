@@ -1,7 +1,16 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Ban, Check, ChevronLeft, ChevronRight, Monitor, Smartphone, UserX } from 'lucide-react'
+import {
+  Ban,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  Monitor,
+  Smartphone,
+  UserX,
+} from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { ServicoAgendaIcon } from '@/lib/agenda-service-icons'
@@ -17,7 +26,7 @@ const MIN_BLOCK_PX = 80
 const HEADER_ROW_PX = 72
 
 const PASTEL_BLOCK = [
-  'bg-emerald-100/95 text-emerald-950 border-emerald-200/70',
+  'bg-indigo-100/95 text-indigo-950 border-indigo-200/70',
   'bg-orange-100/95 text-orange-950 border-orange-200/70',
   'bg-violet-100/95 text-violet-950 border-violet-200/70',
   'bg-amber-100/95 text-amber-950 border-amber-200/70',
@@ -77,6 +86,8 @@ function assignLanes(
 export interface AppointmentDayGridProps {
   barbeiros: Barbeiro[]
   appointments: Agendamento[]
+  /** Número da comanda por id do agendamento (ex.: após check-in). */
+  comandaByAgendamentoId?: Record<string, number>
   onBlockClick?: (agendamento: Agendamento) => void
   className?: string
   /** Sobrescreve horário de início/fim do eixo (ex.: 09:00–18:00). */
@@ -88,6 +99,7 @@ export interface AppointmentDayGridProps {
 export function AppointmentDayGrid({
   barbeiros,
   appointments,
+  comandaByAgendamentoId,
   onBlockClick,
   className,
   timeRange,
@@ -357,7 +369,7 @@ export function AppointmentDayGrid({
                     return (
                       <div
                         key={`${barbeiro.id}-na-${idx}`}
-                        className="pointer-events-none absolute inset-x-0.5 z-[1] flex items-start justify-center rounded-lg border border-dashed border-muted-foreground/25 bg-muted/70 px-1 pt-0.5 text-center text-[10px] font-medium leading-tight text-muted-foreground"
+                        className="pointer-events-none absolute inset-x-0.5 z-[1] flex items-start justify-center rounded-lg border border-border bg-muted px-1 pt-0.5 text-center text-[10px] font-medium leading-tight text-muted-foreground"
                         style={{ top, height: h }}
                         title={block.label ?? 'Não atende'}
                       >
@@ -387,9 +399,11 @@ export function AppointmentDayGrid({
                     const pastel = PASTEL_BLOCK[hashId(a.cliente_id || a.id) % PASTEL_BLOCK.length]
                     const done = a.status === 'concluido'
                     const cancelled = a.status === 'cancelado' || a.status === 'faltou'
+                    const inProgress = a.status === 'em_atendimento'
+                    const comandaNo = comandaByAgendamentoId?.[a.id]
                     const payAlert =
                       a.status_pagamento === 'pendente' &&
-                      (a.status === 'agendado' || a.status === 'concluido')
+                      (a.status === 'agendado' || a.status === 'em_atendimento' || a.status === 'concluido')
 
                     const startLbl = minutesToLabel(start)
                     const endLbl = minutesToLabel(fullEnd)
@@ -404,8 +418,11 @@ export function AppointmentDayGrid({
                           'hover:z-[3] hover:shadow-md hover:brightness-[0.99] active:scale-[0.99]',
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                           done && 'bg-muted/90 text-foreground border-border',
-                          cancelled && 'opacity-55 line-through decoration-muted-foreground/80',
-                          !done && !cancelled && pastel,
+                          cancelled &&
+                            'border-zinc-300/90 bg-zinc-200/95 text-zinc-700 opacity-[0.72] line-through decoration-zinc-500/90 dark:border-zinc-600 dark:bg-zinc-800/95 dark:text-zinc-300 dark:decoration-zinc-500',
+                          inProgress &&
+                            'border-2 border-emerald-600/95 bg-emerald-200/95 text-emerald-950 shadow-md dark:border-emerald-500 dark:bg-emerald-950/65 dark:text-emerald-50 motion-safe:agenda-em-atendimento-pulse',
+                          !done && !cancelled && !inProgress && pastel,
                           payAlert && 'ring-2 ring-red-400/80 ring-offset-1 ring-offset-background',
                         )}
                         style={{
@@ -418,6 +435,20 @@ export function AppointmentDayGrid({
                         <span className="flex shrink-0 items-center gap-1 text-muted-foreground">
                           {a.status === 'concluido' ? (
                             <Check className="h-3 w-3 text-emerald-600" aria-hidden />
+                          ) : a.status === 'em_atendimento' ? (
+                            <>
+                              <span
+                                className="relative flex h-3 w-3 shrink-0 items-center justify-center"
+                                aria-hidden
+                              >
+                                <span className="absolute inline-flex h-2 w-2 rounded-full bg-emerald-500 opacity-75 motion-safe:animate-ping" />
+                                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-600 dark:bg-emerald-400" />
+                              </span>
+                              <ClipboardCheck
+                                className="h-3 w-3 text-emerald-800 dark:text-emerald-200"
+                                aria-hidden
+                              />
+                            </>
                           ) : a.status === 'cancelado' ? (
                             <Ban className="h-3 w-3" aria-hidden />
                           ) : a.status === 'faltou' ? (
@@ -436,8 +467,16 @@ export function AppointmentDayGrid({
                         <span className="truncate text-[10px] leading-tight opacity-90">
                           {a.servico?.nome ?? 'Serviço'}
                         </span>
-                        <span className="truncate text-[10px] tabular-nums text-muted-foreground">
+                        <span
+                          className={cn(
+                            'truncate text-[10px] tabular-nums',
+                            inProgress
+                              ? 'font-semibold text-emerald-900 dark:text-emerald-100'
+                              : 'text-muted-foreground',
+                          )}
+                        >
                           {startLbl} – {endLbl}
+                          {inProgress && comandaNo != null ? ` · Comanda #${comandaNo}` : ''}
                         </span>
                       </button>
                     )

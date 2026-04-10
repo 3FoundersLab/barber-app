@@ -5,6 +5,7 @@ import type { AppointmentStatus, PaymentStatus, UserRole } from '@/types'
 // Status Labels
 export const APPOINTMENT_STATUS_LABELS: Record<AppointmentStatus, string> = {
   agendado: 'Agendado',
+  em_atendimento: 'Em atendimento',
   concluido: 'Concluído',
   cancelado: 'Cancelado',
   faltou: 'Faltou',
@@ -25,6 +26,10 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 // Status Colors (Tailwind classes)
 export const APPOINTMENT_STATUS_COLORS: Record<AppointmentStatus, { bg: string; text: string }> = {
   agendado: { bg: 'bg-accent/20', text: 'text-accent-foreground' },
+  em_atendimento: {
+    bg: 'bg-emerald-500/20',
+    text: 'text-emerald-900 dark:text-emerald-100',
+  },
   concluido: { bg: 'bg-success/20', text: 'text-success' },
   cancelado: { bg: 'bg-destructive/20', text: 'text-destructive' },
   faltou: { bg: 'bg-warning/20', text: 'text-warning-foreground' },

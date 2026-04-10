@@ -20,19 +20,74 @@ const VIEW_LABELS: Record<CalendarView, string> = {
   day: 'Dia',
 }
 
+type CalendarAppointmentChip = {
+  id: string
+  data: string
+  horario?: string
+  clienteNome?: string
+  barbeiroNome?: string
+  servicoNome?: string
+  status?: string
+  comandaNumero?: number
+}
+
 interface DateNavigatorCalendarProps {
   value?: Date
   onChange: (date: Date) => void
   disabled?: (date: Date) => boolean
-  appointments?: Array<{
-    id: string
-    data: string
-    horario?: string
-    clienteNome?: string
-    barbeiroNome?: string
-    servicoNome?: string
-  }>
+  appointments?: CalendarAppointmentChip[]
   onMoveAppointment?: (appointmentId: string, nextDate: Date) => Promise<void> | void
+}
+
+function hashAppointmentId(id: string): number {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0
+  return Math.abs(h)
+}
+
+/** Pastéis alinhados à grade do dia (agendado). */
+const PASTEL_AGENDA_CHIP = [
+  'border border-indigo-200/80 bg-indigo-100/95 text-indigo-950 dark:border-indigo-800/60 dark:bg-indigo-950/40 dark:text-indigo-100',
+  'border border-orange-200/80 bg-orange-100/95 text-orange-950 dark:border-orange-800/60 dark:bg-orange-950/40 dark:text-orange-100',
+  'border border-violet-200/80 bg-violet-100/95 text-violet-950 dark:border-violet-800/60 dark:bg-violet-950/40 dark:text-violet-100',
+  'border border-amber-200/80 bg-amber-100/95 text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100',
+  'border border-sky-200/80 bg-sky-100/95 text-sky-950 dark:border-sky-800/60 dark:bg-sky-950/40 dark:text-sky-100',
+  'border border-rose-200/80 bg-rose-100/95 text-rose-950 dark:border-rose-800/60 dark:bg-rose-950/40 dark:text-rose-100',
+  'border border-teal-200/80 bg-teal-100/95 text-teal-950 dark:border-teal-800/60 dark:bg-teal-950/40 dark:text-teal-100',
+] as const
+
+function calendarChipClass(
+  appointment: CalendarAppointmentChip,
+  onMoveAppointment?: (appointmentId: string, nextDate: Date) => Promise<void> | void,
+) {
+  const s = appointment.status
+  const grab = onMoveAppointment && 'cursor-grab active:cursor-grabbing'
+  if (s === 'cancelado' || s === 'faltou') {
+    return cn(
+      'w-full shrink-0 truncate rounded border border-zinc-300/90 px-1.5 py-0.5 text-left text-[10px] leading-tight sm:text-[11px]',
+      'bg-zinc-200/95 text-zinc-700 line-through decoration-zinc-500/80 opacity-80 dark:border-zinc-600 dark:bg-zinc-800/95 dark:text-zinc-300',
+      grab,
+    )
+  }
+  if (s === 'concluido') {
+    return cn(
+      'w-full shrink-0 truncate rounded border border-border bg-muted/95 px-1.5 py-0.5 text-left text-[10px] leading-tight text-muted-foreground sm:text-[11px]',
+      grab,
+    )
+  }
+  if (s === 'em_atendimento') {
+    return cn(
+      'w-full shrink-0 truncate rounded border-2 border-emerald-600/90 px-1.5 py-0.5 text-left text-[10px] font-medium leading-tight sm:text-[11px]',
+      'bg-emerald-200/95 text-emerald-950 motion-safe:agenda-em-atendimento-pulse dark:border-emerald-500 dark:bg-emerald-950/55 dark:text-emerald-50',
+      grab,
+    )
+  }
+  const pastel = PASTEL_AGENDA_CHIP[hashAppointmentId(appointment.id) % PASTEL_AGENDA_CHIP.length]
+  return cn(
+    'w-full shrink-0 truncate rounded px-1.5 py-0.5 text-left text-[10px] leading-tight sm:text-[11px]',
+    pastel,
+    grab,
+  )
 }
 
 function startOfMonth(date: Date) {
@@ -304,18 +359,24 @@ export function DateNavigatorCalendar({
                           data-appointment-chip
                           draggable={Boolean(onMoveAppointment)}
                           onDragStart={(event) => handleDragStart(event, appointment.id)}
-                          className={cn(
-                            'w-full shrink-0 truncate rounded bg-primary px-1.5 py-0.5 text-left text-[10px] leading-tight text-primary-foreground sm:text-[11px]',
-                            onMoveAppointment && 'cursor-grab active:cursor-grabbing'
-                          )}
+                          className={calendarChipClass(appointment, onMoveAppointment)}
                           onClick={(event) => {
                             event.stopPropagation()
                             handlePickDate(date)
                           }}
-                          title={`${appointment.horario ?? ''} ${appointment.clienteNome ?? ''}`.trim()}
+                          title={
+                            [
+                              appointment.horario,
+                              appointment.clienteNome,
+                              appointment.comandaNumero != null ? `Comanda ${appointment.comandaNumero}` : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' · ') || undefined
+                          }
                         >
                           {appointment.horario ? `${appointment.horario} ` : ''}
                           {appointment.clienteNome ?? appointment.servicoNome ?? 'Agendamento'}
+                          {appointment.comandaNumero != null ? ` #${appointment.comandaNumero}` : ''}
                         </button>
                       ))}
                       {hiddenCount > 0 && (
@@ -414,17 +475,26 @@ export function DateNavigatorCalendar({
                           draggable={Boolean(onMoveAppointment)}
                           onDragStart={(event) => handleDragStart(event, appointment.id)}
                           className={cn(
-                            'w-full shrink-0 truncate rounded bg-primary px-1.5 py-0.5 text-left text-[10px] leading-tight text-primary-foreground sm:px-2 sm:py-1 sm:text-[11px]',
-                            onMoveAppointment && 'cursor-grab active:cursor-grabbing'
+                            calendarChipClass(appointment, onMoveAppointment),
+                            'sm:px-2 sm:py-1 sm:text-[11px]',
                           )}
                           onClick={(event) => {
                             event.stopPropagation()
                             handlePickDate(date)
                           }}
-                          title={`${appointment.horario ?? ''} ${appointment.clienteNome ?? ''}`.trim()}
+                          title={
+                            [
+                              appointment.horario,
+                              appointment.clienteNome,
+                              appointment.comandaNumero != null ? `Comanda ${appointment.comandaNumero}` : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' · ') || undefined
+                          }
                         >
                           {appointment.horario ? `${appointment.horario} ` : ''}
                           {appointment.clienteNome ?? appointment.servicoNome ?? 'Agendamento'}
+                          {appointment.comandaNumero != null ? ` #${appointment.comandaNumero}` : ''}
                         </button>
                       ))}
                       {hiddenCount > 0 && (
@@ -475,6 +545,10 @@ export function DateNavigatorCalendar({
                   className={cn(
                     'px-3 py-3 sm:px-4',
                     onMoveAppointment && 'cursor-grab active:cursor-grabbing',
+                    (a.status === 'cancelado' || a.status === 'faltou') &&
+                      'bg-zinc-100/90 text-zinc-600 opacity-[0.78] line-through decoration-zinc-500/80 dark:bg-zinc-900/50 dark:text-zinc-400',
+                    a.status === 'em_atendimento' &&
+                      'border-l-4 border-l-emerald-500 bg-emerald-50/70 dark:border-l-emerald-400 dark:bg-emerald-950/30',
                   )}
                 >
                   <div className="grid min-w-0 gap-2 sm:grid-cols-[4.5rem_1fr] sm:items-start sm:gap-3">
@@ -499,6 +573,11 @@ export function DateNavigatorCalendar({
                       {a.servicoNome && (
                         <p className="pl-[1.375rem] text-xs leading-snug text-muted-foreground">
                           {a.servicoNome}
+                        </p>
+                      )}
+                      {a.status === 'em_atendimento' && a.comandaNumero != null && (
+                        <p className="pl-[1.375rem] text-xs font-semibold text-emerald-800 dark:text-emerald-200">
+                          Comanda nº {a.comandaNumero}
                         </p>
                       )}
                     </div>
@@ -529,7 +608,13 @@ export function DateNavigatorCalendar({
             {moreModalAppointments.map((a) => (
               <li
                 key={a.id}
-                className="border-b border-border/60 py-3 last:border-b-0"
+                className={cn(
+                  'border-b border-border/60 py-3 last:border-b-0',
+                  (a.status === 'cancelado' || a.status === 'faltou') &&
+                    'bg-zinc-50/90 text-zinc-600 opacity-[0.78] line-through decoration-zinc-500/80 dark:bg-zinc-900/35 dark:text-zinc-400',
+                  a.status === 'em_atendimento' &&
+                    'border-l-4 border-l-emerald-500 bg-emerald-50/60 pl-3 dark:border-l-emerald-400 dark:bg-emerald-950/25',
+                )}
               >
                 <div className="grid min-w-0 gap-2 sm:grid-cols-[4.5rem_1fr] sm:items-start sm:gap-3">
                   <div className="flex items-center gap-1.5 text-sm font-semibold tabular-nums sm:flex-col sm:items-start sm:gap-0 sm:pt-0.5">
@@ -553,6 +638,11 @@ export function DateNavigatorCalendar({
                     {a.servicoNome && (
                       <p className="pl-[1.375rem] text-xs leading-snug text-muted-foreground">
                         {a.servicoNome}
+                      </p>
+                    )}
+                    {a.status === 'em_atendimento' && a.comandaNumero != null && (
+                      <p className="pl-[1.375rem] text-xs font-semibold text-emerald-800 dark:text-emerald-200">
+                        Comanda nº {a.comandaNumero}
                       </p>
                     )}
                   </div>

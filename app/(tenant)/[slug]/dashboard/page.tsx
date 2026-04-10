@@ -145,7 +145,7 @@ export default function AdminDashboardPage() {
               `)
               .eq('barbearia_id', barbeariaData.id)
               .eq('data', today)
-              .eq('status', 'agendado')
+              .in('status', ['agendado', 'em_atendimento'])
               .order('horario', { ascending: true })
               .limit(5)
 

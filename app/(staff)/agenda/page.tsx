@@ -20,6 +20,7 @@ import { ViewToggle, type ViewMode } from '@/components/shared/view-toggle'
 import { DateNavigatorCalendar } from '@/components/shared/date-navigator-calendar'
 import { DIAS_SEMANA_ABREV, formatDate, formatDateWeekdayLong } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
+import { ensureComandaForAgendamento } from '@/lib/ensure-comanda-agendamento'
 import type { Agendamento, Barbeiro, Profile } from '@/types'
 
 export default function BarbeiroAgendaPage() {
@@ -31,6 +32,9 @@ export default function BarbeiroAgendaPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('grade')
   const [barbeiroSelf, setBarbeiroSelf] = useState<Barbeiro | null>(null)
   const [detailAppointment, setDetailAppointment] = useState<Agendamento | null>(null)
+  const [comandaNumeroPorAgendamento, setComandaNumeroPorAgendamento] = useState<Record<string, number>>(
+    {},
+  )
 
   const formatDateKey = (date: Date) => {
     const year = date.getFullYear()
@@ -53,6 +57,7 @@ export default function BarbeiroAgendaPage() {
     if (!user) {
       setError('Usuário não autenticado')
       setAgendamentos([])
+      setComandaNumeroPorAgendamento({})
       setIsLoading(false)
       return
     }
@@ -75,6 +80,7 @@ export default function BarbeiroAgendaPage() {
       setBarbeiroSelf(null)
       setError('Barbeiro não encontrado')
       setAgendamentos([])
+      setComandaNumeroPorAgendamento({})
       setIsLoading(false)
       return
     }
@@ -99,10 +105,29 @@ export default function BarbeiroAgendaPage() {
     if (queryError) {
       setError('Não foi possível carregar os agendamentos')
       setAgendamentos([])
+      setComandaNumeroPorAgendamento({})
     } else if (data) {
       setAgendamentos(data)
+      const bbId = barbeiro.barbearia_id
+      const ids = data.map((r) => r.id)
+      if (ids.length === 0 || !bbId) {
+        setComandaNumeroPorAgendamento({})
+      } else {
+        const { data: comandasRows } = await supabase
+          .from('comandas')
+          .select('agendamento_id, numero')
+          .eq('barbearia_id', bbId)
+          .in('agendamento_id', ids)
+        const map: Record<string, number> = {}
+        for (const c of comandasRows ?? []) {
+          if (c.agendamento_id != null && c.numero != null) {
+            map[c.agendamento_id] = Number(c.numero)
+          }
+        }
+        setComandaNumeroPorAgendamento(map)
+      }
     }
-    
+
     setIsLoading(false)
   }
 
@@ -126,14 +151,54 @@ export default function BarbeiroAgendaPage() {
     setSelectedDate(new Date())
   }
 
-  const handleStatusChange = async (id: string, status: 'concluido' | 'cancelado' | 'faltou') => {
+  const handleStatusChange = async (id: string, status: 'concluido' | 'faltou') => {
     const supabase = createClient()
-    
-    await supabase
+
+    await supabase.from('agendamentos').update({ status }).eq('id', id)
+
+    loadAgendamentos()
+  }
+
+  const handleCheckIn = async (id: string) => {
+    const row = agendamentos.find((a) => a.id === id)
+    if (!row) return
+
+    const supabase = createClient()
+    const ensured = await ensureComandaForAgendamento(supabase, row)
+    if (!ensured.ok) {
+      setError(ensured.message)
+      return
+    }
+
+    const { error: updErr } = await supabase
       .from('agendamentos')
-      .update({ status })
+      .update({ status: 'em_atendimento' })
       .eq('id', id)
-    
+
+    if (updErr) {
+      setError('Não foi possível registrar o check-in')
+      return
+    }
+
+    setComandaNumeroPorAgendamento((prev) => ({ ...prev, [id]: ensured.numero }))
+    setAgendamentos((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, status: 'em_atendimento' as const } : a)),
+    )
+  }
+
+  const handleCancelAppointment = async (id: string, motivo?: string) => {
+    const supabase = createClient()
+    await supabase.from('comandas').update({ status: 'cancelada' }).eq('agendamento_id', id)
+
+    const { error: cancelErr } = await supabase
+      .from('agendamentos')
+      .update({ status: 'cancelado', motivo_cancelamento: motivo?.trim() || null })
+      .eq('id', id)
+
+    if (cancelErr) {
+      setError('Não foi possível cancelar o agendamento')
+    }
+
     loadAgendamentos()
   }
 
@@ -278,6 +343,8 @@ export default function BarbeiroAgendaPage() {
                   clienteNome: agendamento.cliente?.nome,
                   barbeiroNome: barbeiroSelf?.nome,
                   servicoNome: agendamento.servico?.nome,
+                  status: agendamento.status,
+                  comandaNumero: comandaNumeroPorAgendamento[agendamento.id],
                 }))}
                 onMoveAppointment={handleMoveAppointment}
               />
@@ -297,6 +364,7 @@ export default function BarbeiroAgendaPage() {
               <AppointmentDayGrid
                 barbeiros={[barbeiroSelf]}
                 appointments={appointmentsOfSelectedDate}
+                comandaByAgendamentoId={comandaNumeroPorAgendamento}
                 onBlockClick={setDetailAppointment}
               />
             )}
@@ -320,8 +388,10 @@ export default function BarbeiroAgendaPage() {
                 <AppointmentCard
                   key={agendamento.id}
                   appointment={agendamento}
+                  comandaNumero={comandaNumeroPorAgendamento[agendamento.id]}
+                  onCheckIn={handleCheckIn}
                   onComplete={(id) => handleStatusChange(id, 'concluido')}
-                  onCancel={(id) => handleStatusChange(id, 'cancelado')}
+                  onCancel={(id, motivo) => void handleCancelAppointment(id, motivo)}
                   onNoShow={(id) => handleStatusChange(id, 'faltou')}
                   onMarkPaid={handleMarkPaid}
                 />
@@ -355,12 +425,14 @@ export default function BarbeiroAgendaPage() {
           {detailAppointment && (
             <AppointmentCard
               appointment={detailAppointment}
+              comandaNumero={comandaNumeroPorAgendamento[detailAppointment.id]}
+              onCheckIn={handleCheckIn}
               onComplete={(id) => {
                 handleStatusChange(id, 'concluido')
                 setDetailAppointment(null)
               }}
-              onCancel={(id) => {
-                handleStatusChange(id, 'cancelado')
+              onCancel={(id, motivo) => {
+                void handleCancelAppointment(id, motivo)
                 setDetailAppointment(null)
               }}
               onNoShow={(id) => {

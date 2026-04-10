@@ -188,3 +188,31 @@
     transform: scaleX(0);
   }
 }
+
+/* Agenda: borda “respirando” em agendamentos em atendimento (check-in feito) */
+@keyframes agenda-em-atendimento-ring {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgb(16 185 129 / 0.45),
+      0 2px 8px rgb(16 185 129 / 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px rgb(16 185 129 / 0.28),
+      0 2px 12px rgb(16 185 129 / 0.18);
+  }
+}
+
+@layer utilities {
+  .agenda-em-atendimento-pulse {
+    animation: agenda-em-atendimento-ring 2.2s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .agenda-em-atendimento-pulse {
+      animation: none;
+      box-shadow: 0 0 0 2px rgb(16 185 129 / 0.35);
+    }
+  }
+}

@@ -4,7 +4,12 @@
 export type UserRole = 'super_admin' | 'admin' | 'barbeiro' | 'cliente'
 
 // Status
-export type AppointmentStatus = 'agendado' | 'concluido' | 'cancelado' | 'faltou'
+export type AppointmentStatus =
+  | 'agendado'
+  | 'em_atendimento'
+  | 'concluido'
+  | 'cancelado'
+  | 'faltou'
 export type PaymentStatus = 'pendente' | 'pago'
 
 // Entities
@@ -108,6 +113,8 @@ export interface Agendamento {
   status_pagamento: PaymentStatus
   valor: number
   observacoes?: string
+  /** Preenchido ao cancelar pelo painel (opcional). */
+  motivo_cancelamento?: string | null
   created_at: string
   updated_at: string
   // Relacionamentos (para exibição)
