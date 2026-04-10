@@ -98,27 +98,31 @@ export default function TenantEstoquePage() {
     void init()
   }, [slug])
 
-  const loadProdutos = useCallback(async () => {
-    if (!barbeariaId) return
-    setIsLoading(true)
-    setError(null)
-    const supabase = createClient()
-    const { data, error: qErr } = await supabase
-      .from('estoque_produtos')
-      .select('*')
-      .eq('barbearia_id', barbeariaId)
-      .order('nome')
+  const loadProdutos = useCallback(
+    async (options?: { showLoading?: boolean }) => {
+      if (!barbeariaId) return
+      const showLoading = options?.showLoading ?? true
+      if (showLoading) setIsLoading(true)
+      setError(null)
+      const supabase = createClient()
+      const { data, error: qErr } = await supabase
+        .from('estoque_produtos')
+        .select('*')
+        .eq('barbearia_id', barbeariaId)
+        .order('nome')
 
-    if (qErr) {
-      setError(
-        'Não foi possível carregar o estoque. Execute scripts/032_comandas_estoque.sql no Supabase (tabela estoque_produtos).',
-      )
-      setProdutos([])
-    } else {
-      setProdutos((data ?? []).map((r) => mapEstoqueRowToProduto(r as EstoqueProdutoRow)))
-    }
-    setIsLoading(false)
-  }, [barbeariaId])
+      if (qErr) {
+        setError(
+          'Não foi possível carregar o estoque. Execute scripts/032_comandas_estoque.sql no Supabase (tabela estoque_produtos).',
+        )
+        setProdutos([])
+      } else {
+        setProdutos((data ?? []).map((r) => mapEstoqueRowToProduto(r as EstoqueProdutoRow)))
+      }
+      if (showLoading) setIsLoading(false)
+    },
+    [barbeariaId],
+  )
 
   useEffect(() => {
     void loadProdutos()
@@ -144,7 +148,7 @@ export default function TenantEstoquePage() {
         break
       }
     }
-    await loadProdutos()
+    await loadProdutos({ showLoading: false })
     setSeeding(false)
   }
 
@@ -228,7 +232,7 @@ export default function TenantEstoquePage() {
       }
     }
     fecharDialog(false)
-    await loadProdutos()
+    await loadProdutos({ showLoading: false })
   }
 
   const confirmarExclusao = async () => {
@@ -243,7 +247,7 @@ export default function TenantEstoquePage() {
       setError(toUserFriendlyErrorMessage(delE, { fallback: 'Não foi possível excluir o produto.' }))
     }
     setProdutoParaExcluir(null)
-    await loadProdutos()
+    await loadProdutos({ showLoading: false })
   }
 
   const deltaQuantidade = async (id: string, delta: number) => {
@@ -260,7 +264,7 @@ export default function TenantEstoquePage() {
     if (upE) {
       setError(toUserFriendlyErrorMessage(upE, { fallback: 'Não foi possível atualizar a quantidade.' }))
     }
-    else await loadProdutos()
+    else await loadProdutos({ showLoading: false })
   }
 
   const formEstoquePodeSalvar = useMemo(() => {

@@ -34,6 +34,7 @@ import { ProfileAvatarUpload } from '@/components/shared/profile-avatar-upload'
 import { createClient } from '@/lib/supabase/client'
 import { signOutWithPersistenceClear } from '@/lib/supabase/sign-out-client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
+import { rpcUpdateBarbeariaDadosTenant } from '@/lib/barbearia-rpc'
 import { fetchLatestAssinaturaWithPlano, type AssinaturaComPlano } from '@/lib/tenant-assinatura-query'
 import { clearProfileCache, setProfileCache } from '@/lib/profile-cache'
 import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
@@ -82,7 +83,7 @@ function isBarbeariaHorarioColumnError(err: { message?: string } | null): boolea
 
 const MSGS = {
   barbeariaUpdateBloqueado:
-    'Não foi possível salvar os dados da barbearia. Confirme que você é o administrador vinculado a ela ou execute no Supabase o script `038_barbearias_update_admin_por_perfil.sql` (política RLS).',
+    'Não foi possível salvar os dados da barbearia. Só o administrador da barbearia pode alterá-los. Tente sair da conta e entrar de novo; se o problema continuar, entre em contato com o suporte.',
 } as const
 
 const profileAvatarUploadPremiumClass = cn(
@@ -295,6 +296,34 @@ export default function AdminConfiguracoesPage() {
       ...basePayload,
       horario_abertura: timeToDb(formBarbearia.horario_abertura),
       horario_fechamento: timeToDb(formBarbearia.horario_fechamento),
+    }
+
+    const rpc = await rpcUpdateBarbeariaDadosTenant(supabase, {
+      p_barbearia_id: barbearia.id,
+      p_nome: nomeBarbearia,
+      p_endereco: basePayload.endereco,
+      p_telefone: basePayload.telefone,
+      p_email: basePayload.email,
+      p_horario_abertura: withHorarios.horario_abertura,
+      p_horario_fechamento: withHorarios.horario_fechamento,
+    })
+
+    if (rpc.row) {
+      setBarbearia(rpc.row)
+      setSuccessMessage('Dados da barbearia salvos com sucesso.')
+      scheduleScrollToSaveFeedback()
+      setIsSavingBarbearia(false)
+      return
+    }
+
+    if (!rpc.missingFunction) {
+      clearFieldErrors()
+      setError(
+        toUserFriendlyErrorMessage(rpc.error, { fallback: 'Não foi possível salvar os dados da barbearia.' }),
+      )
+      scheduleScrollToSaveFeedback()
+      setIsSavingBarbearia(false)
+      return
     }
 
     const { data: updatedRows, error: updateError } = await supabase
