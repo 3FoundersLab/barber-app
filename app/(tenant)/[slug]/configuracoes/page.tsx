@@ -10,10 +10,12 @@ import {
   CreditCard,
   LogOut,
   Mail,
+  MapPin,
   Phone,
   Plus,
   Save,
   Store,
+  Trash2,
   User,
 } from 'lucide-react'
 import { PageContent } from '@/components/shared/page-container'
@@ -25,6 +27,15 @@ import {
   AlertTitle,
   ALERT_DEFAULT_AUTO_CLOSE_MS,
 } from '@/components/ui/alert'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -35,7 +46,11 @@ import { ProfileAvatarUpload } from '@/components/shared/profile-avatar-upload'
 import { createClient } from '@/lib/supabase/client'
 import { signOutWithPersistenceClear } from '@/lib/supabase/sign-out-client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
-import { rpcCriarUnidadeBarbeariaTenant, rpcUpdateBarbeariaDadosTenant } from '@/lib/barbearia-rpc'
+import {
+  rpcCriarUnidadeBarbeariaTenant,
+  rpcRemoverUnidadeBarbeariaTenant,
+  rpcUpdateBarbeariaDadosTenant,
+} from '@/lib/barbearia-rpc'
 import { fetchLatestAssinaturaWithPlano, type AssinaturaComPlano } from '@/lib/tenant-assinatura-query'
 import { clearProfileCache, setProfileCache } from '@/lib/profile-cache'
 import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
@@ -112,6 +127,19 @@ const profileAvatarUploadPremiumClass = cn(
 /** Borda de validação nos inputs da página (mensagem continua no Alert no topo). */
 const configuracoesInputErrorClass =
   'border-red-500/90 focus-visible:border-red-500 focus-visible:ring-red-500/25 dark:border-red-500/70'
+
+/** Painel único: filiais + endereço + horário da unidade atual. */
+const barbeariaPainelLocalClass = cn(
+  'overflow-hidden rounded-xl border border-zinc-200/85 bg-white/75 shadow-sm',
+  'dark:border-white/[0.1] dark:bg-white/[0.04]',
+)
+
+const barbeariaPainelSecaoClass = 'border-b border-zinc-200/70 px-5 py-5 last:border-b-0 md:px-6 dark:border-white/[0.08]'
+
+const barbeariaPainelSecaoTituloClass =
+  'flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground dark:text-zinc-100'
+
+const barbeariaPainelSecaoDescClass = 'mt-1.5 max-w-prose text-xs leading-relaxed text-muted-foreground'
 
 type MinhaUnidade = { id: string; nome: string; slug: string }
 
@@ -212,14 +240,18 @@ export default function AdminConfiguracoesPage() {
   const [novaUnidadeSlug, setNovaUnidadeSlug] = useState('')
   const [novaUnidadeSlugAutofill, setNovaUnidadeSlugAutofill] = useState(true)
   const [isCreatingUnidade, setIsCreatingUnidade] = useState(false)
+  const [unidadeRemoverDialog, setUnidadeRemoverDialog] = useState<MinhaUnidade | null>(null)
+  const [isRemovingUnidade, setIsRemovingUnidade] = useState(false)
 
-  const refreshMinhasUnidades = useCallback(async (userId: string) => {
+  const refreshMinhasUnidades = useCallback(async (userId: string): Promise<MinhaUnidade[]> => {
     const client = createClient()
     const { data: buRows } = await client
       .from('barbearia_users')
       .select('barbearias ( id, nome, slug )')
       .eq('user_id', userId)
-    setMinhasUnidades(parseMinhasUnidadesFromBarbeariaUsers(buRows))
+    const list = parseMinhasUnidadesFromBarbeariaUsers(buRows)
+    setMinhasUnidades(list)
+    return list
   }, [])
 
   useEffect(() => {
@@ -447,6 +479,10 @@ export default function AdminConfiguracoesPage() {
   const podeGerenciarUnidades =
     profile?.role === 'admin' || profile?.role === 'super_admin'
 
+  const podeOferecerRemoverUnidade =
+    podeGerenciarUnidades &&
+    (minhasUnidades.length >= 2 || profile?.role === 'super_admin')
+
   const handleCriarUnidade = async () => {
     if (!barbearia || !profile || !podeGerenciarUnidades) return
 
@@ -516,6 +552,65 @@ export default function AdminConfiguracoesPage() {
     )
     scheduleScrollToSaveFeedback()
     setIsCreatingUnidade(false)
+  }
+
+  const handleConfirmRemoverUnidade = async () => {
+    if (!unidadeRemoverDialog || !profile) return
+
+    const alvo = unidadeRemoverDialog
+    const nomeAlvo = alvo.nome
+    const slugAlvo = alvo.slug
+    const eraPainelAtual = slugAlvo === slug
+
+    setIsRemovingUnidade(true)
+    setError(null)
+    setWarning(null)
+    setSuccessMessage(null)
+    const supabase = createClient()
+
+    const rpc = await rpcRemoverUnidadeBarbeariaTenant(supabase, {
+      p_barbearia_id: alvo.id,
+    })
+
+    if (rpc.missingFunction) {
+      setUnidadeRemoverDialog(null)
+      setWarning(
+        'Não foi possível remover a unidade: a função no banco ainda não existe. Execute no Supabase o script `041_rpc_remover_unidade_barbearia_tenant.sql` (ou a migração `20260410230000_rpc_remover_unidade_barbearia_tenant.sql`).',
+      )
+      scheduleScrollToSaveFeedback()
+      setIsRemovingUnidade(false)
+      return
+    }
+
+    if (!rpc.ok) {
+      setUnidadeRemoverDialog(null)
+      const errCode = (rpc.error as { code?: string } | null)?.code
+      const msgForeignKey =
+        errCode === '23503'
+          ? 'A exclusão foi bloqueada por restrições no banco (comandas/estoque). Execute no Supabase o script `042_comandas_fk_cascade_barbearia_delete.sql` ou a migração `20260410240000_comandas_fk_cascade_barbearia_delete.sql` e tente de novo.'
+          : null
+      setError(
+        msgForeignKey ??
+          toUserFriendlyErrorMessage(rpc.error, {
+            fallback: 'Não foi possível remover a unidade. Tente de novo.',
+          }),
+      )
+      scheduleScrollToSaveFeedback()
+      setIsRemovingUnidade(false)
+      return
+    }
+
+    setUnidadeRemoverDialog(null)
+    const nextList = await refreshMinhasUnidades(profile.id)
+    setSuccessMessage(`A unidade “${nomeAlvo}” foi removida.`)
+    scheduleScrollToSaveFeedback()
+    setIsRemovingUnidade(false)
+
+    if (eraPainelAtual && nextList.length > 0) {
+      router.push(
+        `${tenantBarbeariaBasePath(nextList[0].slug)}/configuracoes?${CONFIG_TAB_QUERY}=${CONFIG_TAB_BEARBEARIA}`,
+      )
+    }
   }
 
   const handleSaveProfile = async () => {
@@ -861,199 +956,280 @@ export default function AdminConfiguracoesPage() {
                           </h2>
                         </div>
                         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                          Nome, endereço e horário de funcionamento de referência.
+                          Nome, URL, filiais, endereço e horário da unidade que você está gerenciando agora.
                         </p>
                       </header>
 
                       <div className="space-y-5 p-5 md:p-6">
                         {barbearia ? (
                           <>
-                            <div className="space-y-2">
-                              <Label htmlFor="slug" className={superProfileLabelClass}>
-                                Identificador (slug)
-                              </Label>
-                              <Input
-                                id="slug"
-                                value={barbearia.slug}
-                                readOnly
-                                disabled
-                                className={cn(
-                                  superProfileInputClass,
-                                  'cursor-not-allowed bg-zinc-100 font-mono text-sm text-muted-foreground dark:bg-white/[0.06] dark:text-zinc-400',
-                                )}
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="nomeBarbearia" className={superProfileLabelClass} required>
-                                Nome da barbearia
-                              </Label>
-                              <Input
-                                id="nomeBarbearia"
-                                value={formBarbearia.nome}
-                                onChange={(e) => {
-                                  setFormBarbearia({ ...formBarbearia, nome: e.target.value })
-                                  setFieldErrors((prev) => {
-                                    if (!prev.barbeariaNome) return prev
-                                    const { barbeariaNome: _removed, ...rest } = prev
-                                    return rest
-                                  })
-                                }}
-                                placeholder="Nome da barbearia"
-                                aria-required="true"
-                                aria-invalid={fieldErrors.barbeariaNome ? true : undefined}
-                                aria-describedby={fieldErrors.barbeariaNome ? 'nomeBarbearia-error' : undefined}
-                                className={cn(
-                                  superProfileInputClass,
-                                  fieldErrors.barbeariaNome ? configuracoesInputErrorClass : null,
-                                )}
-                              />
-                              {fieldErrors.barbeariaNome ? (
-                                <p id="nomeBarbearia-error" className="text-sm text-destructive" role="alert">
-                                  {fieldErrors.barbeariaNome}
+                            <div className={barbeariaPainelLocalClass} role="region" aria-label="Dados da unidade">
+                              <div className="border-b border-zinc-200/75 bg-zinc-50/90 px-5 py-4 md:px-6 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
+                                  Unidade atual
                                 </p>
-                              ) : null}
-                            </div>
+                                <p className="mt-2 text-sm font-medium leading-snug text-foreground">
+                                  Nome, URL, filiais, endereço e horário
+                                </p>
+                                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                                  Tudo neste quadro é desta unidade. Uma filial nova ganha painel próprio — você preenche
+                                  endereço e horário ao acessar essa unidade. A assinatura da nova filial segue o plano e
+                                  o status desta.
+                                </p>
+                              </div>
 
-                            <div
-                              className="rounded-lg border border-zinc-200/80 bg-zinc-50/50 p-4 dark:border-white/[0.08] dark:bg-white/[0.03]"
-                              role="region"
-                              aria-label="Unidades"
-                            >
-                              <p className="flex items-center gap-2 text-sm font-medium text-foreground dark:text-zinc-300">
-                                <Building2 className="size-4 text-muted-foreground" aria-hidden />
-                                Unidades
-                              </p>
-                              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                                Cada unidade é um painel próprio (URL com slug). A assinatura da unidade nova segue o
-                                plano e o status da unidade em que você está agora (ativa ou pendente de pagamento).
-                              </p>
-                              {minhasUnidades.length > 0 ? (
-                                <ul className="mt-3 space-y-2">
-                                  {minhasUnidades.map((u) => {
-                                    const isCurrent = u.slug === slug
-                                    return (
-                                      <li
-                                        key={u.id}
-                                        className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-zinc-200/70 bg-white/80 px-3 py-2.5 dark:border-white/[0.08] dark:bg-white/[0.04]"
-                                      >
-                                        <div className="min-w-0 flex-1">
-                                          <p className="truncate text-sm font-medium text-foreground">{u.nome}</p>
-                                          <p className="truncate font-mono text-xs text-muted-foreground">/{u.slug}</p>
-                                        </div>
-                                        {isCurrent ? (
-                                          <span className="shrink-0 text-xs font-medium text-primary">Painel atual</span>
-                                        ) : (
-                                          <Button variant="outline" size="sm" className="shrink-0" asChild>
-                                            <Link
-                                              href={`${tenantBarbeariaBasePath(u.slug)}/configuracoes?${CONFIG_TAB_QUERY}=${CONFIG_TAB_BEARBEARIA}`}
-                                            >
-                                              Acessar
-                                            </Link>
-                                          </Button>
-                                        )}
-                                      </li>
-                                    )
-                                  })}
-                                </ul>
-                              ) : null}
+                              <div className={barbeariaPainelSecaoClass}>
+                                <div className={barbeariaPainelSecaoTituloClass}>
+                                  <Store className="size-4 shrink-0 text-primary" aria-hidden />
+                                  Nome e identificador
+                                </div>
+                                <p className={barbeariaPainelSecaoDescClass}>
+                                  Nome exibido no painel e o slug fixo da URL desta unidade (o identificador não pode ser
+                                  alterado aqui).
+                                </p>
+                                <div className="mt-4 space-y-4">
+                                  <div className="min-w-0 space-y-2">
+                                    <Label htmlFor="nomeBarbearia" className={superProfileLabelClass} required>
+                                      Nome da barbearia
+                                    </Label>
+                                    <Input
+                                      id="nomeBarbearia"
+                                      value={formBarbearia.nome}
+                                      onChange={(e) => {
+                                        setFormBarbearia({ ...formBarbearia, nome: e.target.value })
+                                        setFieldErrors((prev) => {
+                                          if (!prev.barbeariaNome) return prev
+                                          const { barbeariaNome: _removed, ...rest } = prev
+                                          return rest
+                                        })
+                                      }}
+                                      placeholder="Nome da barbearia"
+                                      aria-required="true"
+                                      aria-invalid={fieldErrors.barbeariaNome ? true : undefined}
+                                      aria-describedby={fieldErrors.barbeariaNome ? 'nomeBarbearia-error' : undefined}
+                                      className={cn(
+                                        superProfileInputClass,
+                                        fieldErrors.barbeariaNome ? configuracoesInputErrorClass : null,
+                                      )}
+                                    />
+                                    {fieldErrors.barbeariaNome ? (
+                                      <p id="nomeBarbearia-error" className="text-sm text-destructive" role="alert">
+                                        {fieldErrors.barbeariaNome}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                  <div className="min-w-0 space-y-2">
+                                    <Label htmlFor="slug" className={superProfileLabelClass}>
+                                      Identificador na URL (slug)
+                                    </Label>
+                                    <Input
+                                      id="slug"
+                                      value={barbearia.slug}
+                                      readOnly
+                                      disabled
+                                      className={cn(
+                                        superProfileInputClass,
+                                        'cursor-not-allowed bg-zinc-100 font-mono text-sm text-muted-foreground dark:bg-white/[0.06] dark:text-zinc-400',
+                                      )}
+                                    />
+                                    <p className="text-xs leading-relaxed text-muted-foreground">
+                                      Caminho base do painel:{' '}
+                                      <span className="font-mono text-foreground/90">
+                                        {tenantBarbeariaBasePath(barbearia.slug)}
+                                      </span>
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
 
-                              {podeGerenciarUnidades ? (
-                                <div className="mt-4 border-t border-zinc-200/80 pt-4 dark:border-white/[0.08]">
-                                  <p className="text-sm font-medium text-foreground dark:text-zinc-300">
-                                    Nova unidade
+                              <div className={barbeariaPainelSecaoClass}>
+                                <div className={barbeariaPainelSecaoTituloClass}>
+                                  <Building2 className="size-4 shrink-0 text-primary" aria-hidden />
+                                  Filiais e acesso
+                                </div>
+                                <p className={barbeariaPainelSecaoDescClass}>
+                                  Cada filial tem URL própria. Use <span className="font-medium text-foreground">Acessar</span>{' '}
+                                  para abrir o painel noutra unidade (continua na aba Barbearia).
+                                  {podeOferecerRemoverUnidade ? (
+                                    <>
+                                      {' '}
+                                      O botão <span className="font-medium text-destructive">Remover</span> exclui a
+                                      filial e todos os dados vinculados a ela — ação{' '}
+                                      <span className="font-medium text-foreground">irreversível</span>.
+                                    </>
+                                  ) : null}
+                                </p>
+                                {minhasUnidades.length > 0 ? (
+                                  <ul className="mt-4 space-y-2">
+                                    {minhasUnidades.map((u) => {
+                                      const isCurrent = u.slug === slug
+                                      return (
+                                        <li
+                                          key={u.id}
+                                          className="flex flex-col gap-3 rounded-lg border border-zinc-200/80 bg-white/90 px-3 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/[0.1] dark:bg-white/[0.06]"
+                                        >
+                                          <div className="min-w-0 flex-1">
+                                            <p className="truncate text-sm font-medium text-foreground">{u.nome}</p>
+                                            <p className="truncate font-mono text-xs text-muted-foreground">
+                                              /{u.slug}
+                                            </p>
+                                          </div>
+                                          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                                            {isCurrent ? (
+                                              <span className="rounded-full bg-primary/12 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+                                                Painel atual
+                                              </span>
+                                            ) : (
+                                              <Button variant="outline" size="sm" asChild>
+                                                <Link
+                                                  href={`${tenantBarbeariaBasePath(u.slug)}/configuracoes?${CONFIG_TAB_QUERY}=${CONFIG_TAB_BEARBEARIA}`}
+                                                >
+                                                  Acessar
+                                                </Link>
+                                              </Button>
+                                            )}
+                                            {podeOferecerRemoverUnidade ? (
+                                              <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="border-destructive/35 text-destructive hover:bg-destructive/10 dark:border-destructive/40"
+                                                aria-label={`Remover unidade ${u.nome}`}
+                                                disabled={isRemovingUnidade || Boolean(unidadeRemoverDialog)}
+                                                onClick={(e) => {
+                                                  e.preventDefault()
+                                                  e.stopPropagation()
+                                                  setUnidadeRemoverDialog(u)
+                                                }}
+                                              >
+                                                <Trash2 className="size-4 sm:mr-1.5" aria-hidden />
+                                                <span className="hidden sm:inline">Remover</span>
+                                              </Button>
+                                            ) : null}
+                                          </div>
+                                        </li>
+                                      )
+                                    })}
+                                  </ul>
+                                ) : null}
+                                {podeGerenciarUnidades &&
+                                minhasUnidades.length === 1 &&
+                                profile?.role !== 'super_admin' ? (
+                                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                                    Com apenas uma filial, não é possível excluí-la aqui. Cadastre outra unidade antes ou
+                                    fale com o suporte.
                                   </p>
-                                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                                    O identificador vira o caminho do painel (apenas letras minúsculas, números e hífens).
-                                  </p>
-                                  <div className="mt-3 space-y-3">
-                                    <div className="space-y-2">
-                                      <Label htmlFor="novaUnidadeNome" className={superProfileLabelClass}>
-                                        Nome da unidade
-                                      </Label>
-                                      <Input
-                                        id="novaUnidadeNome"
-                                        value={novaUnidadeNome}
-                                        onChange={(e) => {
-                                          const v = e.target.value
-                                          setNovaUnidadeNome(v)
-                                          if (novaUnidadeSlugAutofill) {
-                                            setNovaUnidadeSlug(slugifyBarbeariaSlug(v))
+                                ) : null}
+
+                                {podeGerenciarUnidades ? (
+                                  <div
+                                    className={cn(
+                                      'mt-5 rounded-xl border border-dashed border-primary/25 bg-primary/[0.04] p-4',
+                                      'dark:border-primary/30 dark:bg-primary/[0.07]',
+                                    )}
+                                  >
+                                    <p className="text-sm font-semibold text-foreground dark:text-zinc-100">
+                                      Cadastrar nova unidade
+                                    </p>
+                                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                                      Nome e identificador da URL. Depois de criar, complete endereço e horário nesta
+                                      mesma aba já no painel da nova filial.
+                                    </p>
+                                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                                      <div className="space-y-2 sm:col-span-1">
+                                        <Label htmlFor="novaUnidadeNome" className={superProfileLabelClass}>
+                                          Nome da unidade
+                                        </Label>
+                                        <Input
+                                          id="novaUnidadeNome"
+                                          value={novaUnidadeNome}
+                                          onChange={(e) => {
+                                            const v = e.target.value
+                                            setNovaUnidadeNome(v)
+                                            if (novaUnidadeSlugAutofill) {
+                                              setNovaUnidadeSlug(slugifyBarbeariaSlug(v))
+                                            }
+                                            setFieldErrors((prev) => {
+                                              if (!prev.barbeariaNovaUnidadeNome) return prev
+                                              const { barbeariaNovaUnidadeNome: _r, ...rest } = prev
+                                              return rest
+                                            })
+                                          }}
+                                          placeholder="Ex.: Filial Centro"
+                                          disabled={isCreatingUnidade}
+                                          aria-invalid={fieldErrors.barbeariaNovaUnidadeNome ? true : undefined}
+                                          aria-describedby={
+                                            fieldErrors.barbeariaNovaUnidadeNome
+                                              ? 'novaUnidadeNome-error'
+                                              : undefined
                                           }
-                                          setFieldErrors((prev) => {
-                                            if (!prev.barbeariaNovaUnidadeNome) return prev
-                                            const { barbeariaNovaUnidadeNome: _r, ...rest } = prev
-                                            return rest
-                                          })
-                                        }}
-                                        placeholder="Ex.: Filial Centro"
-                                        disabled={isCreatingUnidade}
-                                        aria-invalid={fieldErrors.barbeariaNovaUnidadeNome ? true : undefined}
-                                        aria-describedby={
-                                          fieldErrors.barbeariaNovaUnidadeNome ? 'novaUnidadeNome-error' : undefined
-                                        }
-                                        className={cn(
-                                          superProfileInputClass,
-                                          fieldErrors.barbeariaNovaUnidadeNome
-                                            ? configuracoesInputErrorClass
-                                            : null,
-                                        )}
-                                      />
-                                      {fieldErrors.barbeariaNovaUnidadeNome ? (
-                                        <p
-                                          id="novaUnidadeNome-error"
-                                          className="text-sm text-destructive"
-                                          role="alert"
-                                        >
-                                          {fieldErrors.barbeariaNovaUnidadeNome}
-                                        </p>
-                                      ) : null}
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label htmlFor="novaUnidadeSlug" className={superProfileLabelClass}>
-                                        Identificador na URL (slug)
-                                      </Label>
-                                      <Input
-                                        id="novaUnidadeSlug"
-                                        value={novaUnidadeSlug}
-                                        onChange={(e) => {
-                                          setNovaUnidadeSlugAutofill(false)
-                                          setNovaUnidadeSlug(e.target.value)
-                                          setFieldErrors((prev) => {
-                                            if (!prev.barbeariaNovaUnidadeSlug) return prev
-                                            const { barbeariaNovaUnidadeSlug: _r, ...rest } = prev
-                                            return rest
-                                          })
-                                        }}
-                                        placeholder="ex.: filial-centro"
-                                        disabled={isCreatingUnidade}
-                                        className={cn(
-                                          superProfileInputClass,
-                                          'font-mono text-sm',
-                                          fieldErrors.barbeariaNovaUnidadeSlug
-                                            ? configuracoesInputErrorClass
-                                            : null,
-                                        )}
-                                        aria-invalid={fieldErrors.barbeariaNovaUnidadeSlug ? true : undefined}
-                                        aria-describedby={
-                                          fieldErrors.barbeariaNovaUnidadeSlug ? 'novaUnidadeSlug-error' : undefined
-                                        }
-                                        autoComplete="off"
-                                      />
-                                      {fieldErrors.barbeariaNovaUnidadeSlug ? (
-                                        <p
-                                          id="novaUnidadeSlug-error"
-                                          className="text-sm text-destructive"
-                                          role="alert"
-                                        >
-                                          {fieldErrors.barbeariaNovaUnidadeSlug}
-                                        </p>
-                                      ) : null}
+                                          className={cn(
+                                            superProfileInputClass,
+                                            fieldErrors.barbeariaNovaUnidadeNome
+                                              ? configuracoesInputErrorClass
+                                              : null,
+                                          )}
+                                        />
+                                        {fieldErrors.barbeariaNovaUnidadeNome ? (
+                                          <p
+                                            id="novaUnidadeNome-error"
+                                            className="text-sm text-destructive"
+                                            role="alert"
+                                          >
+                                            {fieldErrors.barbeariaNovaUnidadeNome}
+                                          </p>
+                                        ) : null}
+                                      </div>
+                                      <div className="space-y-2 sm:col-span-1">
+                                        <Label htmlFor="novaUnidadeSlug" className={superProfileLabelClass}>
+                                          Identificador na URL (slug)
+                                        </Label>
+                                        <Input
+                                          id="novaUnidadeSlug"
+                                          value={novaUnidadeSlug}
+                                          onChange={(e) => {
+                                            setNovaUnidadeSlugAutofill(false)
+                                            setNovaUnidadeSlug(e.target.value)
+                                            setFieldErrors((prev) => {
+                                              if (!prev.barbeariaNovaUnidadeSlug) return prev
+                                              const { barbeariaNovaUnidadeSlug: _r, ...rest } = prev
+                                              return rest
+                                            })
+                                          }}
+                                          placeholder="ex.: filial-centro"
+                                          disabled={isCreatingUnidade}
+                                          className={cn(
+                                            superProfileInputClass,
+                                            'font-mono text-sm',
+                                            fieldErrors.barbeariaNovaUnidadeSlug
+                                              ? configuracoesInputErrorClass
+                                              : null,
+                                          )}
+                                          aria-invalid={fieldErrors.barbeariaNovaUnidadeSlug ? true : undefined}
+                                          aria-describedby={
+                                            fieldErrors.barbeariaNovaUnidadeSlug
+                                              ? 'novaUnidadeSlug-error'
+                                              : undefined
+                                          }
+                                          autoComplete="off"
+                                        />
+                                        {fieldErrors.barbeariaNovaUnidadeSlug ? (
+                                          <p
+                                            id="novaUnidadeSlug-error"
+                                            className="text-sm text-destructive"
+                                            role="alert"
+                                          >
+                                            {fieldErrors.barbeariaNovaUnidadeSlug}
+                                          </p>
+                                        ) : null}
+                                      </div>
                                     </div>
                                     <Button
                                       type="button"
-                                      variant="secondary"
-                                      className="w-full sm:w-auto"
+                                      className={cn(
+                                        landingPrimaryCtaClass,
+                                        'mt-4 h-11 w-full sm:w-auto sm:min-w-[12rem]',
+                                      )}
                                       onClick={() => void handleCriarUnidade()}
                                       disabled={isCreatingUnidade}
                                     >
@@ -1065,108 +1241,112 @@ export default function AdminConfiguracoesPage() {
                                       Criar unidade
                                     </Button>
                                   </div>
-                                </div>
-                              ) : null}
-                            </div>
+                                ) : null}
+                              </div>
 
-                            <BarbeariaEnderecoFields
-                              idPrefix="cfg-barbearia"
-                              value={formBarbearia.enderecoParts}
-                              onChange={(enderecoParts) =>
-                                setFormBarbearia((prev) => ({ ...prev, enderecoParts }))
-                              }
-                              disabled={isSavingBarbearia}
-                              inputClassName={superProfileInputClass}
-                              labelClassName={cn(superProfileLabelClass, 'flex items-center gap-1.5')}
-                            />
-
-                            <div
-                              className="rounded-lg border border-zinc-200/80 bg-zinc-50/50 p-4 dark:border-white/[0.08] dark:bg-white/[0.03]"
-                              role="group"
-                              aria-labelledby="cfg-horario-funcionamento-label"
-                            >
-                              <p
-                                id="cfg-horario-funcionamento-label"
-                                className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground dark:text-zinc-300"
-                              >
-                                <Clock className="size-4 text-muted-foreground" aria-hidden />
-                                Horário de funcionamento
-                              </p>
-                              <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
-                                Opcional. Referência para equipe e clientes; não substitui os horários individuais da
-                                equipe.
-                              </p>
-                              <div className="grid gap-4 sm:grid-cols-2">
-                                <div className="space-y-2">
-                                  <Label htmlFor="horarioAbertura" className={superProfileLabelClass}>
-                                    Abre às
-                                  </Label>
-                                  <Input
-                                    id="horarioAbertura"
-                                    type="time"
-                                    value={formBarbearia.horario_abertura}
-                                    onChange={(e) => {
-                                      setFormBarbearia((prev) => ({
-                                        ...prev,
-                                        horario_abertura: e.target.value,
-                                      }))
-                                      setFieldErrors((prev) => {
-                                        if (!prev.barbeariaHorario) return prev
-                                        const { barbeariaHorario: _removed, ...rest } = prev
-                                        return rest
-                                      })
-                                    }}
-                                    disabled={isSavingBarbearia}
-                                    aria-invalid={fieldErrors.barbeariaHorario ? true : undefined}
-                                    aria-describedby={
-                                      fieldErrors.barbeariaHorario ? 'cfg-horario-funcionamento-error' : undefined
-                                    }
-                                    className={cn(
-                                      superProfileInputClass,
-                                      fieldErrors.barbeariaHorario ? configuracoesInputErrorClass : null,
-                                    )}
-                                  />
+                              <div className={barbeariaPainelSecaoClass}>
+                                <div className={barbeariaPainelSecaoTituloClass}>
+                                  <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
+                                  Endereço
                                 </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="horarioFechamento" className={superProfileLabelClass}>
-                                    Fecha às
-                                  </Label>
-                                  <Input
-                                    id="horarioFechamento"
-                                    type="time"
-                                    value={formBarbearia.horario_fechamento}
-                                    onChange={(e) => {
-                                      setFormBarbearia((prev) => ({
-                                        ...prev,
-                                        horario_fechamento: e.target.value,
-                                      }))
-                                      setFieldErrors((prev) => {
-                                        if (!prev.barbeariaHorario) return prev
-                                        const { barbeariaHorario: _removed, ...rest } = prev
-                                        return rest
-                                      })
-                                    }}
-                                    disabled={isSavingBarbearia}
-                                    aria-invalid={fieldErrors.barbeariaHorario ? true : undefined}
-                                    aria-describedby={
-                                      fieldErrors.barbeariaHorario ? 'cfg-horario-funcionamento-error' : undefined
+                                <p className={barbeariaPainelSecaoDescClass}>
+                                  Localização desta unidade para referência no painel e cadastros.
+                                </p>
+                                <div className="mt-4">
+                                  <BarbeariaEnderecoFields
+                                    idPrefix="cfg-barbearia"
+                                    value={formBarbearia.enderecoParts}
+                                    onChange={(enderecoParts) =>
+                                      setFormBarbearia((prev) => ({ ...prev, enderecoParts }))
                                     }
-                                    className={cn(
-                                      superProfileInputClass,
-                                      fieldErrors.barbeariaHorario ? configuracoesInputErrorClass : null,
-                                    )}
+                                    disabled={isSavingBarbearia}
+                                    showHeading={false}
+                                    inputClassName={superProfileInputClass}
+                                    labelClassName={cn(superProfileLabelClass, 'flex items-center gap-1.5')}
                                   />
                                 </div>
                               </div>
-                              {fieldErrors.barbeariaHorario ? (
-                                <p
-                                  id="cfg-horario-funcionamento-error"
-                                  className="mt-3 text-sm text-destructive"
-                                  role="alert"
-                                >
-                                  {fieldErrors.barbeariaHorario}
+
+                              <div className={barbeariaPainelSecaoClass} role="group" aria-labelledby="cfg-horario-funcionamento-label">
+                                <p id="cfg-horario-funcionamento-label" className={barbeariaPainelSecaoTituloClass}>
+                                  <Clock className="size-4 shrink-0 text-primary" aria-hidden />
+                                  Horário de funcionamento
                                 </p>
-                              ) : null}
+                                <p className={barbeariaPainelSecaoDescClass}>
+                                  Opcional. Referência geral da unidade; não substitui os horários individuais da equipe.
+                                </p>
+                                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="horarioAbertura" className={superProfileLabelClass}>
+                                      Abre às
+                                    </Label>
+                                    <Input
+                                      id="horarioAbertura"
+                                      type="time"
+                                      value={formBarbearia.horario_abertura}
+                                      onChange={(e) => {
+                                        setFormBarbearia((prev) => ({
+                                          ...prev,
+                                          horario_abertura: e.target.value,
+                                        }))
+                                        setFieldErrors((prev) => {
+                                          if (!prev.barbeariaHorario) return prev
+                                          const { barbeariaHorario: _removed, ...rest } = prev
+                                          return rest
+                                        })
+                                      }}
+                                      disabled={isSavingBarbearia}
+                                      aria-invalid={fieldErrors.barbeariaHorario ? true : undefined}
+                                      aria-describedby={
+                                        fieldErrors.barbeariaHorario ? 'cfg-horario-funcionamento-error' : undefined
+                                      }
+                                      className={cn(
+                                        superProfileInputClass,
+                                        fieldErrors.barbeariaHorario ? configuracoesInputErrorClass : null,
+                                      )}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="horarioFechamento" className={superProfileLabelClass}>
+                                      Fecha às
+                                    </Label>
+                                    <Input
+                                      id="horarioFechamento"
+                                      type="time"
+                                      value={formBarbearia.horario_fechamento}
+                                      onChange={(e) => {
+                                        setFormBarbearia((prev) => ({
+                                          ...prev,
+                                          horario_fechamento: e.target.value,
+                                        }))
+                                        setFieldErrors((prev) => {
+                                          if (!prev.barbeariaHorario) return prev
+                                          const { barbeariaHorario: _removed, ...rest } = prev
+                                          return rest
+                                        })
+                                      }}
+                                      disabled={isSavingBarbearia}
+                                      aria-invalid={fieldErrors.barbeariaHorario ? true : undefined}
+                                      aria-describedby={
+                                        fieldErrors.barbeariaHorario ? 'cfg-horario-funcionamento-error' : undefined
+                                      }
+                                      className={cn(
+                                        superProfileInputClass,
+                                        fieldErrors.barbeariaHorario ? configuracoesInputErrorClass : null,
+                                      )}
+                                    />
+                                  </div>
+                                </div>
+                                {fieldErrors.barbeariaHorario ? (
+                                  <p
+                                    id="cfg-horario-funcionamento-error"
+                                    className="mt-3 text-sm text-destructive"
+                                    role="alert"
+                                  >
+                                    {fieldErrors.barbeariaHorario}
+                                  </p>
+                                ) : null}
+                              </div>
                             </div>
                           </>
                         ) : (
@@ -1281,6 +1461,44 @@ export default function AdminConfiguracoesPage() {
                     </section>
                   </TabsContent>
                 </Tabs>
+
+                <AlertDialog
+                  open={Boolean(unidadeRemoverDialog)}
+                  onOpenChange={(open) => {
+                    if (!open && !isRemovingUnidade) {
+                      setUnidadeRemoverDialog(null)
+                    }
+                  }}
+                >
+                  <AlertDialogContent className="max-w-md">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Remover esta unidade?</AlertDialogTitle>
+                      <AlertDialogDescription className="text-left">
+                        {unidadeRemoverDialog
+                          ? `A unidade “${unidadeRemoverDialog.nome}” (/${unidadeRemoverDialog.slug}) será excluída com todos os dados associados (serviços, equipe, clientes, agendamentos, assinatura, estoque etc.). Esta ação não pode ser desfeita.${
+                              unidadeRemoverDialog.slug === slug
+                                ? ' Você está no painel desta unidade; após remover, você será levado para outra filial da lista.'
+                                : ''
+                            }`
+                          : ''}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel type="button" disabled={isRemovingUnidade}>
+                        Cancelar
+                      </AlertDialogCancel>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        disabled={isRemovingUnidade}
+                        onClick={() => void handleConfirmRemoverUnidade()}
+                      >
+                        {isRemovingUnidade ? <Spinner className="mr-2 h-4 w-4" /> : null}
+                        Sim, remover
+                      </Button>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </>
             )}
           </motion.div>

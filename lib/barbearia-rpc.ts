@@ -77,6 +77,28 @@ export async function rpcCriarUnidadeBarbeariaTenant(
   }
 }
 
+/**
+ * Exclui a barbearia (unidade) e dados relacionados (CASCADE).
+ * Script `041_rpc_remover_unidade_barbearia_tenant.sql`. Admin: exige outra unidade vinculada à conta.
+ */
+export async function rpcRemoverUnidadeBarbeariaTenant(
+  supabase: SupabaseClient,
+  payload: { p_barbearia_id: string },
+): Promise<{ ok: boolean; error: unknown; missingFunction: boolean }> {
+  const { error } = await supabase.rpc('remover_unidade_barbearia_tenant', payload)
+  if (!error) {
+    return { ok: true, error: null, missingFunction: false }
+  }
+  if (isMissingDatabaseFunctionError(error)) {
+    return { ok: false, error, missingFunction: true }
+  }
+  return {
+    ok: false,
+    error: error ?? new Error('RPC remover_unidade_barbearia_tenant falhou'),
+    missingFunction: false,
+  }
+}
+
 export async function rpcGetMyBarbeariaSlug(supabase: SupabaseClient): Promise<string | null> {
   const { data, error } = await supabase.rpc('get_my_barbearia_slug')
   if (error || data == null) return null
