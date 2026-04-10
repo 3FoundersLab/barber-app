@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
@@ -79,6 +80,11 @@ function isBarbeariaHorarioColumnError(err: { message?: string } | null): boolea
   )
 }
 
+const MSGS = {
+  barbeariaUpdateBloqueado:
+    'Não foi possível salvar os dados da barbearia. Confirme que você é o administrador vinculado a ela ou execute no Supabase o script `038_barbearias_update_admin_por_perfil.sql` (política RLS).',
+} as const
+
 const profileAvatarUploadPremiumClass = cn(
   'space-y-3 border-t border-zinc-200/80 pt-5 dark:border-white/[0.06]',
   '[&_.text-muted-foreground]:text-muted-foreground [&_label]:text-foreground dark:[&_label]:text-zinc-300',
@@ -87,6 +93,10 @@ const profileAvatarUploadPremiumClass = cn(
   'dark:[&_button]:border-white/15 dark:[&_button]:bg-white/[0.06] dark:[&_button]:text-zinc-200',
   'dark:[&_button:hover]:border-white/22 dark:[&_button:hover]:bg-white/[0.1]',
 )
+
+/** Borda de validação nos inputs da página (mensagem continua no Alert no topo). */
+const configuracoesInputErrorClass =
+  'border-red-500/90 focus-visible:border-red-500 focus-visible:ring-red-500/25 dark:border-red-500/70'
 
 export default function AdminConfiguracoesPage() {
   const router = useRouter()
@@ -110,12 +120,29 @@ export default function AdminConfiguracoesPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [barbearia, setBarbearia] = useState<Barbearia | null>(null)
   const [assinatura, setAssinatura] = useState<AssinaturaComPlano | null>(null)
+  /** Falha ao ler `assinaturas` (RLS, rede) — distinto de “sem registro no banco”. */
+  const [assinaturaFetchError, setAssinaturaFetchError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSavingBarbearia, setIsSavingBarbearia] = useState(false)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  /** Erros de preenchimento por campo (borda + texto abaixo do input). */
+  const [fieldErrors, setFieldErrors] = useState<{
+    contaNome?: string
+    barbeariaNome?: string
+    barbeariaHorario?: string
+  }>({})
+
+  const clearFieldErrors = useCallback(() => {
+    setFieldErrors({})
+  }, [])
+
+  const dismissError = useCallback(() => {
+    setError(null)
+    clearFieldErrors()
+  }, [clearFieldErrors])
 
   const [nomePerfil, setNomePerfil] = useState('')
   const [telefonePerfil, setTelefonePerfil] = useState('')
@@ -136,6 +163,7 @@ export default function AdminConfiguracoesPage() {
       setError(null)
       setSuccessMessage(null)
       setWarning(null)
+      setAssinaturaFetchError(null)
 
       await supabase.auth.refreshSession()
 
@@ -197,8 +225,21 @@ export default function AdminConfiguracoesPage() {
           horario_fechamento: timeFromDb(b.horario_fechamento),
         })
 
-        const assinaturaData = await fetchLatestAssinaturaWithPlano(supabase, b.id)
+        const { assinatura: assinaturaData, error: assinaturaErr } = await fetchLatestAssinaturaWithPlano(
+          supabase,
+          b.id,
+        )
         setAssinatura(assinaturaData)
+        setAssinaturaFetchError(
+          assinaturaErr
+            ? toUserFriendlyErrorMessage(assinaturaErr, {
+                fallback: 'Não foi possível carregar os dados da assinatura',
+              })
+            : null,
+        )
+      } else {
+        setAssinatura(null)
+        setAssinaturaFetchError(null)
       }
 
       setIsLoading(false)
@@ -210,10 +251,17 @@ export default function AdminConfiguracoesPage() {
   const handleSaveBarbearia = async () => {
     if (!barbearia) return
 
+    setFieldErrors((prev) => {
+      const { barbeariaNome, barbeariaHorario, ...rest } = prev
+      return rest
+    })
+
     const nomeBarbearia = formBarbearia.nome.trim()
     if (!nomeBarbearia) {
       setSuccessMessage(null)
-      setError('Informe o nome da barbearia.')
+      const msg = 'Informe o nome da barbearia.'
+      setError(msg)
+      setFieldErrors((prev) => ({ ...prev, barbeariaNome: msg }))
       scheduleScrollToSaveFeedback()
       return
     }
@@ -222,7 +270,9 @@ export default function AdminConfiguracoesPage() {
     const fecha = formBarbearia.horario_fechamento.trim()
     if (abre && fecha && abre >= fecha) {
       setSuccessMessage(null)
-      setError('O horário de abertura deve ser anterior ao horário de fechamento.')
+      const msg = 'O horário de abertura deve ser anterior ao horário de fechamento.'
+      setError(msg)
+      setFieldErrors((prev) => ({ ...prev, barbeariaHorario: msg }))
       scheduleScrollToSaveFeedback()
       return
     }
@@ -231,6 +281,7 @@ export default function AdminConfiguracoesPage() {
     setError(null)
     setWarning(null)
     setSuccessMessage(null)
+    clearFieldErrors()
     const supabase = createClient()
 
     const basePayload = {
@@ -246,12 +297,13 @@ export default function AdminConfiguracoesPage() {
       horario_fechamento: timeToDb(formBarbearia.horario_fechamento),
     }
 
-    let { data: updatedB, error: updateError } = await supabase
+    const { data: updatedRows, error: updateError } = await supabase
       .from('barbearias')
       .update(withHorarios)
       .eq('id', barbearia.id)
       .select('*')
-      .single()
+
+    let updatedB = updatedRows?.[0] ?? null
 
     if (updateError && isBarbeariaHorarioColumnError(updateError)) {
       const retry = await supabase
@@ -259,26 +311,38 @@ export default function AdminConfiguracoesPage() {
         .update(basePayload)
         .eq('id', barbearia.id)
         .select('*')
-        .single()
-      updatedB = retry.data
-      updateError = retry.error
-      if (!retry.error && retry.data) {
-        setBarbearia(retry.data)
+
+      if (retry.error) {
+        clearFieldErrors()
+        setError(
+          toUserFriendlyErrorMessage(retry.error, { fallback: 'Não foi possível salvar os dados da barbearia.' }),
+        )
+        scheduleScrollToSaveFeedback()
+      } else if (!retry.data?.length) {
+        clearFieldErrors()
+        setError(MSGS.barbeariaUpdateBloqueado)
+        scheduleScrollToSaveFeedback()
+      } else {
+        setBarbearia(retry.data[0])
         setSuccessMessage('Dados da barbearia salvos com sucesso.')
         setWarning(
           'Os horários de abertura/fechamento não foram gravados: o banco ainda não possui as colunas. Execute a migração `036_barbearias_horario_funcionamento.sql` (ou `20260410160000_barbearias_horario_funcionamento.sql`) no Supabase.',
         )
         scheduleScrollToSaveFeedback()
-      } else if (retry.error) {
-        setError(retry.error.message || 'Não foi possível salvar os dados da barbearia.')
-        scheduleScrollToSaveFeedback()
       }
     } else if (updateError) {
+      clearFieldErrors()
       setError(
-        toUserFriendlyErrorMessage(updateError, { fallback: 'Não foi possível salvar os dados da barbearia.' }),
+        (updateError as { code?: string }).code === 'PGRST116'
+          ? MSGS.barbeariaUpdateBloqueado
+          : toUserFriendlyErrorMessage(updateError, { fallback: 'Não foi possível salvar os dados da barbearia.' }),
       )
       scheduleScrollToSaveFeedback()
-    } else if (updatedB) {
+    } else if (!updatedB) {
+      clearFieldErrors()
+      setError(MSGS.barbeariaUpdateBloqueado)
+      scheduleScrollToSaveFeedback()
+    } else {
       setBarbearia(updatedB)
       setSuccessMessage('Dados da barbearia salvos com sucesso.')
       scheduleScrollToSaveFeedback()
@@ -289,10 +353,18 @@ export default function AdminConfiguracoesPage() {
 
   const handleSaveProfile = async () => {
     if (!profile) return
+
+    setFieldErrors((prev) => {
+      const { contaNome, ...rest } = prev
+      return rest
+    })
+
     const trimmedNome = nomePerfil.trim()
     if (!trimmedNome) {
       setSuccessMessage(null)
-      setError('Informe seu nome')
+      const msg = 'Informe seu nome.'
+      setError(msg)
+      setFieldErrors((prev) => ({ ...prev, contaNome: msg }))
       scheduleScrollToSaveFeedback()
       return
     }
@@ -301,6 +373,7 @@ export default function AdminConfiguracoesPage() {
     setError(null)
     setWarning(null)
     setSuccessMessage(null)
+    clearFieldErrors()
     const supabase = createClient()
 
     const { data: updated, error: updateError } = await supabase
@@ -315,6 +388,7 @@ export default function AdminConfiguracoesPage() {
       .single()
 
     if (updateError || !updated) {
+      clearFieldErrors()
       setError(
         updateError
           ? toUserFriendlyErrorMessage(updateError, { fallback: 'Não foi possível salvar os dados da conta.' })
@@ -411,7 +485,7 @@ export default function AdminConfiguracoesPage() {
                   {error ? (
                     <Alert
                       variant="danger"
-                      onClose={() => setError(null)}
+                      onClose={dismissError}
                       autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
                       className={superProfileDangerAlertClass}
                     >
@@ -535,17 +609,35 @@ export default function AdminConfiguracoesPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="nomePerfil" className={superProfileLabelClass}>
+                          <Label htmlFor="nomePerfil" className={superProfileLabelClass} required>
                             Nome
                           </Label>
                           <Input
                             id="nomePerfil"
                             value={nomePerfil}
-                            onChange={(e) => setNomePerfil(e.target.value)}
+                            onChange={(e) => {
+                              setNomePerfil(e.target.value)
+                              setFieldErrors((prev) => {
+                                if (!prev.contaNome) return prev
+                                const { contaNome: _removed, ...rest } = prev
+                                return rest
+                              })
+                            }}
                             placeholder="Nome de exibição"
                             autoComplete="name"
-                            className={superProfileInputClass}
+                            aria-invalid={fieldErrors.contaNome ? true : undefined}
+                            aria-describedby={fieldErrors.contaNome ? 'nomePerfil-error' : undefined}
+                            aria-required="true"
+                            className={cn(
+                              superProfileInputClass,
+                              fieldErrors.contaNome ? configuracoesInputErrorClass : null,
+                            )}
                           />
+                          {fieldErrors.contaNome ? (
+                            <p id="nomePerfil-error" className="text-sm text-destructive" role="alert">
+                              {fieldErrors.contaNome}
+                            </p>
+                          ) : null}
                         </div>
 
                         <div className="space-y-2">
@@ -640,11 +732,28 @@ export default function AdminConfiguracoesPage() {
                               <Input
                                 id="nomeBarbearia"
                                 value={formBarbearia.nome}
-                                onChange={(e) => setFormBarbearia({ ...formBarbearia, nome: e.target.value })}
+                                onChange={(e) => {
+                                  setFormBarbearia({ ...formBarbearia, nome: e.target.value })
+                                  setFieldErrors((prev) => {
+                                    if (!prev.barbeariaNome) return prev
+                                    const { barbeariaNome: _removed, ...rest } = prev
+                                    return rest
+                                  })
+                                }}
                                 placeholder="Nome da barbearia"
                                 aria-required="true"
-                                className={superProfileInputClass}
+                                aria-invalid={fieldErrors.barbeariaNome ? true : undefined}
+                                aria-describedby={fieldErrors.barbeariaNome ? 'nomeBarbearia-error' : undefined}
+                                className={cn(
+                                  superProfileInputClass,
+                                  fieldErrors.barbeariaNome ? configuracoesInputErrorClass : null,
+                                )}
                               />
+                              {fieldErrors.barbeariaNome ? (
+                                <p id="nomeBarbearia-error" className="text-sm text-destructive" role="alert">
+                                  {fieldErrors.barbeariaNome}
+                                </p>
+                              ) : null}
                             </div>
 
                             <div className="space-y-2">
@@ -732,14 +841,26 @@ export default function AdminConfiguracoesPage() {
                                     id="horarioAbertura"
                                     type="time"
                                     value={formBarbearia.horario_abertura}
-                                    onChange={(e) =>
+                                    onChange={(e) => {
                                       setFormBarbearia((prev) => ({
                                         ...prev,
                                         horario_abertura: e.target.value,
                                       }))
-                                    }
+                                      setFieldErrors((prev) => {
+                                        if (!prev.barbeariaHorario) return prev
+                                        const { barbeariaHorario: _removed, ...rest } = prev
+                                        return rest
+                                      })
+                                    }}
                                     disabled={isSavingBarbearia}
-                                    className={superProfileInputClass}
+                                    aria-invalid={fieldErrors.barbeariaHorario ? true : undefined}
+                                    aria-describedby={
+                                      fieldErrors.barbeariaHorario ? 'cfg-horario-funcionamento-error' : undefined
+                                    }
+                                    className={cn(
+                                      superProfileInputClass,
+                                      fieldErrors.barbeariaHorario ? configuracoesInputErrorClass : null,
+                                    )}
                                   />
                                 </div>
                                 <div className="space-y-2">
@@ -750,17 +871,38 @@ export default function AdminConfiguracoesPage() {
                                     id="horarioFechamento"
                                     type="time"
                                     value={formBarbearia.horario_fechamento}
-                                    onChange={(e) =>
+                                    onChange={(e) => {
                                       setFormBarbearia((prev) => ({
                                         ...prev,
                                         horario_fechamento: e.target.value,
                                       }))
-                                    }
+                                      setFieldErrors((prev) => {
+                                        if (!prev.barbeariaHorario) return prev
+                                        const { barbeariaHorario: _removed, ...rest } = prev
+                                        return rest
+                                      })
+                                    }}
                                     disabled={isSavingBarbearia}
-                                    className={superProfileInputClass}
+                                    aria-invalid={fieldErrors.barbeariaHorario ? true : undefined}
+                                    aria-describedby={
+                                      fieldErrors.barbeariaHorario ? 'cfg-horario-funcionamento-error' : undefined
+                                    }
+                                    className={cn(
+                                      superProfileInputClass,
+                                      fieldErrors.barbeariaHorario ? configuracoesInputErrorClass : null,
+                                    )}
                                   />
                                 </div>
                               </div>
+                              {fieldErrors.barbeariaHorario ? (
+                                <p
+                                  id="cfg-horario-funcionamento-error"
+                                  className="mt-3 text-sm text-destructive"
+                                  role="alert"
+                                >
+                                  {fieldErrors.barbeariaHorario}
+                                </p>
+                              ) : null}
                             </div>
                           </>
                         ) : (
@@ -794,7 +936,48 @@ export default function AdminConfiguracoesPage() {
                   </TabsContent>
 
                   <TabsContent value="assinatura" className="mt-0 space-y-6 outline-none">
-                    {assinatura ? <TenantAssinaturaSummary assinatura={assinatura} variant="premium" /> : null}
+                    {assinaturaFetchError ? (
+                      <Alert variant="danger" className="text-left">
+                        <AlertTitle>Não foi possível carregar a assinatura</AlertTitle>
+                        <AlertDescription>{assinaturaFetchError}</AlertDescription>
+                      </Alert>
+                    ) : null}
+
+                    {assinatura ? (
+                      <TenantAssinaturaSummary assinatura={assinatura} variant="premium" />
+                    ) : !assinaturaFetchError && barbearia ? (
+                      <section className={cn(superProfileGlassCardClass, 'overflow-hidden')}>
+                        <header className="border-b border-zinc-200/80 px-5 py-4 dark:border-white/[0.06] md:px-6">
+                          <div className="flex items-center gap-2 text-foreground">
+                            <CreditCard className="size-4 text-primary opacity-90" aria-hidden />
+                            <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                              Plano contratado
+                            </h2>
+                          </div>
+                          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                            Ainda não há registro de assinatura vinculado a esta barbearia no sistema.
+                          </p>
+                        </header>
+                        <div className="space-y-3 p-5 text-sm leading-relaxed text-muted-foreground md:p-6">
+                          <p>
+                            Quem gerencia a plataforma cadastra o plano e confirma o pagamento na área{' '}
+                            <span className="font-medium text-foreground">Assinaturas</span>. Depois disso, o nome do
+                            plano, início, validade e valores aparecem aqui automaticamente.
+                          </p>
+                          <p className="text-xs">
+                            Ambiente de demonstração: se você usa o seed da Barbearia Modelo sem passar pelo fluxo de
+                            cobrança, execute o script{' '}
+                            <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
+                              scripts/038_demo_barbearia_modelo_assinatura.sql
+                            </code>{' '}
+                            no SQL Editor para criar um plano e uma assinatura de exemplo.
+                          </p>
+                          <Button variant="outline" size="sm" className="w-full sm:w-auto" asChild>
+                            <Link href={`${base}/assinatura`}>Abrir página Assinatura</Link>
+                          </Button>
+                        </div>
+                      </section>
+                    ) : null}
 
                     <section className={cn(superProfileGlassCardClass, 'px-5 py-4 md:px-6')}>
                       <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">

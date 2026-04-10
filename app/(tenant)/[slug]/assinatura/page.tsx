@@ -61,8 +61,20 @@ export default function TenantAssinaturaPage() {
       }
 
       setBarbearia(b)
-      const assinaturaData = await fetchLatestAssinaturaWithPlano(supabase, b.id)
-      setAssinatura(assinaturaData)
+      const { assinatura: assinaturaData, error: assinaturaErr } = await fetchLatestAssinaturaWithPlano(
+        supabase,
+        b.id,
+      )
+      if (assinaturaErr) {
+        setError(
+          toUserFriendlyErrorMessage(assinaturaErr, {
+            fallback: 'Não foi possível carregar os dados da assinatura',
+          }),
+        )
+        setAssinatura(null)
+      } else {
+        setAssinatura(assinaturaData)
+      }
       setIsLoading(false)
     }
 

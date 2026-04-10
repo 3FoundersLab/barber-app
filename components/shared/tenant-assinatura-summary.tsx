@@ -2,7 +2,7 @@ import { Check, CreditCard } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { labelAssinaturaStatus } from '@/lib/assinatura-labels'
-import { formatCurrency } from '@/lib/constants'
+import { formatCurrency, formatDate } from '@/lib/constants'
 import { linhasBeneficiosPlano } from '@/lib/plano-beneficios'
 import {
   labelPeriodicidade,
@@ -27,14 +27,36 @@ export function TenantAssinaturaSummary({
   title = 'Plano contratado',
   variant = 'default',
 }: TenantAssinaturaSummaryProps) {
+  const vigenciaBoxClass = cn(
+    'mt-3 grid gap-3 rounded-lg border px-3 py-3 sm:grid-cols-2',
+    variant === 'premium'
+      ? 'border-zinc-200/80 bg-white/45 dark:border-white/[0.08] dark:bg-white/[0.04]'
+      : 'border-border/60 bg-muted/25',
+  )
+
   const body = (
     <div className="space-y-2 text-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-medium">{assinatura.plano?.nome ?? 'Plano'}</span>
+        <span className="text-base font-semibold text-foreground">{assinatura.plano?.nome ?? 'Plano'}</span>
         <Badge variant={assinatura.status === 'ativa' ? 'default' : 'secondary'}>
           {labelAssinaturaStatus(assinatura.status)}
         </Badge>
       </div>
+
+      <dl className={vigenciaBoxClass}>
+        <div className="min-w-0">
+          <dt className="text-xs font-medium text-muted-foreground">Início da vigência</dt>
+          <dd className="mt-0.5 tabular-nums text-sm font-medium text-foreground">
+            {formatDate(assinatura.inicio_em)}
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-xs font-medium text-muted-foreground">Validade (fim do período)</dt>
+          <dd className="mt-0.5 tabular-nums text-sm font-medium text-foreground">
+            {assinatura.fim_em ? formatDate(assinatura.fim_em) : '—'}
+          </dd>
+        </div>
+      </dl>
       {assinatura.plano != null &&
         (() => {
           const per = parsePlanoPeriodicidade(assinatura.periodicidade)
@@ -71,6 +93,10 @@ export function TenantAssinaturaSummary({
             </>
           )
         })()}
+      <p className="pt-1 text-xs text-muted-foreground">
+        Última atualização no sistema: {formatDate(assinatura.updated_at)}.
+        {!assinatura.fim_em ? ' A data de término do período ainda não consta no cadastro.' : null}
+      </p>
     </div>
   )
 
@@ -83,7 +109,7 @@ export function TenantAssinaturaSummary({
             <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</h2>
           </div>
           <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-            Plano vinculado à assinatura da sua barbearia na plataforma.
+            Plano, vigência (início e validade), valores e benefícios do contrato com a plataforma.
           </p>
         </header>
         <div className="p-5 md:p-6">{body}</div>

@@ -1,13 +1,18 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js'
 import type { Assinatura, Plano } from '@/types'
 
 export type AssinaturaComPlano = Assinatura & { plano?: Plano | null }
 
+export type FetchLatestAssinaturaWithPlanoResult = {
+  assinatura: AssinaturaComPlano | null
+  error: PostgrestError | null
+}
+
 export async function fetchLatestAssinaturaWithPlano(
   supabase: SupabaseClient,
   barbeariaId: string,
-): Promise<AssinaturaComPlano | null> {
-  const { data } = await supabase
+): Promise<FetchLatestAssinaturaWithPlanoResult> {
+  const { data, error } = await supabase
     .from('assinaturas')
     .select('*, plano:planos(*)')
     .eq('barbearia_id', barbeariaId)
@@ -15,5 +20,9 @@ export async function fetchLatestAssinaturaWithPlano(
     .limit(1)
     .maybeSingle()
 
-  return data as AssinaturaComPlano | null
+  if (error) {
+    return { assinatura: null, error }
+  }
+
+  return { assinatura: data as AssinaturaComPlano | null, error: null }
 }
