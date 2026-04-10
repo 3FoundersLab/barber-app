@@ -93,6 +93,8 @@ interface AppointmentCardProps {
   showActions?: boolean
   /** Painel lateral / sheet: menos sombra e contraste com o fundo do painel. */
   inSheet?: boolean
+  /** Modo grade em lista: um pouco mais de espaço acima do bloco de serviço. */
+  listLayout?: boolean
   className?: string
 }
 
@@ -110,6 +112,7 @@ export function AppointmentCard({
   isNext = false,
   showActions = true,
   inSheet = false,
+  listLayout = false,
   className,
 }: AppointmentCardProps) {
   const [cancelOpen, setCancelOpen] = useState(false)
@@ -213,7 +216,7 @@ export function AppointmentCard({
         className={cn(
           '@container/appt-card flex h-full flex-col gap-0 overflow-hidden rounded-2xl border border-border/80 py-0 shadow-none',
           !inSheet &&
-            'shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-[0_8px_28px_rgba(0,0,0,0.12)]',
+            'shadow-[0_4px_20px_rgba(0,0,0,0.08)] motion-safe:transition-[transform,box-shadow] motion-safe:duration-500 motion-safe:ease-out motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-[0_6px_24px_rgba(0,0,0,0.095)]',
           inSheet && 'shadow-none',
           inSheet &&
             !isCancelado &&
@@ -322,7 +325,8 @@ export function AppointmentCard({
           {/* Body */}
           <div
             className={cn(
-              'mb-4 flex flex-1 flex-col gap-3 px-5 pt-1',
+              'mb-4 flex flex-1 flex-col gap-3 px-5',
+              listLayout ? 'pt-2.5' : 'pt-1',
               inSheet && 'px-4 sm:px-5',
             )}
           >

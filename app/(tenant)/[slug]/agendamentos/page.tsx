@@ -833,6 +833,7 @@ export default function AdminAgendamentosPage() {
                             <AppointmentCard
                               key={agendamento.id}
                               appointment={agendamento}
+                              listLayout
                               comandaNumero={comandaMapEfetivo[agendamento.id]}
                               isNext={agendamento.id === nextAppointmentId}
                               onCardClick={(id) => {
