@@ -1,9 +1,18 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { Calendar, CalendarOff, ChevronLeft, ChevronRight, Pencil, Plus } from 'lucide-react'
+import {
+  Calendar,
+  CalendarOff,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Plus,
+  User,
+  Users,
+} from 'lucide-react'
 import { PageContent } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { AppointmentAdminFormDialog } from '@/components/domain/appointment-admin-form-dialog'
@@ -88,6 +97,7 @@ export default function AdminAgendamentosPage() {
     Record<string, number>
   >({})
   const [listQuickFocus, setListQuickFocus] = useState<ListQuickFocus>('todos')
+  const loadAgendamentosRequestId = useRef(0)
 
   useEffect(() => {
     setFabPortalHost(document.body)
@@ -179,6 +189,7 @@ export default function AdminAgendamentosPage() {
     }
 
     const refDate = dateOverride ?? selectedDate
+    const requestId = ++loadAgendamentosRequestId.current
 
     setIsLoading(true)
     setError(null)
@@ -206,6 +217,10 @@ export default function AdminAgendamentosPage() {
     
     const { data, error: queryError } = await query
 
+    if (requestId !== loadAgendamentosRequestId.current) {
+      return
+    }
+
     if (queryError) {
       setError('Não foi possível carregar os agendamentos')
       setAgendamentos([])
@@ -221,6 +236,9 @@ export default function AdminAgendamentosPage() {
           .select('agendamento_id, numero')
           .eq('barbearia_id', barbeariaId)
           .in('agendamento_id', ids)
+        if (requestId !== loadAgendamentosRequestId.current) {
+          return
+        }
         const map: Record<string, number> = {}
         for (const c of comandasRows ?? []) {
           if (c.agendamento_id != null && c.numero != null) {
@@ -230,7 +248,9 @@ export default function AdminAgendamentosPage() {
         setComandaNumeroPorAgendamento(map)
       }
     }
-    setIsLoading(false)
+    if (requestId === loadAgendamentosRequestId.current) {
+      setIsLoading(false)
+    }
   }
 
   const handlePrevDay = () => {
@@ -367,7 +387,12 @@ export default function AdminAgendamentosPage() {
     [useDemoData, barbeiros],
   )
 
-  const displayAgendamentos = useDemoData ? demoAgendamentos : agendamentos
+  const displayAgendamentosRaw = useDemoData ? demoAgendamentos : agendamentos
+
+  const displayAgendamentos = useMemo(() => {
+    if (selectedBarbeiro === 'all') return displayAgendamentosRaw
+    return displayAgendamentosRaw.filter((a) => a.barbeiro_id === selectedBarbeiro)
+  }, [displayAgendamentosRaw, selectedBarbeiro])
 
   const comandaMapEfetivo = useDemoData ? demoComandaNumeroPorAgendamento : comandaNumeroPorAgendamento
 
@@ -466,6 +491,19 @@ export default function AdminAgendamentosPage() {
         title="Agendamentos"
         profileHref={`${base}/configuracoes`}
         avatarFallback="A"
+        headingActions={
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-1.5">
+            <Switch
+              id="agenda-demo-data"
+              checked={useDemoData}
+              onCheckedChange={setUseDemoData}
+              aria-label="Usar dados fictícios de demonstração"
+            />
+            <Label htmlFor="agenda-demo-data" className="cursor-pointer text-xs font-medium">
+              Dados fictícios
+            </Label>
+          </div>
+        }
       />
 
       <PageContent className="space-y-4">
@@ -473,7 +511,7 @@ export default function AdminAgendamentosPage() {
           <Alert variant="info">
             <AlertTitle>
               Modo demonstração: agenda com dados fictícios (Gabriel, Fernando, Pedro, Lucas).
-              Desative o interruptor abaixo para ver os agendamentos reais da barbearia.
+              Desative o interruptor ao lado do título para ver os agendamentos reais da barbearia.
             </AlertTitle>
           </Alert>
         )}
@@ -550,34 +588,36 @@ export default function AdminAgendamentosPage() {
           })}
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3 gap-y-2">
-          <Select value={selectedBarbeiro} onValueChange={setSelectedBarbeiro}>
-            <SelectTrigger className="min-w-[160px] flex-1 sm:max-w-xs">
-              <SelectValue placeholder="Barbeiro" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os barbeiros</SelectItem>
-              {displayBarbeiros.map((barbeiro) => (
-                <SelectItem key={barbeiro.id} value={barbeiro.id}>
-                  {barbeiro.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex flex-1 flex-wrap items-center justify-end gap-3 sm:flex-none">
-            <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-1.5">
-              <Switch
-                id="agenda-demo-data"
-                checked={useDemoData}
-                onCheckedChange={setUseDemoData}
-                aria-label="Usar dados fictícios de demonstração"
-              />
-              <Label htmlFor="agenda-demo-data" className="cursor-pointer text-xs font-medium">
-                Dados fictícios
-              </Label>
+        {/* Filtros: linha (hr) acima; fundo branco; divisor vertical interno */}
+        <div className="flex flex-col gap-2">
+          <Separator />
+          <div className="flex w-full min-w-0 items-center gap-0 rounded-lg border border-border bg-white p-1 shadow-sm dark:bg-card">
+            <div className="min-w-0 flex-1 px-2">
+              <Select value={selectedBarbeiro} onValueChange={setSelectedBarbeiro}>
+                <SelectTrigger className="h-9 w-full min-w-0 justify-between border-0 bg-transparent shadow-none focus-visible:ring-2 focus-visible:ring-ring/50">
+                  <span className="flex min-w-0 flex-1 items-center gap-2">
+                    {selectedBarbeiro === 'all' ? (
+                      <Users className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    ) : (
+                      <User className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    )}
+                    <SelectValue placeholder="Barbeiro" />
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os barbeiros</SelectItem>
+                  {displayBarbeiros.map((barbeiro) => (
+                    <SelectItem key={barbeiro.id} value={barbeiro.id}>
+                      {barbeiro.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <ViewToggle value={viewMode} onChange={setViewMode} />
+            <Separator orientation="vertical" className="h-9 shrink-0" />
+            <div className="shrink-0 px-1">
+              <ViewToggle value={viewMode} onChange={setViewMode} className="w-fit shrink-0" />
+            </div>
           </div>
         </div>
 
