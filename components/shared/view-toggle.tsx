@@ -32,13 +32,13 @@ export function ViewToggle({ value, onChange, className }: ViewToggleProps) {
       </ToggleGroupItem>
       <ToggleGroupItem
         value="grade"
-        aria-label="Calendário por profissional — grade do dia"
-        title="Calendário (grade)"
+        aria-label="Grade do dia — coluna por profissional"
+        title="Grade"
         className="gap-1.5 px-2 sm:px-3"
       >
         <LayoutGrid className="h-4 w-4 shrink-0" />
-        <span className="hidden max-w-[9rem] truncate text-xs font-medium sm:inline">
-          Calendário
+        <span className="hidden whitespace-nowrap text-xs font-medium sm:inline">
+          Grade
         </span>
       </ToggleGroupItem>
       <ToggleGroupItem

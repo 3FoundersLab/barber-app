@@ -485,7 +485,7 @@ export default function AdminAgendamentosPage() {
             </p>
             <p className="text-xs text-muted-foreground sm:text-sm">
               {viewMode === 'grade'
-                ? 'Calendário por profissional · intervalos de 10 minutos'
+                ? 'Grade por profissional · intervalos de 10 minutos'
                 : viewMode === 'calendar'
                   ? 'Calendário mensal — arraste para mover o dia do agendamento'
                   : 'Lista do dia selecionado'}

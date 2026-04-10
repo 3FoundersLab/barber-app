@@ -94,7 +94,7 @@ export function ClienteCard({
           showMenu && 'max-md:pr-12',
           'md:max-lg:items-center md:max-lg:gap-3 md:max-lg:p-4 md:max-lg:px-4 md:max-lg:pb-5 md:max-lg:text-center',
           showMenu ? 'md:max-lg:pt-12' : 'md:max-lg:pt-4',
-          'lg:h-full lg:min-h-0 lg:items-center lg:gap-2 lg:p-4 lg:text-center',
+          'lg:h-full lg:min-h-0 lg:items-center lg:justify-center lg:gap-2 lg:p-4 lg:text-center',
           showMenu ? 'lg:pt-10 xl:pt-10' : 'lg:pt-4 xl:pt-4',
           'xl:gap-2 xl:p-4',
         )}
@@ -117,7 +117,7 @@ export function ClienteCard({
             'flex min-h-0 w-full min-w-0 flex-col gap-2',
             'max-md:flex-1 max-md:justify-center max-md:gap-1.5',
             'md:max-lg:items-center md:max-lg:gap-2.5',
-            'lg:min-h-0 lg:flex-1 lg:justify-between lg:gap-1',
+            'lg:min-h-0 lg:shrink-0 lg:justify-start lg:gap-2',
           )}
         >
           <span
@@ -135,7 +135,7 @@ export function ClienteCard({
           <div
             className={cn(
               'w-full min-w-0 space-y-0.5 text-[10px] text-muted-foreground sm:text-xs',
-              'lg:mt-auto lg:pt-0.5',
+              'lg:pt-0.5',
             )}
           >
             {cliente.telefone ? (

@@ -122,7 +122,7 @@ export function TeamMemberCard({ barbeiro, onEdit, onDelete, className }: TeamMe
             'flex min-h-0 w-full min-w-0 flex-col gap-2',
             'max-md:flex-1 max-md:justify-center max-md:gap-1.5',
             'md:max-lg:items-center md:max-lg:gap-2.5',
-            'lg:min-h-0 lg:flex-1 lg:justify-between lg:gap-1',
+            'lg:min-h-0 lg:flex-1 lg:justify-start lg:gap-2',
           )}
         >
           <div
@@ -176,7 +176,7 @@ export function TeamMemberCard({ barbeiro, onEdit, onDelete, className }: TeamMe
             className={cn(
               'flex w-full min-w-0 shrink-0 flex-col space-y-0.5 text-[10px] text-muted-foreground sm:text-xs',
               'max-md:pt-0',
-              'lg:mt-auto lg:pt-0.5',
+              'lg:pt-0.5',
             )}
           >
             {barbeiro.telefone ? (
