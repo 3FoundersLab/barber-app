@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/select'
 import {
   ESTOQUE_CATEGORIAS_ORDEM,
+  ESTOQUE_CATEGORIAS_ORDEM_ALFABETICA,
   estoqueIconeCategoria,
 } from '@/lib/estoque-categoria-icons'
 import { ESTOQUE_PRODUTOS_MOCK } from '@/lib/estoque-produto-mock'
@@ -45,6 +46,22 @@ import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import type { EstoqueProduto, EstoqueStatusFiltro } from '@/types/estoque-produto'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
+
+function parseDecimalMoeda(raw: string): number | null {
+  const t = raw.trim()
+  if (t === '') return null
+  const n = Number(t.replace(',', '.'))
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null
+}
+
+/** Quantidade inteira ≥ 0; string vazia ou inválida → null. */
+function parseQuantidadeObrigatoria(raw: string): number | null {
+  const t = raw.trim()
+  if (t === '') return null
+  const n = Number(t)
+  if (!Number.isFinite(n) || n < 0) return null
+  return Math.max(0, Math.floor(n))
+}
 
 export default function TenantEstoquePage() {
   const { slug, base } = useTenantAdminBase()
@@ -157,22 +174,18 @@ export default function TenantEstoquePage() {
     setDialogOpen(true)
   }
 
-  const parseDecimal = (raw: string) => {
-    const t = raw.trim()
-    if (t === '') return null
-    const n = Number(t.replace(',', '.'))
-    return Number.isFinite(n) ? Math.round(n * 100) / 100 : null
-  }
-
   const salvarProduto = async () => {
     const nome = formNome.trim()
     if (!nome || !formCategoria || !barbeariaId) return
 
-    const q = Math.max(0, Math.floor(Number(formQuantidade) || 0))
+    const q = parseQuantidadeObrigatoria(formQuantidade)
+    if (q === null) return
+
     const m = Math.max(0, Math.floor(Number(formMinimo) || 0))
-    const custoParsed = parseDecimal(formPrecoCusto)
-    const vendaParsed = parseDecimal(formPrecoVenda)
-    const precoVenda = vendaParsed != null && vendaParsed >= 0 ? vendaParsed : 0
+    const custoParsed = parseDecimalMoeda(formPrecoCusto)
+    const vendaParsed = parseDecimalMoeda(formPrecoVenda)
+    if (vendaParsed === null || vendaParsed < 0) return
+    const precoVenda = vendaParsed
     let precoCusto: number | null = null
     if (formPrecoCusto.trim() !== '') {
       if (custoParsed != null) precoCusto = custoParsed
@@ -244,6 +257,13 @@ export default function TenantEstoquePage() {
     if (upE) setError(upE.message)
     else await loadProdutos()
   }
+
+  const formEstoquePodeSalvar = useMemo(() => {
+    if (!formNome.trim() || !formCategoria) return false
+    if (parseQuantidadeObrigatoria(formQuantidade) === null) return false
+    const v = parseDecimalMoeda(formPrecoVenda)
+    return v !== null && v >= 0
+  }, [formNome, formCategoria, formQuantidade, formPrecoVenda])
 
   const filtradosOrdenados = useMemo(() => {
     const q = busca.trim().toLowerCase()
@@ -319,7 +339,7 @@ export default function TenantEstoquePage() {
                     Todas
                   </span>
                 </SelectItem>
-                {ESTOQUE_CATEGORIAS_ORDEM.map((cat) => {
+                {ESTOQUE_CATEGORIAS_ORDEM_ALFABETICA.map((cat) => {
                   const Icon = estoqueIconeCategoria(cat)
                   return (
                     <SelectItem key={cat} value={cat}>
@@ -418,22 +438,28 @@ export default function TenantEstoquePage() {
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="estoque-nome">Nome</Label>
+              <Label htmlFor="estoque-nome">
+                Nome <span className="text-destructive" aria-hidden>*</span>
+              </Label>
               <Input
                 id="estoque-nome"
                 value={formNome}
                 onChange={(e) => setFormNome(e.target.value)}
                 placeholder="Nome do produto"
+                required
+                aria-required
               />
             </div>
             <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select value={formCategoria} onValueChange={setFormCategoria}>
-                <SelectTrigger className="w-full">
+              <Label>
+                Categoria <span className="text-destructive" aria-hidden>*</span>
+              </Label>
+              <Select value={formCategoria} onValueChange={setFormCategoria} required>
+                <SelectTrigger className="w-full" aria-required>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ESTOQUE_CATEGORIAS_ORDEM.map((cat) => {
+                  {ESTOQUE_CATEGORIAS_ORDEM_ALFABETICA.map((cat) => {
                     const Icon = estoqueIconeCategoria(cat)
                     return (
                       <SelectItem key={cat} value={cat}>
@@ -449,7 +475,9 @@ export default function TenantEstoquePage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="estoque-qtd">Quantidade atual</Label>
+                <Label htmlFor="estoque-qtd">
+                  Quantidade atual <span className="text-destructive" aria-hidden>*</span>
+                </Label>
                 <Input
                   id="estoque-qtd"
                   type="number"
@@ -457,6 +485,8 @@ export default function TenantEstoquePage() {
                   inputMode="numeric"
                   value={formQuantidade}
                   onChange={(e) => setFormQuantidade(e.target.value)}
+                  required
+                  aria-required
                 />
               </div>
               <div className="space-y-2">
@@ -473,7 +503,7 @@ export default function TenantEstoquePage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="estoque-custo">Preço de custo (R$, opcional)</Label>
+                <Label htmlFor="estoque-custo">Preço de custo (R$)</Label>
                 <Input
                   id="estoque-custo"
                   type="text"
@@ -484,7 +514,9 @@ export default function TenantEstoquePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="estoque-venda">Preço de venda (R$)</Label>
+                <Label htmlFor="estoque-venda">
+                  Preço de venda (R$) <span className="text-destructive" aria-hidden>*</span>
+                </Label>
                 <Input
                   id="estoque-venda"
                   type="text"
@@ -492,6 +524,8 @@ export default function TenantEstoquePage() {
                   placeholder="Ex: 39,90"
                   value={formPrecoVenda}
                   onChange={(e) => setFormPrecoVenda(e.target.value)}
+                  required
+                  aria-required
                 />
               </div>
             </div>
@@ -503,7 +537,7 @@ export default function TenantEstoquePage() {
             <Button
               type="button"
               onClick={() => void salvarProduto()}
-              disabled={!formNome.trim() || !formCategoria}
+              disabled={!formEstoquePodeSalvar}
             >
               Salvar
             </Button>
