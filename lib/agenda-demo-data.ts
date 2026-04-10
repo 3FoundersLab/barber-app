@@ -279,7 +279,12 @@ export function getAgendaDemoForDate(data: string): {
     { barbeiroId: BID.lucas, start: '13:00', end: '14:00', label: 'Indisponível' },
   ]
 
-  return { barbeiros: demoBarbeiros, agendamentos, unavailable }
+  const agendamentosComBarbeiro = agendamentos.map((a) => ({
+    ...a,
+    barbeiro: demoBarbeiros.find((b) => b.id === a.barbeiro_id),
+  }))
+
+  return { barbeiros: demoBarbeiros, agendamentos: agendamentosComBarbeiro, unavailable }
 }
 
 /** Profissionais do cenário de demonstração (Gabriel, Fernando, Pedro, Lucas). */

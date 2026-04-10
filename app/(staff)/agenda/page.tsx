@@ -276,6 +276,7 @@ export default function BarbeiroAgendaPage() {
                   data: agendamento.data,
                   horario: agendamento.horario,
                   clienteNome: agendamento.cliente?.nome,
+                  barbeiroNome: barbeiroSelf?.nome,
                   servicoNome: agendamento.servico?.nome,
                 }))}
                 onMoveAppointment={handleMoveAppointment}

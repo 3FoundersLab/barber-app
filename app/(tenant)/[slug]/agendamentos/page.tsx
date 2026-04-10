@@ -400,6 +400,7 @@ export default function AdminAgendamentosPage() {
                   data: agendamento.data,
                   horario: agendamento.horario,
                   clienteNome: agendamento.cliente?.nome,
+                  barbeiroNome: agendamento.barbeiro?.nome,
                   servicoNome: agendamento.servico?.nome,
                 }))}
                 onMoveAppointment={handleMoveAppointment}
