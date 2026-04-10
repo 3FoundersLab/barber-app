@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Check } from 'lucide-react'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
@@ -13,18 +13,23 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { DateNavigatorCalendar } from '@/components/shared/date-navigator-calendar'
 import { Spinner } from '@/components/ui/spinner'
 import { AgendarFlowSkeleton } from '@/components/shared/loading-skeleton'
-import { formatCurrency, DIAS_SEMANA_ABREV } from '@/lib/constants'
+import {
+  buildAgendaSlotStrings,
+  DIAS_SEMANA_ABREV,
+  formatCurrency,
+  HORARIOS_PADRAO,
+  resolveBarbeariaAgendaTimeRange,
+} from '@/lib/constants'
+import {
+  formatDiasFuncionamentoLegenda,
+  isBarbeariaAbertaNoDia,
+  normalizeDiasFuncionamento,
+} from '@/lib/barbearia-dias-funcionamento'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Servico, Barbeiro } from '@/types'
 
 type Step = 'servico' | 'barbeiro' | 'data' | 'horario' | 'confirmar'
-
-const HORARIOS_DISPONIVEIS = [
-  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
-  '17:00', '17:30', '18:00', '18:30'
-]
 
 export default function AgendarPage() {
   const router = useRouter()
@@ -42,6 +47,16 @@ export default function AgendarPage() {
   const [selectedBarbeiro, setSelectedBarbeiro] = useState<Barbeiro | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [selectedHorario, setSelectedHorario] = useState<string | null>(null)
+  const [barbeariaHorarioAbertura, setBarbeariaHorarioAbertura] = useState<string | null>(null)
+  const [barbeariaHorarioFechamento, setBarbeariaHorarioFechamento] = useState<string | null>(null)
+  const [diasFuncionamento, setDiasFuncionamento] = useState<number[]>(() =>
+    normalizeDiasFuncionamento(null),
+  )
+
+  const horariosDisponiveis = useMemo(() => {
+    const range = resolveBarbeariaAgendaTimeRange(barbeariaHorarioAbertura, barbeariaHorarioFechamento)
+    return buildAgendaSlotStrings(range.start, range.end, HORARIOS_PADRAO.intervalo)
+  }, [barbeariaHorarioAbertura, barbeariaHorarioFechamento])
 
   useEffect(() => {
     async function loadData() {
@@ -51,15 +66,19 @@ export default function AgendarPage() {
       // Get first barbearia (for demo)
       const { data: barbearia } = await supabase
         .from('barbearias')
-        .select('id')
+        .select('id, horario_abertura, horario_fechamento, dias_funcionamento')
         .limit(1)
         .single()
-      
+
       if (!barbearia) {
         setError('Barbearia não encontrada')
         setIsLoading(false)
         return
       }
+
+      setBarbeariaHorarioAbertura(barbearia.horario_abertura ?? null)
+      setBarbeariaHorarioFechamento(barbearia.horario_fechamento ?? null)
+      setDiasFuncionamento(normalizeDiasFuncionamento(barbearia.dias_funcionamento))
 
       if (barbearia) {
         // Load services
@@ -328,16 +347,23 @@ export default function AgendarPage() {
         {/* Step: Data */}
         {step === 'data' && (
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="space-y-2 p-4">
               <DateNavigatorCalendar
                 value={selectedDate}
                 onChange={setSelectedDate}
                 disabled={(date) => {
                   const today = new Date()
                   today.setHours(0, 0, 0, 0)
-                  return date < today || date.getDay() === 0
+                  if (date < today) return true
+                  return !isBarbeariaAbertaNoDia(date.getDay(), diasFuncionamento)
                 }}
               />
+              <p className="text-center text-xs text-muted-foreground">
+                Atendimento:{' '}
+                <span className="font-medium text-foreground">
+                  {formatDiasFuncionamentoLegenda(diasFuncionamento)}
+                </span>
+              </p>
             </CardContent>
           </Card>
         )}
@@ -354,14 +380,14 @@ export default function AgendarPage() {
               )}
             </p>
             <div className="grid grid-cols-4 gap-2">
-              {HORARIOS_DISPONIVEIS.map((horario) => (
+              {horariosDisponiveis.map((h) => (
                 <Button
-                  key={horario}
-                  variant={selectedHorario === horario ? 'default' : 'outline'}
+                  key={h}
+                  variant={selectedHorario === h ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setSelectedHorario(horario)}
+                  onClick={() => setSelectedHorario(h)}
                 >
-                  {horario}
+                  {h}
                 </Button>
               ))}
             </div>

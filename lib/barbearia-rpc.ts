@@ -27,6 +27,8 @@ export type UpdateBarbeariaDadosTenantPayload = {
   /** `HH:MM:SS` ou null (Postgres TIME) */
   p_horario_abertura: string | null
   p_horario_fechamento: string | null
+  /** 0=dom … 6=sáb; pelo menos um dia */
+  p_dias_funcionamento: number[]
 }
 
 /**

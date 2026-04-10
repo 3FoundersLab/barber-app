@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Check, ChevronsUpDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { buildAgendaSlotStrings, HORARIOS_PADRAO } from '@/lib/constants'
+import {
+  buildAgendaSlotStrings,
+  HORARIOS_PADRAO,
+  resolveBarbeariaAgendaTimeRange,
+} from '@/lib/constants'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import { cn } from '@/lib/utils'
 import { Alert, AlertTitle } from '@/components/ui/alert'
@@ -38,11 +42,11 @@ function formatYMD(date: Date): string {
   return `${y}-${m}-${d}`
 }
 
-function normalizeHorarioLabel(h: string): string {
-  if (!h) return HORARIOS_PADRAO.sugestaoNovoHorario
+function normalizeHorarioLabel(h: string, fallback: string): string {
+  if (!h) return fallback
   const s = h.includes('T') ? (h.split('T')[1] ?? h) : h
   const match = /^(\d{1,2}):(\d{2})/.exec(s)
-  if (!match) return HORARIOS_PADRAO.sugestaoNovoHorario
+  if (!match) return fallback
   return `${match[1]!.padStart(2, '0')}:${match[2]}`
 }
 
@@ -61,6 +65,8 @@ export interface AppointmentAdminFormDialogProps {
   onError: (message: string) => void
   /** Com dados fictícios ativos, o envio fica bloqueado (evita gravar no banco com a demo na tela). */
   demoDataActive?: boolean
+  /** Abertura/fechamento da barbearia (grade e lista de horários do formulário). */
+  agendaTimeRange?: { start: string; end: string }
 }
 
 export function AppointmentAdminFormDialog({
@@ -74,8 +80,14 @@ export function AppointmentAdminFormDialog({
   onSaved,
   onError,
   demoDataActive = false,
+  agendaTimeRange: agendaTimeRangeProp,
 }: AppointmentAdminFormDialogProps) {
   const { base } = useTenantAdminBase()
+  const agendaTimeRange = useMemo(
+    () => agendaTimeRangeProp ?? resolveBarbeariaAgendaTimeRange(null, null),
+    [agendaTimeRangeProp],
+  )
+  const horarioFallback = agendaTimeRange.start
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [servicos, setServicos] = useState<Servico[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -87,19 +99,19 @@ export function AppointmentAdminFormDialog({
   const [barbeiroId, setBarbeiroId] = useState('')
   const [servicoId, setServicoId] = useState('')
   const [dataStr, setDataStr] = useState(formatYMD(initialDate))
-  const [horario, setHorario] = useState(HORARIOS_PADRAO.sugestaoNovoHorario)
+  const [horario, setHorario] = useState(horarioFallback)
   const [observacoes, setObservacoes] = useState('')
 
   const slotOptions = useMemo(() => {
     const base = buildAgendaSlotStrings(
-      HORARIOS_PADRAO.inicio,
-      HORARIOS_PADRAO.fim,
+      agendaTimeRange.start,
+      agendaTimeRange.end,
       HORARIOS_PADRAO.intervalo,
     )
-    const h = normalizeHorarioLabel(horario)
+    const h = normalizeHorarioLabel(horario, horarioFallback)
     if (h && !base.includes(h)) return [h, ...base].sort()
     return base
-  }, [horario])
+  }, [horario, agendaTimeRange.start, agendaTimeRange.end, horarioFallback])
 
   useEffect(() => {
     if (!open || !barbeariaId) return
@@ -142,7 +154,7 @@ export function AppointmentAdminFormDialog({
       setBarbeiroId(editing.barbeiro_id)
       setServicoId(editing.servico_id)
       setDataStr(editing.data)
-      setHorario(normalizeHorarioLabel(editing.horario))
+      setHorario(normalizeHorarioLabel(editing.horario, horarioFallback))
       setObservacoes(editing.observacoes ?? '')
       return
     }
@@ -154,9 +166,9 @@ export function AppointmentAdminFormDialog({
     setBarbeiroId(preferredBarber)
     setServicoId('')
     setDataStr(formatYMD(initialDate))
-    setHorario(HORARIOS_PADRAO.sugestaoNovoHorario)
+    setHorario(horarioFallback)
     setObservacoes('')
-  }, [open, editing, initialDate, defaultBarbeiroId, barbeiros])
+  }, [open, editing, initialDate, defaultBarbeiroId, barbeiros, horarioFallback])
 
   const selectedServico = servicos.find((s) => s.id === servicoId)
   const selectedCliente = useMemo(
@@ -182,7 +194,7 @@ export function AppointmentAdminFormDialog({
 
     setIsSubmitting(true)
     const supabase = createClient()
-    const horarioNorm = normalizeHorarioLabel(horario)
+    const horarioNorm = normalizeHorarioLabel(horario, horarioFallback)
     const payload = {
       barbearia_id: barbeariaId,
       cliente_id: clienteId,

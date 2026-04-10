@@ -39,6 +39,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Spinner } from '@/components/ui/spinner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -77,6 +79,12 @@ import {
   landingPrimaryCtaClass,
 } from '@/components/landing/landing-classes'
 import { cn } from '@/lib/utils'
+import { DIAS_SEMANA } from '@/lib/constants'
+import {
+  BARBEARIA_DIAS_FUNCIONAMENTO_PADRAO,
+  diasFuncionamentoToFormFlags,
+  formFlagsToDiasFuncionamento,
+} from '@/lib/barbearia-dias-funcionamento'
 import type { Barbearia, Profile } from '@/types'
 
 function timeFromDb(value: string | null | undefined): string {
@@ -95,6 +103,14 @@ function isBarbeariaHorarioColumnError(err: { message?: string } | null): boolea
   const m = err?.message ?? ''
   return (
     /horario_abertura|horario_fechamento/i.test(m) &&
+    /column|schema cache|does not exist|PGRST204/i.test(m)
+  )
+}
+
+function isBarbeariaDiasColumnError(err: { message?: string } | null): boolean {
+  const m = err?.message ?? ''
+  return (
+    /dias_funcionamento/i.test(m) &&
     /column|schema cache|does not exist|PGRST204/i.test(m)
   )
 }
@@ -139,7 +155,8 @@ const barbeariaPainelSecaoClass = 'border-b border-zinc-200/70 px-5 py-5 last:bo
 const barbeariaPainelSecaoTituloClass =
   'flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground dark:text-zinc-100'
 
-const barbeariaPainelSecaoDescClass = 'mt-1.5 max-w-prose text-xs leading-relaxed text-muted-foreground'
+const barbeariaPainelSecaoDescClass =
+  'mt-1.5 w-full min-w-0 text-pretty text-xs leading-relaxed text-muted-foreground'
 
 type MinhaUnidade = { id: string; nome: string; slug: string }
 
@@ -212,6 +229,7 @@ export default function AdminConfiguracoesPage() {
     contaNome?: string
     barbeariaNome?: string
     barbeariaHorario?: string
+    barbeariaDias?: string
     barbeariaNovaUnidadeNome?: string
     barbeariaNovaUnidadeSlug?: string
   }>({})
@@ -234,6 +252,7 @@ export default function AdminConfiguracoesPage() {
     enderecoParts: emptyBarbeariaEnderecoParts(),
     horario_abertura: '',
     horario_fechamento: '',
+    diasSemana: diasFuncionamentoToFormFlags([...BARBEARIA_DIAS_FUNCIONAMENTO_PADRAO]),
   })
   const [minhasUnidades, setMinhasUnidades] = useState<MinhaUnidade[]>([])
   const [novaUnidadeNome, setNovaUnidadeNome] = useState('')
@@ -320,6 +339,7 @@ export default function AdminConfiguracoesPage() {
           enderecoParts: deserializeBarbeariaEndereco(b.endereco ?? null),
           horario_abertura: timeFromDb(b.horario_abertura),
           horario_fechamento: timeFromDb(b.horario_fechamento),
+          diasSemana: diasFuncionamentoToFormFlags(b.dias_funcionamento ?? []),
         })
 
         const { assinatura: assinaturaData, error: assinaturaErr } = await fetchLatestAssinaturaWithPlano(
@@ -349,7 +369,7 @@ export default function AdminConfiguracoesPage() {
     if (!barbearia) return
 
     setFieldErrors((prev) => {
-      const { barbeariaNome, barbeariaHorario, ...rest } = prev
+      const { barbeariaNome, barbeariaHorario, barbeariaDias, ...rest } = prev
       return rest
     })
 
@@ -359,6 +379,16 @@ export default function AdminConfiguracoesPage() {
       const msg = 'Informe o nome da barbearia.'
       setError(msg)
       setFieldErrors((prev) => ({ ...prev, barbeariaNome: msg }))
+      scheduleScrollToSaveFeedback()
+      return
+    }
+
+    const diasDb = formFlagsToDiasFuncionamento(formBarbearia.diasSemana)
+    if (diasDb.length === 0) {
+      setSuccessMessage(null)
+      const msg = 'Marque pelo menos um dia de funcionamento.'
+      setError(msg)
+      setFieldErrors((prev) => ({ ...prev, barbeariaDias: msg }))
       scheduleScrollToSaveFeedback()
       return
     }
@@ -394,6 +424,11 @@ export default function AdminConfiguracoesPage() {
       horario_fechamento: timeToDb(formBarbearia.horario_fechamento),
     }
 
+    const withPayload = {
+      ...withHorarios,
+      dias_funcionamento: diasDb,
+    }
+
     const rpc = await rpcUpdateBarbeariaDadosTenant(supabase, {
       p_barbearia_id: barbearia.id,
       p_nome: nomeBarbearia,
@@ -402,6 +437,7 @@ export default function AdminConfiguracoesPage() {
       p_email: basePayload.email,
       p_horario_abertura: withHorarios.horario_abertura,
       p_horario_fechamento: withHorarios.horario_fechamento,
+      p_dias_funcionamento: diasDb,
     })
 
     if (rpc.row) {
@@ -424,11 +460,42 @@ export default function AdminConfiguracoesPage() {
 
     const { data: updatedRows, error: updateError } = await supabase
       .from('barbearias')
-      .update(withHorarios)
+      .update(withPayload)
       .eq('id', barbearia.id)
       .select('*')
 
     let updatedB = updatedRows?.[0] ?? null
+
+    if (updateError && isBarbeariaDiasColumnError(updateError) && !isBarbeariaHorarioColumnError(updateError)) {
+      const retryDias = await supabase
+        .from('barbearias')
+        .update(withHorarios)
+        .eq('id', barbearia.id)
+        .select('*')
+
+      if (retryDias.error) {
+        clearFieldErrors()
+        setError(
+          toUserFriendlyErrorMessage(retryDias.error, {
+            fallback: 'Não foi possível salvar os dados da barbearia.',
+          }),
+        )
+        scheduleScrollToSaveFeedback()
+      } else if (!retryDias.data?.length) {
+        clearFieldErrors()
+        setError(MSGS.barbeariaUpdateBloqueado)
+        scheduleScrollToSaveFeedback()
+      } else {
+        setBarbearia(retryDias.data[0])
+        setSuccessMessage('Dados da barbearia salvos com sucesso.')
+        setWarning(
+          'Os dias de funcionamento não foram gravados: execute a migração `043_barbearias_dias_funcionamento.sql` (ou `20260411130000_barbearias_dias_funcionamento.sql`) no Supabase.',
+        )
+        scheduleScrollToSaveFeedback()
+      }
+      setIsSavingBarbearia(false)
+      return
+    }
 
     if (updateError && isBarbeariaHorarioColumnError(updateError)) {
       const retry = await supabase
@@ -1043,228 +1110,269 @@ export default function AdminConfiguracoesPage() {
                               </div>
 
                               <div className={barbeariaPainelSecaoClass}>
-                                <div className={barbeariaPainelSecaoTituloClass}>
-                                  <Building2 className="size-4 shrink-0 text-primary" aria-hidden />
-                                  Filiais e acesso
-                                </div>
-                                <p className={barbeariaPainelSecaoDescClass}>
-                                  Cada filial tem URL própria. Use <span className="font-medium text-foreground">Acessar</span>{' '}
-                                  para abrir o painel noutra unidade (continua na aba Barbearia).
-                                  {podeOferecerRemoverUnidade ? (
-                                    <>
-                                      {' '}
-                                      O botão <span className="font-medium text-destructive">Remover</span> exclui a
-                                      filial e todos os dados vinculados a ela — ação{' '}
-                                      <span className="font-medium text-foreground">irreversível</span>.
-                                    </>
-                                  ) : null}
-                                </p>
-                                {minhasUnidades.length > 0 ? (
-                                  <ul className="mt-4 space-y-2">
-                                    {minhasUnidades.map((u) => {
-                                      const isCurrent = u.slug === slug
-                                      return (
-                                        <li
-                                          key={u.id}
-                                          className="flex flex-col gap-3 rounded-lg border border-zinc-200/80 bg-white/90 px-3 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/[0.1] dark:bg-white/[0.06]"
-                                        >
-                                          <div className="min-w-0 flex-1">
-                                            <p className="truncate text-sm font-medium text-foreground">{u.nome}</p>
-                                            <p className="truncate font-mono text-xs text-muted-foreground">
-                                              /{u.slug}
-                                            </p>
-                                          </div>
-                                          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                                            {isCurrent ? (
-                                              <span className="rounded-full bg-primary/12 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
-                                                Painel atual
-                                              </span>
-                                            ) : (
-                                              <Button variant="outline" size="sm" asChild>
-                                                <Link
-                                                  href={`${tenantBarbeariaBasePath(u.slug)}/configuracoes?${CONFIG_TAB_QUERY}=${CONFIG_TAB_BEARBEARIA}`}
-                                                >
-                                                  Acessar
-                                                </Link>
-                                              </Button>
-                                            )}
-                                            {podeOferecerRemoverUnidade ? (
-                                              <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="border-destructive/35 text-destructive hover:bg-destructive/10 dark:border-destructive/40"
-                                                aria-label={`Remover unidade ${u.nome}`}
-                                                disabled={isRemovingUnidade || Boolean(unidadeRemoverDialog)}
-                                                onClick={(e) => {
-                                                  e.preventDefault()
-                                                  e.stopPropagation()
-                                                  setUnidadeRemoverDialog(u)
-                                                }}
-                                              >
-                                                <Trash2 className="size-4 sm:mr-1.5" aria-hidden />
-                                                <span className="hidden sm:inline">Remover</span>
-                                              </Button>
-                                            ) : null}
-                                          </div>
-                                        </li>
-                                      )
-                                    })}
-                                  </ul>
-                                ) : null}
-                                {podeGerenciarUnidades &&
-                                minhasUnidades.length === 1 &&
-                                profile?.role !== 'super_admin' ? (
-                                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                                    Com apenas uma filial, não é possível excluí-la aqui. Cadastre outra unidade antes ou
-                                    fale com o suporte.
-                                  </p>
-                                ) : null}
-
-                                {podeGerenciarUnidades ? (
-                                  <div
-                                    className={cn(
-                                      'mt-5 rounded-xl border border-dashed border-primary/25 bg-primary/[0.04] p-4',
-                                      'dark:border-primary/30 dark:bg-primary/[0.07]',
-                                    )}
-                                  >
-                                    <p className="text-sm font-semibold text-foreground dark:text-zinc-100">
-                                      Cadastrar nova unidade
-                                    </p>
-                                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                                      Nome e identificador da URL. Depois de criar, complete endereço e horário nesta
-                                      mesma aba já no painel da nova filial.
-                                    </p>
-                                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                                      <div className="space-y-2 sm:col-span-1">
-                                        <Label htmlFor="novaUnidadeNome" className={superProfileLabelClass}>
-                                          Nome da unidade
-                                        </Label>
-                                        <Input
-                                          id="novaUnidadeNome"
-                                          value={novaUnidadeNome}
-                                          onChange={(e) => {
-                                            const v = e.target.value
-                                            setNovaUnidadeNome(v)
-                                            if (novaUnidadeSlugAutofill) {
-                                              setNovaUnidadeSlug(slugifyBarbeariaSlug(v))
-                                            }
-                                            setFieldErrors((prev) => {
-                                              if (!prev.barbeariaNovaUnidadeNome) return prev
-                                              const { barbeariaNovaUnidadeNome: _r, ...rest } = prev
-                                              return rest
-                                            })
-                                          }}
-                                          placeholder="Ex.: Filial Centro"
-                                          disabled={isCreatingUnidade}
-                                          aria-invalid={fieldErrors.barbeariaNovaUnidadeNome ? true : undefined}
-                                          aria-describedby={
-                                            fieldErrors.barbeariaNovaUnidadeNome
-                                              ? 'novaUnidadeNome-error'
-                                              : undefined
-                                          }
-                                          className={cn(
-                                            superProfileInputClass,
-                                            fieldErrors.barbeariaNovaUnidadeNome
-                                              ? configuracoesInputErrorClass
-                                              : null,
-                                          )}
-                                        />
-                                        {fieldErrors.barbeariaNovaUnidadeNome ? (
-                                          <p
-                                            id="novaUnidadeNome-error"
-                                            className="text-sm text-destructive"
-                                            role="alert"
-                                          >
-                                            {fieldErrors.barbeariaNovaUnidadeNome}
-                                          </p>
-                                        ) : null}
-                                      </div>
-                                      <div className="space-y-2 sm:col-span-1">
-                                        <Label htmlFor="novaUnidadeSlug" className={superProfileLabelClass}>
-                                          Identificador na URL (slug)
-                                        </Label>
-                                        <Input
-                                          id="novaUnidadeSlug"
-                                          value={novaUnidadeSlug}
-                                          onChange={(e) => {
-                                            setNovaUnidadeSlugAutofill(false)
-                                            setNovaUnidadeSlug(e.target.value)
-                                            setFieldErrors((prev) => {
-                                              if (!prev.barbeariaNovaUnidadeSlug) return prev
-                                              const { barbeariaNovaUnidadeSlug: _r, ...rest } = prev
-                                              return rest
-                                            })
-                                          }}
-                                          placeholder="ex.: filial-centro"
-                                          disabled={isCreatingUnidade}
-                                          className={cn(
-                                            superProfileInputClass,
-                                            'font-mono text-sm',
-                                            fieldErrors.barbeariaNovaUnidadeSlug
-                                              ? configuracoesInputErrorClass
-                                              : null,
-                                          )}
-                                          aria-invalid={fieldErrors.barbeariaNovaUnidadeSlug ? true : undefined}
-                                          aria-describedby={
-                                            fieldErrors.barbeariaNovaUnidadeSlug
-                                              ? 'novaUnidadeSlug-error'
-                                              : undefined
-                                          }
-                                          autoComplete="off"
-                                        />
-                                        {fieldErrors.barbeariaNovaUnidadeSlug ? (
-                                          <p
-                                            id="novaUnidadeSlug-error"
-                                            className="text-sm text-destructive"
-                                            role="alert"
-                                          >
-                                            {fieldErrors.barbeariaNovaUnidadeSlug}
-                                          </p>
-                                        ) : null}
-                                      </div>
-                                    </div>
-                                    <Button
-                                      type="button"
+                                <Accordion type="single" collapsible className="w-full">
+                                  <AccordionItem value="cfg-barbearia-filiais" className="border-0">
+                                    <AccordionTrigger
                                       className={cn(
-                                        landingPrimaryCtaClass,
-                                        'mt-4 h-11 w-full sm:w-auto sm:min-w-[12rem]',
+                                        barbeariaPainelSecaoTituloClass,
+                                        'py-0 hover:no-underline [&[data-state=open]]:pb-2',
                                       )}
-                                      onClick={() => void handleCriarUnidade()}
-                                      disabled={isCreatingUnidade}
                                     >
-                                      {isCreatingUnidade ? (
-                                        <Spinner className="mr-2 h-4 w-4" />
-                                      ) : (
-                                        <Plus className="mr-2 h-4 w-4" aria-hidden />
-                                      )}
-                                      Criar unidade
-                                    </Button>
-                                  </div>
-                                ) : null}
+                                      <span className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                                        <Building2 className="size-4 shrink-0 text-primary" aria-hidden />
+                                        Filiais e acesso
+                                      </span>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="pt-0">
+                                      <p className={barbeariaPainelSecaoDescClass}>
+                                        Cada filial tem URL própria. Use{' '}
+                                        <span className="font-medium text-foreground">Acessar</span> para abrir o painel
+                                        noutra unidade (continua na aba Barbearia).
+                                        {podeOferecerRemoverUnidade ? (
+                                          <>
+                                            {' '}
+                                            O botão{' '}
+                                            <span className="font-medium text-destructive dark:text-red-400">
+                                              Remover
+                                            </span>{' '}
+                                            exclui
+                                            a filial e todos os dados vinculados a ela — ação{' '}
+                                            <span className="font-medium text-foreground">irreversível</span>.
+                                          </>
+                                        ) : null}
+                                      </p>
+                                      {minhasUnidades.length > 0 ? (
+                                        <ul className="mt-4 space-y-2">
+                                          {minhasUnidades.map((u) => {
+                                            const isCurrent = u.slug === slug
+                                            return (
+                                              <li
+                                                key={u.id}
+                                                className="flex flex-col gap-3 rounded-lg border border-zinc-200/80 bg-white/90 px-3 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/[0.1] dark:bg-white/[0.06]"
+                                              >
+                                                <div className="min-w-0 flex-1">
+                                                  <p className="truncate text-sm font-medium text-foreground">
+                                                    {u.nome}
+                                                  </p>
+                                                  <p className="truncate font-mono text-xs text-muted-foreground">
+                                                    /{u.slug}
+                                                  </p>
+                                                </div>
+                                                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                                                  {isCurrent ? (
+                                                    <span className="rounded-full bg-primary/12 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+                                                      Painel atual
+                                                    </span>
+                                                  ) : (
+                                                    <Button variant="outline" size="sm" asChild>
+                                                      <Link
+                                                        href={`${tenantBarbeariaBasePath(u.slug)}/configuracoes?${CONFIG_TAB_QUERY}=${CONFIG_TAB_BEARBEARIA}`}
+                                                      >
+                                                        Acessar
+                                                      </Link>
+                                                    </Button>
+                                                  )}
+                                                  {podeOferecerRemoverUnidade ? (
+                                                    <Button
+                                                      type="button"
+                                                      variant="outline"
+                                                      size="sm"
+                                                      className={cn(
+                                                        'border-destructive/35 text-destructive hover:bg-destructive/10',
+                                                        'dark:border-red-400/45 dark:text-red-400 dark:hover:border-red-400/70 dark:hover:bg-red-500/15 dark:hover:text-red-300',
+                                                      )}
+                                                      aria-label={`Remover unidade ${u.nome}`}
+                                                      disabled={isRemovingUnidade || Boolean(unidadeRemoverDialog)}
+                                                      onClick={(e) => {
+                                                        e.preventDefault()
+                                                        e.stopPropagation()
+                                                        setUnidadeRemoverDialog(u)
+                                                      }}
+                                                    >
+                                                      <Trash2 className="size-4 sm:mr-1.5" aria-hidden />
+                                                      <span className="hidden sm:inline">Remover</span>
+                                                    </Button>
+                                                  ) : null}
+                                                </div>
+                                              </li>
+                                            )
+                                          })}
+                                        </ul>
+                                      ) : null}
+                                      {podeGerenciarUnidades &&
+                                      minhasUnidades.length === 1 &&
+                                      profile?.role !== 'super_admin' ? (
+                                        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                                          Com apenas uma filial, não é possível excluí-la aqui. Cadastre outra unidade
+                                          antes ou fale com o suporte.
+                                        </p>
+                                      ) : null}
+
+                                      {podeGerenciarUnidades ? (
+                                        <div
+                                          className={cn(
+                                            'mt-5 rounded-xl border border-dashed border-primary/25 bg-primary/[0.04] p-4',
+                                            'dark:border-primary/30 dark:bg-primary/[0.07]',
+                                          )}
+                                        >
+                                          <p className="text-sm font-semibold text-foreground dark:text-zinc-100">
+                                            Cadastrar nova unidade
+                                          </p>
+                                          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                                            Nome e identificador da URL. Depois de criar, complete endereço e horário
+                                            nesta mesma aba já no painel da nova filial.
+                                          </p>
+                                          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                                            <div className="space-y-2 sm:col-span-1">
+                                              <Label htmlFor="novaUnidadeNome" className={superProfileLabelClass}>
+                                                Nome da unidade
+                                              </Label>
+                                              <Input
+                                                id="novaUnidadeNome"
+                                                value={novaUnidadeNome}
+                                                onChange={(e) => {
+                                                  const v = e.target.value
+                                                  setNovaUnidadeNome(v)
+                                                  if (novaUnidadeSlugAutofill) {
+                                                    setNovaUnidadeSlug(slugifyBarbeariaSlug(v))
+                                                  }
+                                                  setFieldErrors((prev) => {
+                                                    if (!prev.barbeariaNovaUnidadeNome) return prev
+                                                    const { barbeariaNovaUnidadeNome: _r, ...rest } = prev
+                                                    return rest
+                                                  })
+                                                }}
+                                                placeholder="Ex.: Filial Centro"
+                                                disabled={isCreatingUnidade}
+                                                aria-invalid={fieldErrors.barbeariaNovaUnidadeNome ? true : undefined}
+                                                aria-describedby={
+                                                  fieldErrors.barbeariaNovaUnidadeNome
+                                                    ? 'novaUnidadeNome-error'
+                                                    : undefined
+                                                }
+                                                className={cn(
+                                                  superProfileInputClass,
+                                                  fieldErrors.barbeariaNovaUnidadeNome
+                                                    ? configuracoesInputErrorClass
+                                                    : null,
+                                                )}
+                                              />
+                                              {fieldErrors.barbeariaNovaUnidadeNome ? (
+                                                <p
+                                                  id="novaUnidadeNome-error"
+                                                  className="text-sm text-destructive"
+                                                  role="alert"
+                                                >
+                                                  {fieldErrors.barbeariaNovaUnidadeNome}
+                                                </p>
+                                              ) : null}
+                                            </div>
+                                            <div className="space-y-2 sm:col-span-1">
+                                              <Label htmlFor="novaUnidadeSlug" className={superProfileLabelClass}>
+                                                Identificador na URL (slug)
+                                              </Label>
+                                              <Input
+                                                id="novaUnidadeSlug"
+                                                value={novaUnidadeSlug}
+                                                onChange={(e) => {
+                                                  setNovaUnidadeSlugAutofill(false)
+                                                  setNovaUnidadeSlug(e.target.value)
+                                                  setFieldErrors((prev) => {
+                                                    if (!prev.barbeariaNovaUnidadeSlug) return prev
+                                                    const { barbeariaNovaUnidadeSlug: _r, ...rest } = prev
+                                                    return rest
+                                                  })
+                                                }}
+                                                placeholder="ex.: filial-centro"
+                                                disabled={isCreatingUnidade}
+                                                className={cn(
+                                                  superProfileInputClass,
+                                                  'font-mono text-sm',
+                                                  fieldErrors.barbeariaNovaUnidadeSlug
+                                                    ? configuracoesInputErrorClass
+                                                    : null,
+                                                )}
+                                                aria-invalid={
+                                                  fieldErrors.barbeariaNovaUnidadeSlug ? true : undefined
+                                                }
+                                                aria-describedby={
+                                                  fieldErrors.barbeariaNovaUnidadeSlug
+                                                    ? 'novaUnidadeSlug-error'
+                                                    : undefined
+                                                }
+                                                autoComplete="off"
+                                              />
+                                              {fieldErrors.barbeariaNovaUnidadeSlug ? (
+                                                <p
+                                                  id="novaUnidadeSlug-error"
+                                                  className="text-sm text-destructive"
+                                                  role="alert"
+                                                >
+                                                  {fieldErrors.barbeariaNovaUnidadeSlug}
+                                                </p>
+                                              ) : null}
+                                            </div>
+                                          </div>
+                                          <Button
+                                            type="button"
+                                            className={cn(
+                                              landingPrimaryCtaClass,
+                                              'mt-4 h-11 w-full sm:w-auto sm:min-w-[12rem]',
+                                            )}
+                                            onClick={() => void handleCriarUnidade()}
+                                            disabled={isCreatingUnidade}
+                                          >
+                                            {isCreatingUnidade ? (
+                                              <Spinner className="mr-2 h-4 w-4" />
+                                            ) : (
+                                              <Plus className="mr-2 h-4 w-4" aria-hidden />
+                                            )}
+                                            Criar unidade
+                                          </Button>
+                                        </div>
+                                      ) : null}
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                </Accordion>
                               </div>
 
                               <div className={barbeariaPainelSecaoClass}>
-                                <div className={barbeariaPainelSecaoTituloClass}>
-                                  <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
-                                  Endereço
-                                </div>
-                                <p className={barbeariaPainelSecaoDescClass}>
-                                  Localização desta unidade para referência no painel e cadastros.
-                                </p>
-                                <div className="mt-4">
-                                  <BarbeariaEnderecoFields
-                                    idPrefix="cfg-barbearia"
-                                    value={formBarbearia.enderecoParts}
-                                    onChange={(enderecoParts) =>
-                                      setFormBarbearia((prev) => ({ ...prev, enderecoParts }))
-                                    }
-                                    disabled={isSavingBarbearia}
-                                    showHeading={false}
-                                    inputClassName={superProfileInputClass}
-                                    labelClassName={cn(superProfileLabelClass, 'flex items-center gap-1.5')}
-                                  />
-                                </div>
+                                <Accordion type="single" collapsible className="w-full">
+                                  <AccordionItem value="cfg-barbearia-endereco" className="border-0">
+                                    <AccordionTrigger
+                                      className={cn(
+                                        barbeariaPainelSecaoTituloClass,
+                                        'py-0 hover:no-underline [&[data-state=open]]:pb-2',
+                                      )}
+                                    >
+                                      <span className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                                        <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
+                                        Endereço
+                                      </span>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="pt-0">
+                                      <p className={barbeariaPainelSecaoDescClass}>
+                                        Localização desta unidade para referência no painel e cadastros.
+                                      </p>
+                                      <div className="mt-4">
+                                        <BarbeariaEnderecoFields
+                                          idPrefix="cfg-barbearia"
+                                          value={formBarbearia.enderecoParts}
+                                          onChange={(enderecoParts) =>
+                                            setFormBarbearia((prev) => ({ ...prev, enderecoParts }))
+                                          }
+                                          disabled={isSavingBarbearia}
+                                          showHeading={false}
+                                          inputClassName={superProfileInputClass}
+                                          labelClassName={cn(
+                                            superProfileLabelClass,
+                                            'flex items-center gap-1.5',
+                                          )}
+                                        />
+                                      </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                </Accordion>
                               </div>
 
                               <div className={barbeariaPainelSecaoClass} role="group" aria-labelledby="cfg-horario-funcionamento-label">
@@ -1336,6 +1444,47 @@ export default function AdminConfiguracoesPage() {
                                       )}
                                     />
                                   </div>
+                                </div>
+                                <div className="mt-6 space-y-3">
+                                  <Label className={superProfileLabelClass}>Dias com atendimento</Label>
+                                  <p className={barbeariaPainelSecaoDescClass}>
+                                    Usados no agendamento do cliente e indicados na agenda. Domingo a sábado (como no
+                                    calendário do celular).
+                                  </p>
+                                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+                                    {DIAS_SEMANA.map((nome, i) => (
+                                      <div
+                                        key={nome}
+                                        className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background/60 px-2.5 py-2"
+                                      >
+                                        <span className="text-xs font-medium leading-tight text-foreground">
+                                          {nome.replace('-feira', '').slice(0, 3)}
+                                        </span>
+                                        <Switch
+                                          checked={formBarbearia.diasSemana[i] ?? false}
+                                          onCheckedChange={(v) => {
+                                            setFormBarbearia((prev) => {
+                                              const next = [...prev.diasSemana]
+                                              next[i] = v
+                                              return { ...prev, diasSemana: next }
+                                            })
+                                            setFieldErrors((prev) => {
+                                              if (!prev.barbeariaDias) return prev
+                                              const { barbeariaDias: _r, ...rest } = prev
+                                              return rest
+                                            })
+                                          }}
+                                          disabled={isSavingBarbearia}
+                                          aria-label={`${nome} — ${formBarbearia.diasSemana[i] ? 'abre' : 'fechado'}`}
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                  {fieldErrors.barbeariaDias ? (
+                                    <p className="text-sm text-destructive" role="alert">
+                                      {fieldErrors.barbeariaDias}
+                                    </p>
+                                  ) : null}
                                 </div>
                                 {fieldErrors.barbeariaHorario ? (
                                   <p

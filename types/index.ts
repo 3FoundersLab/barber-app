@@ -40,6 +40,8 @@ export interface Barbearia {
   horario_abertura?: string | null
   /** TIME do Postgres, ex.: "20:00:00" */
   horario_fechamento?: string | null
+  /** 0=dom … 6=sáb (igual `Date.getDay()`). Omitido em bases antigas = seg–sáb. */
+  dias_funcionamento?: number[] | null
   /** Self-service até aprovação do super admin; omitido em bases antigas = ativa */
   status_cadastro?: BarbeariaStatusCadastro
   /** false = desativada pelo super admin; omitido em bases antigas = ativa */

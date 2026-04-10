@@ -33,7 +33,11 @@ import { Switch } from '@/components/ui/switch'
 import { AppointmentListSkeleton } from '@/components/shared/loading-skeleton'
 import { ViewToggle, type ViewMode } from '@/components/shared/view-toggle'
 import { DateNavigatorCalendar } from '@/components/shared/date-navigator-calendar'
-import { DIAS_SEMANA_ABREV, formatDateWeekdayLong } from '@/lib/constants'
+import {
+  DIAS_SEMANA_ABREV,
+  formatDateWeekdayLong,
+  resolveBarbeariaAgendaTimeRange,
+} from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
@@ -42,6 +46,12 @@ import {
   getAgendaDemoBarbeiros,
   getAgendaDemoUnavailableBlocks,
 } from '@/lib/agenda-demo-data'
+import {
+  BARBEARIA_DIAS_FUNCIONAMENTO_PADRAO,
+  formatDiasFuncionamentoLegenda,
+  isBarbeariaAbertaNoDia,
+  normalizeDiasFuncionamento,
+} from '@/lib/barbearia-dias-funcionamento'
 import { ensureComandaForAgendamento } from '@/lib/ensure-comanda-agendamento'
 import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
 import { cn } from '@/lib/utils'
@@ -89,6 +99,11 @@ export default function AdminAgendamentosPage() {
   const [barbeiros, setBarbeiros] = useState<Barbeiro[]>([])
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([])
   const [barbeariaId, setBarbeariaId] = useState<string | null>(null)
+  const [barbeariaHorarioAbertura, setBarbeariaHorarioAbertura] = useState<string | null>(null)
+  const [barbeariaHorarioFechamento, setBarbeariaHorarioFechamento] = useState<string | null>(null)
+  const [barbeariaDiasFuncionamento, setBarbeariaDiasFuncionamento] = useState<number[]>(() => [
+    ...BARBEARIA_DIAS_FUNCIONAMENTO_PADRAO,
+  ])
   const [useDemoData, setUseDemoData] = useState(false)
   const [demoAgendamentos, setDemoAgendamentos] = useState<Agendamento[]>(() =>
     getAgendaDemoAgendamentosForMonth(new Date().getFullYear(), new Date().getMonth()),
@@ -154,7 +169,22 @@ export default function AdminAgendamentosPage() {
 
         if (barbeariaIdResolved) {
           setBarbeariaId(barbeariaIdResolved)
-          
+
+          const { data: bbRow } = await supabase
+            .from('barbearias')
+            .select('horario_abertura, horario_fechamento, dias_funcionamento')
+            .eq('id', barbeariaIdResolved)
+            .single()
+          if (bbRow) {
+            setBarbeariaHorarioAbertura(bbRow.horario_abertura ?? null)
+            setBarbeariaHorarioFechamento(bbRow.horario_fechamento ?? null)
+            setBarbeariaDiasFuncionamento(normalizeDiasFuncionamento(bbRow.dias_funcionamento))
+          } else {
+            setBarbeariaHorarioAbertura(null)
+            setBarbeariaHorarioFechamento(null)
+            setBarbeariaDiasFuncionamento([...BARBEARIA_DIAS_FUNCIONAMENTO_PADRAO])
+          }
+
           // Load barbers
           const { data: barbeirosData } = await supabase
             .from('barbeiros')
@@ -454,6 +484,16 @@ export default function AdminAgendamentosPage() {
     return displayBarbeiros.filter((b) => b.id === selectedBarbeiro)
   }, [displayBarbeiros, selectedBarbeiro])
 
+  const agendaTimeRange = useMemo(
+    () => resolveBarbeariaAgendaTimeRange(barbeariaHorarioAbertura, barbeariaHorarioFechamento),
+    [barbeariaHorarioAbertura, barbeariaHorarioFechamento],
+  )
+
+  const diasFuncionamentoLegenda = useMemo(
+    () => formatDiasFuncionamentoLegenda(barbeariaDiasFuncionamento),
+    [barbeariaDiasFuncionamento],
+  )
+
   // Generate week days
   const getWeekDays = () => {
     const days = []
@@ -544,6 +584,11 @@ export default function AdminAgendamentosPage() {
                   ? 'Calendário mensal — arraste para mover o dia do agendamento'
                   : 'Lista do dia selecionado'}
             </p>
+            {!useDemoData ? (
+              <p className="text-xs text-muted-foreground">
+                Abre em: <span className="font-medium text-foreground">{diasFuncionamentoLegenda}</span>
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleToday} className="shrink-0">
@@ -579,6 +624,9 @@ export default function AdminAgendamentosPage() {
             const isSelected = day.toDateString() === selectedDate.toDateString()
             const isTodayDay = day.toDateString() === new Date().toDateString()
             
+            const fechadoNoCalendario =
+              !useDemoData && !isBarbeariaAbertaNoDia(day.getDay(), barbeariaDiasFuncionamento)
+
             return (
               <button
                 key={day.toISOString()}
@@ -589,13 +637,16 @@ export default function AdminAgendamentosPage() {
                     setListQuickFocus('todos')
                   }
                 }}
-                className={`flex flex-1 flex-col items-center rounded-lg py-2 transition-colors ${
+                className={cn(
+                  'flex flex-1 flex-col items-center rounded-lg py-2 transition-colors',
                   isSelected
                     ? 'bg-primary text-primary-foreground'
                     : isTodayDay
-                    ? 'bg-accent/50 text-accent-foreground'
-                    : 'hover:bg-muted'
-                }`}
+                      ? 'bg-accent/50 text-accent-foreground'
+                      : 'hover:bg-muted',
+                  fechadoNoCalendario && !isSelected && 'opacity-45',
+                )}
+                title={fechadoNoCalendario ? 'Dia sem expediente nesta unidade' : undefined}
               >
                 <span className="text-xs">{DIAS_SEMANA_ABREV[day.getDay()]}</span>
                 <span className="text-lg font-semibold">{day.getDate()}</span>
@@ -744,6 +795,7 @@ export default function AdminAgendamentosPage() {
                 comandaByAgendamentoId={comandaMapEfetivo}
                 onBlockClick={setDetailAppointment}
                 referenceDate={selectedDate}
+                timeRange={agendaTimeRange}
                 unavailableBlocks={useDemoData ? getAgendaDemoUnavailableBlocks() : undefined}
               />
             )}
@@ -943,6 +995,7 @@ export default function AdminAgendamentosPage() {
         onSaved={handleAppointmentSaved}
         onError={setError}
         demoDataActive={useDemoData}
+        agendaTimeRange={agendaTimeRange}
       />
 
       <Dialog open={detailAppointment !== null} onOpenChange={(open) => !open && setDetailAppointment(null)}>

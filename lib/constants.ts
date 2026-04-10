@@ -99,6 +99,47 @@ export function buildAgendaSlotStrings(inicio: string, fim: string, stepMinutes:
   return out
 }
 
+/** Quando a barbearia não informa horário no banco, grade e slots usam este intervalo. */
+export const AGENDA_FUNCIONAMENTO_PADRAO = {
+  inicio: '09:00',
+  fim: '19:00',
+} as const
+
+function agendaClockFromDb(value: string | null | undefined): string | null {
+  if (value == null || typeof value !== 'string') return null
+  const s = value.trim()
+  if (!s) return null
+  const part = s.includes('T') ? (s.split('T')[1] ?? s) : s
+  const match = part.match(/^(\d{1,2}):(\d{2})/)
+  if (!match) return null
+  const hh = Number(match[1])
+  const mm = Number(match[2])
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
+}
+
+/**
+ * Intervalo da grade e dos horários livres a partir das colunas da barbearia.
+ * Valores inválidos ou ausentes caem em {@link AGENDA_FUNCIONAMENTO_PADRAO}.
+ */
+export function resolveBarbeariaAgendaTimeRange(
+  horarioAbertura: string | null | undefined,
+  horarioFechamento: string | null | undefined,
+): { start: string; end: string } {
+  const startStr = agendaClockFromDb(horarioAbertura)
+  const endStr = agendaClockFromDb(horarioFechamento)
+  const startM = startStr != null ? parseAgendaClockToMinutes(startStr) : null
+  const endM = endStr != null ? parseAgendaClockToMinutes(endStr) : null
+  if (startM != null && endM != null && endM > startM) {
+    return { start: startStr!, end: endStr! }
+  }
+  return {
+    start: AGENDA_FUNCIONAMENTO_PADRAO.inicio,
+    end: AGENDA_FUNCIONAMENTO_PADRAO.fim,
+  }
+}
+
 // Formatação de moeda
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
