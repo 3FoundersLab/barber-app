@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -70,7 +71,7 @@ export default function TenantEstoquePage() {
   const [produtos, setProdutos] = useState<EstoqueProduto[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [seeding, setSeeding] = useState(false)
+  const [useDemoData, setUseDemoData] = useState(false)
 
   const [busca, setBusca] = useState('')
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('todas')
@@ -128,30 +129,6 @@ export default function TenantEstoquePage() {
     void loadProdutos()
   }, [loadProdutos])
 
-  const seedExemplo = async () => {
-    if (!barbeariaId) return
-    setSeeding(true)
-    setError(null)
-    const supabase = createClient()
-    for (const m of ESTOQUE_PRODUTOS_MOCK) {
-      const { error: insE } = await supabase.from('estoque_produtos').insert({
-        barbearia_id: barbeariaId,
-        nome: m.nome,
-        categoria: m.categoria,
-        quantidade: m.quantidade,
-        minimo: m.minimo,
-        preco_custo: m.precoCusto ?? null,
-        preco_venda: m.precoVenda,
-      })
-      if (insE) {
-        setError(toUserFriendlyErrorMessage(insE, { fallback: 'Não foi possível adicionar o produto de exemplo.' }))
-        break
-      }
-    }
-    await loadProdutos({ showLoading: false })
-    setSeeding(false)
-  }
-
   const abrirEdicao = (p: EstoqueProduto) => {
     setEditando(p)
     setFormNome(p.nome)
@@ -180,6 +157,10 @@ export default function TenantEstoquePage() {
   }
 
   const salvarProduto = async () => {
+    if (useDemoData) {
+      setError('Desative "Dados fictícios" no topo da página para salvar alterações no estoque real.')
+      return
+    }
     const nome = formNome.trim()
     if (!nome || !formCategoria || !barbeariaId) return
 
@@ -236,6 +217,11 @@ export default function TenantEstoquePage() {
   }
 
   const confirmarExclusao = async () => {
+    if (useDemoData) {
+      setProdutoParaExcluir(null)
+      setError('Desative "Dados fictícios" para excluir produtos do estoque real.')
+      return
+    }
     if (!produtoParaExcluir || !barbeariaId) return
     const supabase = createClient()
     const { error: delE } = await supabase
@@ -251,6 +237,7 @@ export default function TenantEstoquePage() {
   }
 
   const deltaQuantidade = async (id: string, delta: number) => {
+    if (useDemoData) return
     if (!barbeariaId) return
     const p = produtos.find((x) => x.id === id)
     if (!p) return
@@ -274,9 +261,11 @@ export default function TenantEstoquePage() {
     return v !== null && v >= 0
   }, [formNome, formCategoria, formQuantidade, formPrecoVenda])
 
+  const produtosParaExibicao = useDemoData ? ESTOQUE_PRODUTOS_MOCK : produtos
+
   const filtradosOrdenados = useMemo(() => {
     const q = busca.trim().toLowerCase()
-    let list = produtos.filter((p) => {
+    let list = produtosParaExibicao.filter((p) => {
       if (q && !p.nome.toLowerCase().includes(q)) return false
       if (categoriaFiltro !== 'todas' && p.categoria !== categoriaFiltro) return false
       if (statusFiltro !== 'todos' && nivelEstoquePorQuantidade(p.quantidade) !== statusFiltro) {
@@ -286,13 +275,41 @@ export default function TenantEstoquePage() {
     })
     list = [...list].sort((a, b) => a.quantidade - b.quantidade)
     return list
-  }, [produtos, busca, categoriaFiltro, statusFiltro])
+  }, [produtosParaExibicao, busca, categoriaFiltro, statusFiltro])
+
+  const showGridLoading = isLoading && !useDemoData
 
   return (
     <TenantPanelPageContainer>
-      <TenantPanelPageHeader title="Estoque" profileHref={`${base}/configuracoes`} avatarFallback="A" />
+      <TenantPanelPageHeader
+        title="Estoque"
+        profileHref={`${base}/configuracoes`}
+        avatarFallback="A"
+        headingActions={
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-1.5">
+            <Switch
+              id="estoque-demo-data"
+              checked={useDemoData}
+              onCheckedChange={setUseDemoData}
+              aria-label="Usar dados fictícios de demonstração"
+            />
+            <Label htmlFor="estoque-demo-data" className="cursor-pointer text-xs font-medium">
+              Dados fictícios
+            </Label>
+          </div>
+        }
+      />
 
       <PageContent className="space-y-4 md:space-y-5">
+        {useDemoData ? (
+          <Alert variant="info">
+            <AlertTitle>
+              Modo demonstração: produtos fictícios apenas para visualização. Desligue o interruptor para ver e
+              editar o estoque real da barbearia.
+            </AlertTitle>
+          </Alert>
+        ) : null}
+
         {error ? (
           <Alert
             variant="danger"
@@ -315,19 +332,14 @@ export default function TenantEstoquePage() {
             />
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            {!isLoading && produtos.length === 0 && barbeariaId ? (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="w-full sm:w-auto"
-                disabled={seeding}
-                onClick={() => void seedExemplo()}
-              >
-                {seeding ? 'Carregando…' : 'Carregar exemplo'}
-              </Button>
-            ) : null}
-            <Button type="button" className="w-full shrink-0 sm:w-auto" size="sm" onClick={abrirNovoProduto}>
+            <Button
+              type="button"
+              className="w-full shrink-0 sm:w-auto"
+              size="sm"
+              onClick={abrirNovoProduto}
+              disabled={useDemoData}
+              title={useDemoData ? 'Desative dados fictícios para cadastrar produtos reais' : undefined}
+            >
               <Plus className="mr-1 h-4 w-4" />
               Novo produto
             </Button>
@@ -400,7 +412,7 @@ export default function TenantEstoquePage() {
           Ordenação: quantidade do menor para o maior. O preço de venda é usado nas comandas.
         </p>
 
-        {isLoading ? (
+        {showGridLoading ? (
           <Card>
             <CardContent className="py-12 text-center text-sm text-muted-foreground">Carregando estoque…</CardContent>
           </Card>
@@ -414,6 +426,7 @@ export default function TenantEstoquePage() {
                   onEdit={abrirEdicao}
                   onExcluir={setProdutoParaExcluir}
                   onDeltaQuantidade={deltaQuantidade}
+                  readOnly={useDemoData}
                 />
               ))
             ) : (
@@ -546,7 +559,7 @@ export default function TenantEstoquePage() {
             <Button
               type="button"
               onClick={() => void salvarProduto()}
-              disabled={!formEstoquePodeSalvar}
+              disabled={!formEstoquePodeSalvar || useDemoData}
             >
               Salvar
             </Button>

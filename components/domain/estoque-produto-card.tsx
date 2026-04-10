@@ -15,6 +15,8 @@ interface EstoqueProdutoCardProps {
   onExcluir: (produto: EstoqueProduto) => void
   onDeltaQuantidade: (id: string, delta: number) => void
   className?: string
+  /** Modo demonstração: sem editar, excluir ou alterar quantidade. */
+  readOnly?: boolean
 }
 
 function badgeNivelClass(nivel: ReturnType<typeof nivelEstoquePorQuantidade>) {
@@ -45,6 +47,7 @@ export function EstoqueProdutoCard({
   onExcluir,
   onDeltaQuantidade,
   className,
+  readOnly = false,
 }: EstoqueProdutoCardProps) {
   const nivel = nivelEstoquePorQuantidade(produto.quantidade)
   const Icon = estoqueIconeCategoria(produto.categoria)
@@ -53,40 +56,43 @@ export function EstoqueProdutoCard({
   return (
     <Card
       className={cn(
-        'group flex h-full cursor-pointer flex-col border-border/80 bg-card/95 shadow-sm transition-shadow hover:shadow-md',
+        'group flex h-full flex-col border-border/80 bg-card/95 shadow-sm transition-shadow',
+        !readOnly && 'cursor-pointer hover:shadow-md',
         className,
       )}
-      onClick={() => onEdit(produto)}
+      onClick={readOnly ? undefined : () => onEdit(produto)}
     >
       <CardContent className="relative flex flex-1 flex-col gap-2 p-2.5 pt-3 sm:p-3">
-        <div className="absolute right-1.5 top-1.5 flex gap-0.5 sm:right-2 sm:top-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-primary"
-            aria-label="Editar produto"
-            onClick={(e) => {
-              e.stopPropagation()
-              onEdit(produto)
-            }}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            aria-label="Excluir produto"
-            onClick={(e) => {
-              e.stopPropagation()
-              onExcluir(produto)
-            }}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        {!readOnly ? (
+          <div className="absolute right-1.5 top-1.5 flex gap-0.5 sm:right-2 sm:top-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-primary"
+              aria-label="Editar produto"
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit(produto)
+              }}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              aria-label="Excluir produto"
+              onClick={(e) => {
+                e.stopPropagation()
+                onExcluir(produto)
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : null}
 
         <div className="flex justify-center pt-0.5">
           <div
@@ -141,6 +147,7 @@ export function EstoqueProdutoCard({
               size="icon"
               className="h-8 w-8 shrink-0 border-border/80"
               aria-label="Remover uma unidade"
+              disabled={readOnly}
               onClick={() => onDeltaQuantidade(produto.id, -1)}
             >
               <Minus className="h-3.5 w-3.5" />
@@ -151,6 +158,7 @@ export function EstoqueProdutoCard({
               size="icon"
               className="h-8 w-8 shrink-0 border-border/80"
               aria-label="Adicionar uma unidade"
+              disabled={readOnly}
               onClick={() => onDeltaQuantidade(produto.id, 1)}
             >
               <Plus className="h-3.5 w-3.5" />
