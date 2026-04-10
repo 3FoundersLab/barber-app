@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react'
 import { PageContent, PageTitle } from '@/components/shared/page-container'
@@ -25,6 +25,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -36,6 +44,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ClientCardSkeleton } from '@/components/shared/loading-skeleton'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Spinner } from '@/components/ui/spinner'
 import {
   Pagination,
@@ -46,9 +55,17 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
+import {
+  APPOINTMENT_STATUS_COLORS,
+  APPOINTMENT_STATUS_LABELS,
+  PAYMENT_STATUS_LABELS,
+  formatCurrency,
+  formatDate,
+  formatTime,
+} from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
-import type { Cliente } from '@/types'
+import type { Agendamento, AppointmentStatus, Cliente, PaymentStatus } from '@/types'
 
 const CLIENTES_PAGE_SIZE_OPTIONS = [12, 24, 36, 48] as const
 type ClientesPageSize = (typeof CLIENTES_PAGE_SIZE_OPTIONS)[number]
@@ -72,6 +89,20 @@ function pageNumberItems(current: number, total: number): (number | 'ellipsis')[
   return out
 }
 
+type ClienteHistoricoRow = Pick<
+  Agendamento,
+  'id' | 'data' | 'horario' | 'status' | 'status_pagamento' | 'valor'
+> & {
+  servico: { nome: string } | null
+  barbeiro: { nome: string } | null
+}
+
+function formatAgendamentoDataLocal(ymd: string): string {
+  const [y, m, d] = ymd.split('-').map(Number)
+  if (!y || !m || !d) return ymd
+  return formatDate(new Date(y, m - 1, d))
+}
+
 export default function AdminClientesPage() {
   const { slug, base } = useTenantAdminBase()
   const searchParams = useSearchParams()
@@ -86,6 +117,10 @@ export default function AdminClientesPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null)
   const [clienteParaExcluir, setClienteParaExcluir] = useState<Cliente | null>(null)
+  const [historicoCliente, setHistoricoCliente] = useState<Cliente | null>(null)
+  const [historicoRows, setHistoricoRows] = useState<ClienteHistoricoRow[]>([])
+  const [historicoLoading, setHistoricoLoading] = useState(false)
+  const [historicoError, setHistoricoError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -160,6 +195,50 @@ export default function AdminClientesPage() {
     }
 
     setIsLoading(false)
+  }
+
+  const loadHistoricoCliente = useCallback(
+    async (clienteId: string) => {
+      if (!barbeariaId) return
+      setHistoricoLoading(true)
+      setHistoricoError(null)
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('agendamentos')
+        .select(
+          `
+          id,
+          data,
+          horario,
+          status,
+          status_pagamento,
+          valor,
+          servico:servicos(nome),
+          barbeiro:barbeiros(nome)
+        `,
+        )
+        .eq('barbearia_id', barbeariaId)
+        .eq('cliente_id', clienteId)
+        .order('data', { ascending: false })
+        .order('horario', { ascending: false })
+        .limit(150)
+
+      setHistoricoLoading(false)
+      if (error) {
+        setHistoricoError('Não foi possível carregar o histórico de agendamentos.')
+        setHistoricoRows([])
+        return
+      }
+      setHistoricoRows((data ?? []) as unknown as ClienteHistoricoRow[])
+    },
+    [barbeariaId],
+  )
+
+  const handleOpenHistorico = (cliente: Cliente) => {
+    setHistoricoCliente(cliente)
+    setHistoricoRows([])
+    setHistoricoError(null)
+    void loadHistoricoCliente(cliente.id)
   }
 
   const handleOpenNew = () => {
@@ -286,6 +365,7 @@ export default function AdminClientesPage() {
               <ClienteCard
                 key={cliente.id}
                 cliente={cliente}
+                onHistorico={handleOpenHistorico}
                 onEdit={handleEdit}
                 onDelete={solicitarExclusaoCliente}
               />
@@ -440,6 +520,94 @@ export default function AdminClientesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Sheet
+        open={historicoCliente != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setHistoricoCliente(null)
+            setHistoricoRows([])
+            setHistoricoError(null)
+          }
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="flex h-full max-h-screen w-full flex-col gap-0 overflow-hidden border-l p-0 sm:max-w-md"
+        >
+          <SheetHeader className="shrink-0 space-y-1 border-b border-border/60 px-6 py-4 pr-14 text-left">
+            <SheetTitle>Histórico de agendamentos</SheetTitle>
+            {historicoCliente ? (
+              <p className="text-sm font-medium text-foreground">{historicoCliente.nome}</p>
+            ) : null}
+            <p className="text-xs text-muted-foreground">Até 150 registros mais recentes nesta unidade.</p>
+          </SheetHeader>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 py-3">
+            {historicoLoading ? (
+              <div className="flex flex-1 items-center justify-center py-12">
+                <Spinner className="size-8" />
+              </div>
+            ) : historicoError ? (
+              <p className="py-6 text-center text-sm text-destructive">{historicoError}</p>
+            ) : historicoRows.length === 0 ? (
+              <p className="flex-1 py-10 text-center text-sm text-muted-foreground">
+                Nenhum agendamento encontrado para este cliente.
+              </p>
+            ) : (
+              <ScrollArea className="min-h-0 flex-1 pr-3">
+                <ul className="space-y-3 pb-4">
+                  {historicoRows.map((row) => {
+                    const st = row.status as AppointmentStatus
+                    const pay = row.status_pagamento as PaymentStatus
+                    const stColors = APPOINTMENT_STATUS_COLORS[st]
+                    return (
+                      <li
+                        key={row.id}
+                        className="rounded-xl border border-border/70 bg-muted/20 px-3 py-2.5 dark:bg-muted/10"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0 space-y-0.5">
+                            <p className="text-sm font-semibold text-foreground">
+                              {formatAgendamentoDataLocal(row.data)} · {formatTime(row.horario)}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {row.servico?.nome ?? 'Serviço'} · {row.barbeiro?.nome ?? 'Profissional'}
+                            </p>
+                          </div>
+                          <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                            {formatCurrency(row.valor)}
+                          </p>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          <span
+                            className={cn(
+                              'inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                              stColors.bg,
+                              stColors.text,
+                            )}
+                          >
+                            {APPOINTMENT_STATUS_LABELS[st]}
+                          </span>
+                          <span className="inline-flex rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            {PAYMENT_STATUS_LABELS[pay]}
+                          </span>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </ScrollArea>
+            )}
+          </div>
+          <SheetFooter className="shrink-0 border-t border-border/60 sm:flex-row sm:justify-center">
+            <SheetClose asChild>
+              <Button type="button" variant="outline">
+                Fechar
+              </Button>
+            </SheetClose>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       <AlertDialog
         open={clienteParaExcluir != null}

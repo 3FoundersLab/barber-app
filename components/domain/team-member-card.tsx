@@ -1,19 +1,20 @@
 'use client'
 
-import { Phone, Mail, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { Mail, Pencil, Phone, Trash2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { labelEquipeFuncao } from '@/lib/equipe-funcao'
 import type { Barbeiro } from '@/types'
+
+const actionIconBtnClass =
+  'h-10 w-10 shrink-0 rounded-xl text-muted-foreground transition-colors hover:bg-background hover:text-foreground hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring/60 dark:hover:bg-background/60'
+
+const trashBtnClass =
+  'h-10 w-10 shrink-0 rounded-xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive hover:shadow-sm focus-visible:ring-2 focus-visible:ring-destructive/40 dark:hover:bg-destructive/15'
 
 interface TeamMemberCardProps {
   barbeiro: Barbeiro
@@ -44,169 +45,196 @@ function displayNome(barbeiro: Barbeiro) {
 
 export function TeamMemberCard({ barbeiro, onEdit, onDelete, className }: TeamMemberCardProps) {
   const nome = displayNome(barbeiro)
+  const showMenu = Boolean(onEdit || onDelete)
+  const showRemove = Boolean(onDelete)
 
   return (
     <Card
       className={cn(
-        'relative flex min-w-0 gap-0 overflow-hidden py-0 transition-colors',
-        /* Mobile (abaixo de md): lista em linha; na grade da página, 1 card por linha */
-        'max-md:aspect-auto max-md:min-h-[4.75rem] max-md:flex-row max-md:items-center',
-        /* Tablet (md–lg): coluna com altura automática — evita texto encavalado no quadrado */
-        'md:max-lg:flex-col md:max-lg:aspect-auto',
-        /* Desktop denso: cartão quadrado */
-        'lg:aspect-square lg:flex-col',
+        'relative flex min-w-0 flex-col gap-0 overflow-hidden py-0 shadow-sm transition-[box-shadow,background-color]',
+        /* Com ações: altura livre para infos ficarem claramente fora da barra inferior */
+        showMenu ? 'lg:aspect-auto' : 'lg:aspect-square',
         !barbeiro.ativo && 'opacity-60',
         className,
       )}
     >
-      {(onEdit || onDelete) && (
-        <div className="absolute right-1 top-1 z-10 max-md:top-1/2 max-md:-translate-y-1/2 md:top-2 md:translate-y-0 md:right-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="h-9 w-9 shrink-0 p-0 shadow-sm md:h-11 md:w-11 lg:h-8 lg:w-8"
-              >
-                <MoreVertical className="h-4 w-4" />
-                <span className="sr-only">Menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {onEdit && (
-                <DropdownMenuItem onClick={() => onEdit(barbeiro)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Editar
-                </DropdownMenuItem>
-              )}
-              {onDelete && (
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => onDelete(barbeiro.id)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Excluir
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      )}
-
       <CardContent
         className={cn(
-          'flex w-full min-w-0 flex-1 flex-col',
-          /* Mobile: linha */
-          'max-md:flex-row max-md:items-center max-md:gap-3 max-md:p-3 max-md:pr-12 max-md:pt-3 max-md:text-left',
-          /* Tablet */
-          'md:max-lg:items-center md:max-lg:gap-3 md:max-lg:p-4 md:max-lg:px-4 md:max-lg:pb-5 md:max-lg:pt-12 md:max-lg:text-center',
-          /* Desktop quadrado */
-          'lg:h-full lg:min-h-0 lg:items-center lg:gap-2 lg:p-4 lg:pt-10 lg:text-center xl:gap-2 xl:p-4 xl:pt-10',
+          'flex min-h-0 flex-1 flex-col p-0',
+          /* Faixa vazia do próprio card entre conteúdo e footer */
+          showMenu && 'gap-5 max-md:gap-4',
         )}
       >
-        <Avatar
-          className={cn(
-            'h-11 w-11 shrink-0 border-2 border-border/60',
-            'md:max-lg:h-16 md:max-lg:w-16',
-            'lg:h-14 lg:w-14 xl:h-[4.5rem] xl:w-[4.5rem]',
-          )}
-        >
-          <AvatarImage src={barbeiro.avatar} className="object-cover" />
-          <AvatarFallback className="text-base md:text-lg lg:text-xl">
-            {nome.charAt(0).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-
         <div
           className={cn(
-            'flex min-h-0 w-full min-w-0 flex-col gap-2',
-            'max-md:flex-1 max-md:justify-center max-md:gap-1.5',
-            'md:max-lg:items-center md:max-lg:gap-2.5',
-            'lg:min-h-0 lg:flex-1 lg:justify-start lg:gap-2',
+            'flex min-h-0 flex-1 flex-col',
+            'max-md:flex-row max-md:items-center max-md:gap-3 max-md:p-3 max-md:pb-3',
+            'md:max-lg:flex-col md:max-lg:items-center md:max-lg:gap-3 md:max-lg:p-4 md:max-lg:pb-4',
+            'lg:flex lg:flex-1 lg:flex-col lg:items-center lg:justify-center lg:gap-2 lg:p-4 lg:pt-5 lg:pb-4',
           )}
         >
-          <div
+          <Avatar
             className={cn(
-              'flex w-full min-w-0 shrink-0 flex-col gap-1',
-              'max-md:items-start',
-              'md:max-lg:items-center',
-              'lg:items-center',
+              'shrink-0 border-2 border-border/50 shadow-sm',
+              'h-11 w-11 max-md:shrink-0',
+              'md:max-lg:h-16 md:max-lg:w-16',
+              'lg:h-14 lg:w-14 xl:h-[4.5rem] xl:w-[4.5rem]',
             )}
           >
-            <span
-              className={cn(
-                'w-full min-w-0 text-xs font-medium leading-snug text-foreground sm:text-sm',
-                'max-md:line-clamp-2 max-md:text-left',
-                'md:max-lg:line-clamp-3 md:max-lg:text-center',
-                'lg:line-clamp-4 lg:text-center',
-              )}
-              title={nome}
-            >
-              {nome}
-            </span>
-            <div
-              className={cn(
-                'flex max-w-full flex-wrap gap-1',
-                'max-md:justify-start',
-                'md:max-lg:justify-center',
-                'lg:justify-center',
-              )}
-            >
-              <Badge
-                variant="outline"
-                className={cn(
-                  'max-w-full truncate px-1.5 py-0 text-[10px] font-normal shadow-none sm:text-xs',
-                  equipeFuncaoBadgeClass(barbeiro.funcao_equipe),
-                )}
-              >
-                {labelEquipeFuncao(barbeiro.funcao_equipe)}
-              </Badge>
-              {!barbeiro.ativo && (
-                <Badge
-                  variant="outline"
-                  className="max-w-full truncate border-border/70 bg-muted/45 px-1.5 py-0 text-[10px] font-normal text-muted-foreground shadow-none dark:bg-muted/25 sm:text-xs"
-                >
-                  Inativo
-                </Badge>
-              )}
-            </div>
-          </div>
+            <AvatarImage src={barbeiro.avatar} className="object-cover" />
+            <AvatarFallback className="text-base font-semibold md:text-lg lg:text-xl">
+              {nome.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
 
           <div
             className={cn(
-              'flex w-full min-w-0 shrink-0 flex-col space-y-0.5 text-[10px] text-muted-foreground sm:text-xs',
-              'max-md:pt-0',
-              'lg:pt-0.5',
+              'flex min-h-0 w-full min-w-0 flex-col gap-2',
+              'max-md:flex-1 max-md:justify-center max-md:gap-1.5 max-md:text-left',
+              'md:max-lg:items-center md:max-lg:gap-2 md:max-lg:text-center',
+              'lg:min-h-0 lg:flex-1 lg:justify-start lg:gap-2 lg:text-center',
             )}
           >
-            {barbeiro.telefone ? (
+            <div
+              className={cn(
+                'flex w-full min-w-0 shrink-0 flex-col gap-1',
+                'max-md:items-start',
+                'md:max-lg:items-center',
+                'lg:items-center',
+              )}
+            >
               <span
                 className={cn(
-                  'flex min-w-0 items-center gap-1',
+                  'w-full min-w-0 text-xs font-semibold leading-snug tracking-tight text-foreground sm:text-sm',
+                  'max-md:line-clamp-2 max-md:text-left',
+                  'md:max-lg:line-clamp-3 md:max-lg:text-center',
+                  'lg:line-clamp-4 lg:text-center',
+                )}
+                title={nome}
+              >
+                {nome}
+              </span>
+              <div
+                className={cn(
+                  'flex max-w-full flex-wrap gap-1',
                   'max-md:justify-start',
                   'md:max-lg:justify-center',
                   'lg:justify-center',
                 )}
               >
-                <Phone className="h-3 w-3 shrink-0" />
-                <span className="min-w-0 truncate">{barbeiro.telefone}</span>
-              </span>
-            ) : null}
-            {barbeiro.email ? (
-              <span
-                className={cn(
-                  'flex min-w-0 items-center gap-1',
-                  'max-md:justify-start',
-                  'md:max-lg:justify-center',
-                  'lg:justify-center',
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'max-w-full truncate px-1.5 py-0 text-[10px] font-medium shadow-none sm:text-xs',
+                    equipeFuncaoBadgeClass(barbeiro.funcao_equipe),
+                  )}
+                >
+                  {labelEquipeFuncao(barbeiro.funcao_equipe)}
+                </Badge>
+                {!barbeiro.ativo && (
+                  <Badge
+                    variant="outline"
+                    className="max-w-full truncate border-border/70 bg-muted/45 px-1.5 py-0 text-[10px] font-medium text-muted-foreground shadow-none dark:bg-muted/25 sm:text-xs"
+                  >
+                    Inativo
+                  </Badge>
                 )}
-              >
-                <Mail className="h-3 w-3 shrink-0" />
-                <span className="min-w-0 truncate">{barbeiro.email}</span>
-              </span>
-            ) : null}
+              </div>
+            </div>
+
+            <div
+              className={cn(
+                'flex w-full min-w-0 shrink-0 flex-col space-y-1 text-[10px] text-muted-foreground sm:text-xs',
+                'lg:pt-0.5',
+              )}
+            >
+              {barbeiro.telefone ? (
+                <span
+                  className={cn(
+                    'flex min-w-0 items-center gap-1.5',
+                    'max-md:justify-start',
+                    'md:max-lg:justify-center',
+                    'lg:justify-center',
+                  )}
+                >
+                  <Phone className="size-3.5 shrink-0 opacity-80" aria-hidden />
+                  <span className="min-w-0 truncate">{barbeiro.telefone}</span>
+                </span>
+              ) : null}
+              {barbeiro.email ? (
+                <span
+                  className={cn(
+                    'flex min-w-0 items-center gap-1.5',
+                    'max-md:justify-start',
+                    'md:max-lg:justify-center',
+                    'lg:justify-center',
+                  )}
+                >
+                  <Mail className="size-3.5 shrink-0 opacity-80" aria-hidden />
+                  <span className="min-w-0 truncate">{barbeiro.email}</span>
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
+
+        {showMenu ? (
+          <div
+            role="toolbar"
+            aria-label={`Ações para ${nome}`}
+            className="flex shrink-0 items-center justify-center gap-0.5 rounded-b-xl border-t border-border/70 bg-gradient-to-b from-muted/35 to-muted/20 px-2 py-3 dark:from-muted/25 dark:to-muted/10"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            {onEdit ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className={actionIconBtnClass}
+                    aria-label={`Editar ${nome}`}
+                    onClick={() => onEdit(barbeiro)}
+                  >
+                    <Pencil className="size-[1.125rem]" strokeWidth={2} aria-hidden />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" sideOffset={6}>
+                  Editar membro
+                </TooltipContent>
+              </Tooltip>
+            ) : null}
+
+            {onEdit && showRemove ? (
+              <div
+                className="mx-1 h-6 w-px shrink-0 bg-border/80"
+                aria-hidden
+                role="separator"
+              />
+            ) : null}
+
+            {showRemove ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className={trashBtnClass}
+                    aria-label={`Remover ${nome} da equipe`}
+                    onClick={() => onDelete?.(barbeiro.id)}
+                  >
+                    <Trash2 className="size-[1.125rem]" strokeWidth={2} aria-hidden />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" sideOffset={6}>
+                  Remover da equipe
+                </TooltipContent>
+              </Tooltip>
+            ) : null}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )
