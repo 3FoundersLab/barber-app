@@ -86,17 +86,17 @@ export function DesktopSidebar({
   const asideRef = useRef<HTMLElement>(null)
 
   useLayoutEffect(() => {
-    const shell = asideRef.current?.closest('[data-app-shell]')
-    if (!shell) return
+    const el = asideRef.current?.closest('[data-app-shell]')
+    if (!el || !(el instanceof HTMLElement)) return
 
     const apply = () => {
-      shell.style.setProperty('--shell-sidebar-inset', shellSidebarInsetRem(collapsible, wide))
+      el.style.setProperty('--shell-sidebar-inset', shellSidebarInsetRem(collapsible, wide))
     }
     apply()
     window.addEventListener('resize', apply)
     return () => {
       window.removeEventListener('resize', apply)
-      shell.style.removeProperty('--shell-sidebar-inset')
+      el.style.removeProperty('--shell-sidebar-inset')
     }
   }, [collapsible, wide])
 

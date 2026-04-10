@@ -539,7 +539,7 @@ export default function AdminAgendamentosPage() {
             </p>
             <p className="text-xs text-muted-foreground sm:text-sm">
               {viewMode === 'grade'
-                ? 'Grade por profissional · intervalos de 10 minutos'
+                ? 'Grade por profissional · intervalos de 15 minutos'
                 : viewMode === 'calendar'
                   ? 'Calendário mensal — arraste para mover o dia do agendamento'
                   : 'Lista do dia selecionado'}
@@ -743,7 +743,7 @@ export default function AdminAgendamentosPage() {
                 appointments={appointmentsOfSelectedDate}
                 comandaByAgendamentoId={comandaMapEfetivo}
                 onBlockClick={setDetailAppointment}
-                timeRange={useDemoData ? { start: '09:00', end: '18:00' } : undefined}
+                referenceDate={selectedDate}
                 unavailableBlocks={useDemoData ? getAgendaDemoUnavailableBlocks() : undefined}
               />
             )}

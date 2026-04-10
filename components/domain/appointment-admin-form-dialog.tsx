@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Check, ChevronsUpDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { HORARIOS_PADRAO } from '@/lib/constants'
+import { buildAgendaSlotStrings, HORARIOS_PADRAO } from '@/lib/constants'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import { cn } from '@/lib/utils'
 import { Alert, AlertTitle } from '@/components/ui/alert'
@@ -39,26 +39,11 @@ function formatYMD(date: Date): string {
 }
 
 function normalizeHorarioLabel(h: string): string {
-  if (!h) return HORARIOS_PADRAO.inicio
+  if (!h) return HORARIOS_PADRAO.sugestaoNovoHorario
   const s = h.includes('T') ? (h.split('T')[1] ?? h) : h
   const match = /^(\d{1,2}):(\d{2})/.exec(s)
-  if (!match) return HORARIOS_PADRAO.inicio
+  if (!match) return HORARIOS_PADRAO.sugestaoNovoHorario
   return `${match[1]!.padStart(2, '0')}:${match[2]}`
-}
-
-function buildTenMinuteSlots(inicio: string, fim: string): string[] {
-  const [sh, sm] = inicio.split(':').map(Number)
-  const [eh, em] = fim.split(':').map(Number)
-  let cur = sh * 60 + sm
-  const end = eh * 60 + em
-  const out: string[] = []
-  while (cur < end) {
-    const h = Math.floor(cur / 60)
-    const m = cur % 60
-    out.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
-    cur += 10
-  }
-  return out
 }
 
 export interface AppointmentAdminFormDialogProps {
@@ -102,11 +87,15 @@ export function AppointmentAdminFormDialog({
   const [barbeiroId, setBarbeiroId] = useState('')
   const [servicoId, setServicoId] = useState('')
   const [dataStr, setDataStr] = useState(formatYMD(initialDate))
-  const [horario, setHorario] = useState(HORARIOS_PADRAO.inicio)
+  const [horario, setHorario] = useState(HORARIOS_PADRAO.sugestaoNovoHorario)
   const [observacoes, setObservacoes] = useState('')
 
   const slotOptions = useMemo(() => {
-    const base = buildTenMinuteSlots(HORARIOS_PADRAO.inicio, HORARIOS_PADRAO.fim)
+    const base = buildAgendaSlotStrings(
+      HORARIOS_PADRAO.inicio,
+      HORARIOS_PADRAO.fim,
+      HORARIOS_PADRAO.intervalo,
+    )
     const h = normalizeHorarioLabel(horario)
     if (h && !base.includes(h)) return [h, ...base].sort()
     return base
@@ -165,7 +154,7 @@ export function AppointmentAdminFormDialog({
     setBarbeiroId(preferredBarber)
     setServicoId('')
     setDataStr(formatYMD(initialDate))
-    setHorario(HORARIOS_PADRAO.inicio)
+    setHorario(HORARIOS_PADRAO.sugestaoNovoHorario)
     setObservacoes('')
   }, [open, editing, initialDate, defaultBarbeiroId, barbeiros])
 

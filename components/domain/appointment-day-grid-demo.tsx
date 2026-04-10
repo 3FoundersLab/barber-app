@@ -32,7 +32,7 @@ export function AppointmentDayGridDemo({
       className={className}
       barbeiros={barbeiros}
       appointments={agendamentos}
-      timeRange={{ start: '09:00', end: '18:00' }}
+      referenceDate={selectedDate}
       unavailableBlocks={unavailable}
       onBlockClick={onBlockClick}
     />

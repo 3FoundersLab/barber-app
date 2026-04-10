@@ -53,11 +53,50 @@ export const DIAS_SEMANA = [
 
 export const DIAS_SEMANA_ABREV = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
-// Horários padrão
+// Horários padrão da grade / formulário de agendamento (dia completo, slot configurável)
 export const HORARIOS_PADRAO = {
-  inicio: '09:00',
-  fim: '19:00',
-  intervalo: 30, // minutos
+  /** Eixo da grade do dia (24 h). */
+  inicio: '00:00',
+  fim: '24:00',
+  intervalo: 15, // minutos (grade e opções de horário no admin)
+  /** Valor inicial do seletor ao criar agendamento (a grade continua 24 h). */
+  sugestaoNovoHorario: '09:00',
+}
+
+/**
+ * Converte "HH:mm", ISO parcial ou "24:00" em minutos desde meia-noite.
+ * "24:00" → 1440 (fim exclusivo do eixo do dia).
+ */
+export function parseAgendaClockToMinutes(t: string): number | null {
+  if (!t || typeof t !== 'string') return null
+  let s = t.trim()
+  const tIdx = s.indexOf('T')
+  if (tIdx !== -1) s = s.slice(tIdx + 1)
+  const match = s.match(/^(\d{1,2}):(\d{2})/)
+  if (!match) return null
+  const h = Number(match[1])
+  const m = Number(match[2])
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null
+  if (h === 24 && m === 0) return 24 * 60
+  if (h < 0 || h > 23 || m < 0 || m > 59) return null
+  return h * 60 + m
+}
+
+/** Gera rótulos HH:mm entre início e fim (fim exclusivo), passo fixo em minutos. */
+export function buildAgendaSlotStrings(inicio: string, fim: string, stepMinutes: number): string[] {
+  const start = parseAgendaClockToMinutes(inicio)
+  const end = parseAgendaClockToMinutes(fim)
+  if (start == null || end == null || end <= start) return []
+  const step = Math.max(5, Math.min(60, stepMinutes))
+  let cur = start
+  const out: string[] = []
+  while (cur < end) {
+    const hh = Math.floor(cur / 60)
+    const mm = cur % 60
+    out.push(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`)
+    cur += step
+  }
+  return out
 }
 
 // Formatação de moeda
