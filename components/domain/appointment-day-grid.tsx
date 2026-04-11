@@ -62,6 +62,23 @@ function hashId(id: string): number {
   return Math.abs(h)
 }
 
+/** Horário local do utilizador em minutos desde 00:00 (com fração, alinhado à linha “agora”). */
+function getLocalPreciseMinutesSinceMidnight(d: Date): number {
+  return (
+    d.getHours() * 60 +
+    d.getMinutes() +
+    d.getSeconds() / 60 +
+    d.getMilliseconds() / 60000
+  )
+}
+
+/**
+ * Posição vertical (px) do instante `minutesSinceMidnight` no eixo da grade (abaixo do cabeçalho).
+ */
+function minutesToContentY(minutesSinceMidnight: number, dayStartMin: number): number {
+  return ((minutesSinceMidnight - dayStartMin) / SLOT_MINUTES) * ROW_PX
+}
+
 function assignLanes(
   items: { id: string; start: number; end: number }[],
 ): { laneById: Map<string, number>; laneCount: number } {
@@ -95,12 +112,17 @@ export interface AppointmentDayGridProps {
   /** Faixas cinzas “Não atende” por profissional. */
   unavailableBlocks?: AppointmentUnavailableBlock[]
   /**
-   * Dia exibido na grade (data local). Se for o dia atual do usuário, o scroll vertical
-   * posiciona ~1h antes do horário local; em outros dias, volta ao topo da timeline.
+   * Dia exibido na grade (data local). Se for o dia atual do utilizador, o scroll vertical
+   * alinha ao horário local do computador; em outros dias, volta ao topo da timeline.
    */
   referenceDate?: Date
-  /** Minutos de contexto antes do “agora” ao alinhar o scroll (padrão 60). */
+  /** Minutos de contexto antes do “agora” quando `scrollToNowStrategy` é `context` (padrão 60). */
   scrollToNowContextMinutes?: number
+  /**
+   * `context`: coloca ~N minutos antes do instante atual junto ao topo útil (estilo Teams).
+   * `center`: centra o instante atual na viewport (útil em ecrãs altos).
+   */
+  scrollToNowStrategy?: 'context' | 'center'
 }
 
 export function AppointmentDayGrid({
@@ -113,6 +135,7 @@ export function AppointmentDayGrid({
   unavailableBlocks,
   referenceDate,
   scrollToNowContextMinutes = 60,
+  scrollToNowStrategy = 'context',
 }: AppointmentDayGridProps) {
   const dayStartMin =
     parseAgendaClockToMinutes(timeRange?.start ?? HORARIOS_PADRAO.inicio) ?? 0
@@ -149,9 +172,9 @@ export function AppointmentDayGrid({
     if (!referenceDayKey) return null
     if (localDayKey(new Date(nowMs)) !== referenceDayKey) return null
     const d = new Date(nowMs)
-    const precise = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60
+    const precise = getLocalPreciseMinutesSinceMidnight(d)
     if (precise < dayStartMin || precise >= dayEndMin) return null
-    return ((precise - dayStartMin) / SLOT_MINUTES) * ROW_PX
+    return minutesToContentY(precise, dayStartMin)
   }, [referenceDayKey, nowMs, dayStartMin, dayEndMin])
 
   const gridBackgroundStyle = useMemo(() => {
@@ -201,33 +224,41 @@ export function AppointmentDayGrid({
     const el = scrollerRef.current
     if (!el || referenceDayKey == null) return
 
-    const today = new Date()
-    const todayKey = localDayKey(today)
-    const viewingToday = referenceDayKey === todayKey
-
     const applyVerticalScroll = () => {
+      const clock = new Date()
+      const todayKey = localDayKey(clock)
+      const viewingToday = referenceDayKey === todayKey
+
       if (!viewingToday) {
         el.scrollTop = 0
         return
       }
 
-      const nowMin = today.getHours() * 60 + today.getMinutes()
+      const preciseNow = getLocalPreciseMinutesSinceMidnight(clock)
       const TOP_PAD = 8
       const ctx = Math.max(0, scrollToNowContextMinutes)
+      const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight)
 
-      if (nowMin < dayStartMin) {
+      if (preciseNow < dayStartMin) {
         el.scrollTop = 0
         return
       }
-      if (nowMin >= dayEndMin) {
-        el.scrollTop = Math.max(0, el.scrollHeight - el.clientHeight)
+      if (preciseNow >= dayEndMin) {
+        el.scrollTop = maxScroll
         return
       }
 
-      const anchorMin = Math.max(dayStartMin, nowMin - ctx)
-      const y = HEADER_ROW_PX + ((anchorMin - dayStartMin) / SLOT_MINUTES) * ROW_PX
-      const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight)
-      el.scrollTop = Math.min(Math.max(0, y - TOP_PAD), maxScroll)
+      const nowY = HEADER_ROW_PX + minutesToContentY(preciseNow, dayStartMin)
+
+      if (scrollToNowStrategy === 'center') {
+        const desired = nowY - el.clientHeight / 2
+        el.scrollTop = Math.min(Math.max(0, desired), maxScroll)
+        return
+      }
+
+      const anchorMin = Math.max(dayStartMin, preciseNow - ctx)
+      const anchorY = HEADER_ROW_PX + minutesToContentY(anchorMin, dayStartMin)
+      el.scrollTop = Math.min(Math.max(0, anchorY - TOP_PAD), maxScroll)
     }
 
     applyVerticalScroll()
@@ -240,7 +271,14 @@ export function AppointmentDayGrid({
       cancelAnimationFrame(raf1)
       cancelAnimationFrame(raf2)
     }
-  }, [referenceDayKey, dayStartMin, dayEndMin, slotCount, scrollToNowContextMinutes])
+  }, [
+    referenceDayKey,
+    dayStartMin,
+    dayEndMin,
+    slotCount,
+    scrollToNowContextMinutes,
+    scrollToNowStrategy,
+  ])
 
   const scrollByOneColumn = useCallback((dir: -1 | 1) => {
     const el = scrollerRef.current
