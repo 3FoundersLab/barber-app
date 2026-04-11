@@ -79,6 +79,32 @@ function minutesToContentY(minutesSinceMidnight: number, dayStartMin: number): n
   return ((minutesSinceMidnight - dayStartMin) / SLOT_MINUTES) * ROW_PX
 }
 
+/** Instante local “agora” na grade do dia: linha sempre visível quando é hoje (clamp ao eixo). */
+function computeNowIndicator(
+  referenceDayKey: string,
+  nowMs: number,
+  dayStartMin: number,
+  dayEndMin: number,
+  gridHeight: number,
+): { rawMinutes: number; lineOffsetPx: number } | null {
+  if (localDayKey(new Date(nowMs)) !== referenceDayKey) return null
+  if (!(dayEndMin > dayStartMin) || gridHeight <= 0) return null
+
+  const raw = getLocalPreciseMinutesSinceMidnight(new Date(nowMs))
+
+  let lineOffsetPx: number
+  if (raw <= dayStartMin) {
+    lineOffsetPx = 0
+  } else if (raw >= dayEndMin) {
+    lineOffsetPx = Math.max(0, gridHeight - 1)
+  } else {
+    lineOffsetPx = minutesToContentY(raw, dayStartMin)
+    lineOffsetPx = Math.min(Math.max(0, lineOffsetPx), Math.max(0, gridHeight - 1))
+  }
+
+  return { rawMinutes: raw, lineOffsetPx }
+}
+
 function assignLanes(
   items: { id: string; start: number; end: number }[],
 ): { laneById: Map<string, number>; laneCount: number } {
@@ -112,8 +138,8 @@ export interface AppointmentDayGridProps {
   /** Faixas cinzas “Não atende” por profissional. */
   unavailableBlocks?: AppointmentUnavailableBlock[]
   /**
-   * Dia exibido na grade (data local). Se for o dia atual do utilizador, o scroll vertical
-   * alinha ao horário local do computador; em outros dias, volta ao topo da timeline.
+   * Dia exibido na grade (data local). Por omissão usa o dia atual local.
+   * Se for hoje, mostra a linha vermelha “agora” (horário real) e alinha o scroll; noutros dias, sem linha.
    */
   referenceDate?: Date
   /** Minutos de contexto antes do “agora” quando `scrollToNowStrategy` é `context` (padrão 60). */
@@ -133,10 +159,13 @@ export function AppointmentDayGrid({
   className,
   timeRange,
   unavailableBlocks,
-  referenceDate,
+  referenceDate: referenceDateProp,
   scrollToNowContextMinutes = 60,
   scrollToNowStrategy = 'context',
 }: AppointmentDayGridProps) {
+  /** Dia da grade: por omissão “hoje” local, para a linha Agora aparecer mesmo se o pai não passar data. */
+  const referenceDate = referenceDateProp ?? new Date()
+
   const dayStartMin =
     parseAgendaClockToMinutes(timeRange?.start ?? HORARIOS_PADRAO.inicio) ?? 0
   const dayEndMin =
@@ -145,15 +174,11 @@ export function AppointmentDayGrid({
   const slotCount = Math.ceil(totalMinutes / SLOT_MINUTES)
   const gridHeight = slotCount * ROW_PX
 
-  const referenceDayKey = useMemo(() => {
-    if (!referenceDate) return null
-    return localDayKey(referenceDate)
-  }, [referenceDate])
+  const referenceDayKey = useMemo(() => localDayKey(referenceDate), [referenceDate])
 
   const [nowMs, setNowMs] = useState(() => Date.now())
 
   useEffect(() => {
-    if (!referenceDayKey) return
     if (localDayKey(new Date()) !== referenceDayKey) return
     const tick = () => setNowMs(Date.now())
     tick()
@@ -168,17 +193,21 @@ export function AppointmentDayGrid({
     }
   }, [referenceDayKey])
 
-  /** Minutos locais “agora” no dia da grade (null se não for hoje ou fora do eixo). */
-  const nowPreciseMinutes = useMemo(() => {
-    if (!referenceDayKey) return null
-    if (localDayKey(new Date(nowMs)) !== referenceDayKey) return null
-    const p = getLocalPreciseMinutesSinceMidnight(new Date(nowMs))
-    if (p < dayStartMin || p >= dayEndMin) return null
-    return p
-  }, [referenceDayKey, nowMs, dayStartMin, dayEndMin])
+  const nowIndicator = useMemo(
+    () => computeNowIndicator(referenceDayKey, nowMs, dayStartMin, dayEndMin, gridHeight),
+    [referenceDayKey, nowMs, dayStartMin, dayEndMin, gridHeight],
+  )
 
-  const nowLineOffsetPx =
-    nowPreciseMinutes == null ? null : minutesToContentY(nowPreciseMinutes, dayStartMin)
+  const nowRawMinutes = nowIndicator?.rawMinutes ?? null
+  const nowLineOffsetPx = nowIndicator?.lineOffsetPx ?? null
+
+  /** Altura da faixa “passado” (sombrear até à linha agora, ou dia inteiro após fecho). */
+  const pastShadeHeightPx = useMemo(() => {
+    if (!nowIndicator) return 0
+    if (nowIndicator.rawMinutes >= dayEndMin) return gridHeight
+    if (nowIndicator.rawMinutes <= dayStartMin) return 0
+    return nowIndicator.lineOffsetPx
+  }, [nowIndicator, dayEndMin, dayStartMin, gridHeight])
 
   const gridBackgroundStyle = useMemo(() => {
     const hourPx = (60 / SLOT_MINUTES) * ROW_PX
@@ -225,7 +254,7 @@ export function AppointmentDayGrid({
 
   useLayoutEffect(() => {
     const el = scrollerRef.current
-    if (!el || referenceDayKey == null) return
+    if (!el) return
 
     const applyVerticalScroll = () => {
       const clock = new Date()
@@ -411,8 +440,7 @@ export function AppointmentDayGrid({
                 const isHalf = mod === 30
                 const isQuarter = mod === 15 || mod === 45
                 const slotEnd = min + SLOT_MINUTES
-                const isPastSlot =
-                  nowPreciseMinutes != null && slotEnd <= nowPreciseMinutes
+                const isPastSlot = nowRawMinutes != null && slotEnd <= nowRawMinutes
                 return (
                   <div
                     key={min}
@@ -541,10 +569,10 @@ export function AppointmentDayGrid({
 
                 <div className="relative box-border" style={{ height: gridHeight }}>
                   <div className="pointer-events-none absolute inset-0 z-0" style={gridBackgroundStyle} />
-                  {nowLineOffsetPx != null && nowPreciseMinutes != null ? (
+                  {pastShadeHeightPx > 0 ? (
                     <div
                       className="pointer-events-none absolute inset-x-0 top-0 z-[5] bg-background/45 dark:bg-background/35"
-                      style={{ height: nowLineOffsetPx }}
+                      style={{ height: pastShadeHeightPx }}
                       aria-hidden
                     />
                   ) : null}
@@ -602,7 +630,7 @@ export function AppointmentDayGrid({
                     const startLbl = minutesToLabel(start)
                     const endLbl = minutesToLabel(fullEnd)
                     const cardEndsInPast =
-                      nowPreciseMinutes != null && visEnd <= nowPreciseMinutes && a.status !== 'em_atendimento'
+                      nowRawMinutes != null && visEnd <= nowRawMinutes && a.status !== 'em_atendimento'
 
                     return (
                       <button
@@ -681,15 +709,15 @@ export function AppointmentDayGrid({
             )
           })}
 
-          {nowLineOffsetPx != null && nowPreciseMinutes != null ? (
+          {nowIndicator != null ? (
             <div
               className="pointer-events-none absolute inset-x-0 z-[50]"
-              style={{ top: HEADER_ROW_PX + nowLineOffsetPx - 1 }}
-              aria-hidden
+              style={{ top: HEADER_ROW_PX + nowIndicator.lineOffsetPx - 1 }}
+              aria-label={`Horário local atual: ${minutesToLabel(Math.floor(nowIndicator.rawMinutes))}`}
             >
               <div
                 className={cn(
-                  'h-[2px] w-full shadow-[0_1px_0_rgba(0,0,0,0.08)] dark:shadow-[0_1px_0_rgba(255,255,255,0.08)]',
+                  'h-[3px] w-full rounded-[1px] shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_3px_rgba(232,17,35,0.35)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_1px_3px_rgba(255,107,107,0.35)]',
                   NOW_LINE_CLASS,
                 )}
               />
