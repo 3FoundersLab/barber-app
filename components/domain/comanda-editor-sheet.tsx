@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Minus, Plus, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -89,12 +89,9 @@ export function ComandaEditorSheet({
   /** Quantidade já reservada na comanda ao abrir (para calcular teto: estoque DB + committed). */
   const [committedProduto, setCommittedProduto] = useState<Record<string, number>>({})
 
-  const comandaRef = useRef(comanda)
-  comandaRef.current = comanda
-
   const loadData = useCallback(async () => {
-    const c = comandaRef.current
-    if (!c) return
+    if (!comanda) return
+    const c = comanda
     setLoading(true)
     setError(null)
 
@@ -191,11 +188,11 @@ export function ComandaEditorSheet({
     setFormaPagamento((c.forma_pagamento as ComandaFormaPagamento) || '')
 
     setLoading(false)
-  }, [demoMode])
+  }, [comanda, demoMode])
 
   useEffect(() => {
     if (open && comanda) void loadData()
-  }, [open, comanda?.id, demoMode, loadData])
+  }, [open, comanda, demoMode, loadData])
 
   const subtotalServicos = useMemo(() => {
     let t = 0

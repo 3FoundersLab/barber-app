@@ -53,13 +53,15 @@ export const DIAS_SEMANA = [
 
 export const DIAS_SEMANA_ABREV = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
-// Horários padrão da grade / formulário de agendamento (dia completo, slot configurável)
+/**
+ * Horários padrão da grade / passos de horário quando não há `timeRange` nem horários da barbearia.
+ * Alinhado a {@link AGENDA_FUNCIONAMENTO_PADRAO} (expediente típico), não ao eixo 24 h.
+ */
 export const HORARIOS_PADRAO = {
-  /** Eixo da grade do dia (24 h). */
-  inicio: '00:00',
-  fim: '24:00',
-  intervalo: 15, // minutos (grade e opções de horário no admin)
-  /** Valor inicial do seletor ao criar agendamento (a grade continua 24 h). */
+  inicio: '09:00',
+  fim: '19:00',
+  intervalo: 30,
+  /** Valor inicial do seletor ao criar agendamento. */
   sugestaoNovoHorario: '09:00',
 }
 

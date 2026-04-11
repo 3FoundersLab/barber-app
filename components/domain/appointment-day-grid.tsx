@@ -20,6 +20,8 @@ import type { Agendamento, Barbeiro } from '@/types'
 const SLOT_MINUTES = HORARIOS_PADRAO.intervalo
 const ROW_PX = 24
 const MIN_BLOCK_PX = 80
+/** Duração mínima realista do bloco no eixo (não confundir com o passo da grade em minutos). */
+const MIN_APPOINTMENT_DURATION_MIN = 10
 /** Altura do cabeçalho (foto + nome) — deve bater com a célula vazia da coluna de horas. */
 const HEADER_ROW_PX = 72
 
@@ -240,7 +242,7 @@ export function AppointmentDayGrid({
       cancelAnimationFrame(raf1)
       cancelAnimationFrame(raf2)
     }
-  }, [referenceDayKey, dayStartMin, dayEndMin, slotCount, scrollToNowContextMinutes])
+  }, [referenceDayKey, dayStartMin, dayEndMin, gridHeight, scrollToNowContextMinutes])
 
   const scrollByOneColumn = useCallback((dir: -1 | 1) => {
     const el = scrollerRef.current
@@ -418,7 +420,7 @@ export function AppointmentDayGrid({
               const start = timeToMinutes(a.horario)
               const rawDur = a.servico?.duracao
               const dur = Math.max(
-                SLOT_MINUTES,
+                MIN_APPOINTMENT_DURATION_MIN,
                 typeof rawDur === 'number' && Number.isFinite(rawDur) ? rawDur : 30,
               )
               const end = start + dur
@@ -487,6 +489,7 @@ export function AppointmentDayGrid({
                 </div>
 
                 <div className="relative box-border" style={{ height: gridHeight }}>
+                  {/* Fundo da grelha. Overlays decorativos na timeline: z ≤ 1 e pointer-events-none, para não bloquear cartões (z-[3]+). */}
                   <div className="pointer-events-none absolute inset-0" style={gridBackgroundStyle} />
                   {nowLineOffsetPx != null && (
                     <div
@@ -527,7 +530,7 @@ export function AppointmentDayGrid({
                     const visStart = Math.max(start, dayStartMin)
                     const visEnd = Math.min(end, dayEndMin)
                     const top = ((visStart - dayStartMin) / SLOT_MINUTES) * ROW_PX
-                    const slotSpanMin = Math.max(visEnd - visStart, SLOT_MINUTES)
+                    const slotSpanMin = Math.max(visEnd - visStart, MIN_APPOINTMENT_DURATION_MIN)
                     const fromGrid = (slotSpanMin / SLOT_MINUTES) * ROW_PX
                     const height = Math.max(
                       Number.isFinite(fromGrid) ? fromGrid : MIN_BLOCK_PX,
