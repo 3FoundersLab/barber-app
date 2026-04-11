@@ -222,20 +222,14 @@ export const AppointmentDayGrid = forwardRef<AppointmentDayGridHandle, Appointme
   const nowMinuteAnchor = useMemo(() => {
     if (!referenceDayKey) return null
     const d = new Date(nowMs)
-<<<<<<< Updated upstream
-    const precise =
+    if (agendaLocalDayKey(d) !== referenceDayKey) return null
+    return (
       d.getHours() * 60 +
       d.getMinutes() +
       d.getSeconds() / 60 +
       d.getMilliseconds() / 60000
-    if (precise < dayStartMin || precise >= dayEndMin) return null
-    return ((precise - dayStartMin) / SLOT_MINUTES) * ROW_PX
-  }, [referenceDayKey, nowMs, dayStartMin, dayEndMin])
-=======
-    if (agendaLocalDayKey(d) !== referenceDayKey) return null
-    return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60
+    )
   }, [referenceDayKey, nowMs])
->>>>>>> Stashed changes
 
   const gridBackgroundStyle = useMemo(() => {
     const hourPx = (60 / SLOT_MINUTES) * ROW_PX
@@ -308,37 +302,9 @@ export const AppointmentDayGrid = forwardRef<AppointmentDayGridHandle, Appointme
     const el = scrollerRef.current
     if (!el || referenceDayKey == null) return
 
-<<<<<<< Updated upstream
     const applyVerticalScroll = () => {
       const clock = new Date()
-      if (referenceDayKey !== localDayKey(clock)) {
-        el.scrollTop = 0
-        return
-      }
-
-      const nowMin = clock.getHours() * 60 + clock.getMinutes()
-      const TOP_PAD = 8
-      const ctx = Math.max(0, scrollToNowContextMinutes)
-
-      if (nowMin < dayStartMin) {
-        el.scrollTop = 0
-        return
-      }
-      if (nowMin >= dayEndMin) {
-        el.scrollTop = Math.max(0, el.scrollHeight - el.clientHeight)
-        return
-      }
-
-      const anchorMin = Math.max(dayStartMin, nowMin - ctx)
-      const y = HEADER_ROW_PX + ((anchorMin - dayStartMin) / SLOT_MINUTES) * ROW_PX
-      const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight)
-      el.scrollTop = Math.min(Math.max(0, y - TOP_PAD), maxScroll)
-=======
-    const today = new Date()
-    const todayKey = agendaLocalDayKey(today)
-    const viewingToday = referenceDayKey === todayKey
-
-    const applyVerticalScroll = () => {
+      const viewingToday = referenceDayKey === agendaLocalDayKey(clock)
       el.scrollTop = computeScrollTopForNowAnchor(el, {
         viewingToday,
         dayStartMin,
@@ -347,9 +313,8 @@ export const AppointmentDayGrid = forwardRef<AppointmentDayGridHandle, Appointme
         rowPx: ROW_PX,
         headerRowPx: HEADER_ROW_PX,
         scrollToNowContextMinutes,
-        now: today,
+        now: clock,
       })
->>>>>>> Stashed changes
     }
 
     applyVerticalScroll()
@@ -362,9 +327,6 @@ export const AppointmentDayGrid = forwardRef<AppointmentDayGridHandle, Appointme
       cancelAnimationFrame(raf1)
       cancelAnimationFrame(raf2)
     }
-<<<<<<< Updated upstream
-  }, [referenceDayKey, dayStartMin, dayEndMin, gridHeight, scrollToNowContextMinutes])
-=======
   }, [
     referenceDayKey,
     dayStartMin,
@@ -410,7 +372,6 @@ export const AppointmentDayGrid = forwardRef<AppointmentDayGridHandle, Appointme
       ro.disconnect()
     }
   }, [referenceDayKey, nowLineOffsetPx, nowMs, onIrParaAgoraFabChange])
->>>>>>> Stashed changes
 
   const scrollByOneColumn = useCallback((dir: -1 | 1) => {
     const el = scrollerRef.current

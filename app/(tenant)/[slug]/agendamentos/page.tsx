@@ -898,39 +898,11 @@ export default function AdminAgendamentosPage() {
                   <AppointmentListSkeleton count={6} className="contents" />
                 </div>
               ) : listFilteredSorted.length > 0 ? (
-<<<<<<< Updated upstream
-                listByPeriod.map(
-                  ({ key, label, items }) =>
-                    items.length === 0 ? null : (
-                      <section key={key} className="space-y-4">
-                        <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                          {label}
-                        </h3>
-                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                          {items.map((agendamento) => (
-                            <AppointmentCard
-                              key={agendamento.id}
-                              appointment={agendamento}
-                              listLayout
-                              comandaNumero={comandaMapEfetivo[agendamento.id]}
-                              isNext={agendamento.id === nextAppointmentId}
-                              onCheckIn={handleCheckIn}
-                              onComplete={(id) => handleStatusChange(id, 'concluido')}
-                              onCancel={(id, motivo) => void handleCancelAppointment(id, motivo)}
-                              onNoShow={(id) => handleStatusChange(id, 'faltou')}
-                              onMarkPaid={handleMarkPaid}
-                              onEdit={
-                                allowsAdminEditAppointment(agendamento, useDemoData)
-                                  ? (id) => {
-                                      const row = displayAgendamentos.find((x) => x.id === id)
-                                      if (row) beginEditAppointment(row)
-                                    }
-                                  : undefined
-=======
                 listFilteredSorted.length > AGENDA_LIST_VIRTUAL_THRESHOLD ? (
                   <AgendaAppointmentListVirtual items={listFilteredSorted}>
                     {(agendamento) => (
                       <AppointmentCard
+                        key={agendamento.id}
                         appointment={agendamento}
                         listLayout
                         comandaNumero={comandaMapEfetivo[agendamento.id]}
@@ -949,7 +921,6 @@ export default function AdminAgendamentosPage() {
                             ? (id) => {
                                 const row = displayAgendamentos.find((x) => x.id === id)
                                 if (row) beginEditAppointment(row)
->>>>>>> Stashed changes
                               }
                             : undefined
                         }
@@ -1011,7 +982,7 @@ export default function AdminAgendamentosPage() {
                             ))}
                           </div>
                         </section>
-                      ),
+                      )
                   )
                 )
               ) : (

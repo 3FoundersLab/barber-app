@@ -20,7 +20,11 @@ export function getAgendaNowLineTopPx(
 ): number | null {
   if (referenceDayKey == null) return null
   if (agendaLocalDayKey(now) !== referenceDayKey) return null
-  const precise = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60
+  const precise =
+    now.getHours() * 60 +
+    now.getMinutes() +
+    now.getSeconds() / 60 +
+    now.getMilliseconds() / 60000
   if (precise < dayStartMin || precise >= dayEndMin) return null
   return ((precise - dayStartMin) / slotMinutes) * rowHeightPx
 }

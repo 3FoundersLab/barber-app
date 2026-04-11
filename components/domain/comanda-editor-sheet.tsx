@@ -1,9 +1,5 @@
 'use client'
 
-<<<<<<< Updated upstream
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Minus, Plus, Search } from 'lucide-react'
-=======
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   Banknote,
@@ -17,7 +13,6 @@ import {
   Smartphone,
   Trash2,
 } from 'lucide-react'
->>>>>>> Stashed changes
 import { createClient } from '@/lib/supabase/client'
 import {
   COMANDA_DEMO_ID_FECHADA,
@@ -69,10 +64,6 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-<<<<<<< Updated upstream
-import { ResumoComanda } from '@/components/domain/resumo-comanda'
-=======
->>>>>>> Stashed changes
 import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
 import type { Comanda, ComandaDescontoModo, ComandaFormaPagamento } from '@/types/comanda'
@@ -127,13 +118,6 @@ export function ComandaEditorSheet({
   /** Quantidade já reservada na comanda ao abrir (para calcular teto: estoque DB + committed). */
   const [committedProduto, setCommittedProduto] = useState<Record<string, number>>({})
 
-<<<<<<< Updated upstream
-  const loadData = useCallback(async () => {
-    if (!comanda) return
-    const c = comanda
-    setLoading(true)
-    setError(null)
-=======
   const comandaRef = useRef(comanda)
   comandaRef.current = comanda
 
@@ -151,7 +135,6 @@ export function ComandaEditorSheet({
       setLoading(true)
       setError(null)
     }
->>>>>>> Stashed changes
 
     if (demoMode) {
       if (quiet) {
@@ -253,14 +236,9 @@ export function ComandaEditorSheet({
     setBuscaProduto('')
     setCategoriaFiltroEstoque('todas')
 
-<<<<<<< Updated upstream
-    setLoading(false)
-  }, [comanda, demoMode])
-=======
     if (!quiet) setLoading(false)
     setQuietRefreshing(false)
   }, [demoMode])
->>>>>>> Stashed changes
 
   useEffect(() => {
     if (open && comanda) void loadData()
@@ -1051,113 +1029,11 @@ export function ComandaEditorSheet({
                           onChange={(e) => setDescontoValor(e.target.value)}
                           disabled={!podeEditar}
                         />
-<<<<<<< Updated upstream
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="taxa-serv"
-                      checked={taxaServicoAplicar}
-                      onCheckedChange={(c) => setTaxaServicoAplicar(c === true)}
-                      disabled={comanda.status !== 'aberta'}
-                    />
-                    <Label htmlFor="taxa-serv" className="text-sm font-normal">
-                      Taxa de serviço (%)
-                    </Label>
-                    <Input
-                      className="ml-auto w-20"
-                      inputMode="decimal"
-                      value={taxaServicoPct}
-                      onChange={(e) => setTaxaServicoPct(e.target.value)}
-                      disabled={!taxaServicoAplicar || comanda.status !== 'aberta'}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Forma de pagamento</Label>
-                    <Select
-                      value={formaPagamento || 'none'}
-                      onValueChange={(v) => setFormaPagamento(v === 'none' ? '' : (v as ComandaFormaPagamento))}
-                      disabled={comanda.status !== 'aberta'}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione ao fechar" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">—</SelectItem>
-                        <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                        <SelectItem value="pix">Pix</SelectItem>
-                        <SelectItem value="cartao_debito">Cartão débito</SelectItem>
-                        <SelectItem value="cartao_credito">Cartão crédito</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <ResumoComanda
-                    key={comanda.id}
-                    subtotalServicos={totais.subtotalServicos}
-                    subtotalProdutos={totais.subtotalProdutos}
-                    desconto={totais.valorDesconto}
-                    taxaServico={totais.valorTaxaServico}
-                    total={totais.totalFinal}
-                    isSaving={saving}
-                    persistExpandedStorageKey="barber-app:comanda-resumo-expanded"
-                  />
-
-                  {comanda.status === 'aberta' ? (
-                    <div className="flex flex-col gap-2 pb-8 sm:flex-row sm:flex-wrap">
-                      <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-                        Voltar
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={() => void handleSalvar()}
-                        disabled={saving || demoMode}
-                        title={
-                          demoMode
-                            ? 'Desative dados fictícios na página de comandas para salvar'
-                            : undefined
-                        }
-                      >
-                        {saving ? <Spinner className="mr-2 h-4 w-4" /> : null}
-                        Salvar linhas e dados
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => void handleFecharComanda()}
-                        disabled={saving || demoMode}
-                        title={
-                          demoMode
-                            ? 'Desative dados fictícios na página de comandas para fechar comanda real'
-                            : undefined
-                        }
-                      >
-                        Fechar comanda
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        className="sm:ml-auto"
-                        onClick={() => void handleCancelarComanda()}
-                        disabled={saving || demoMode}
-                        title={
-                          demoMode
-                            ? 'Desative dados fictícios na página de comandas para cancelar comanda real'
-                            : undefined
-                        }
-                      >
-                        Cancelar comanda
-                      </Button>
-=======
                       ) : (
                         <div className="flex h-10 items-center rounded-md border border-border/80 bg-muted/30 px-3 text-sm tabular-nums text-muted-foreground sm:max-w-[8rem]">
                           {formatCurrency(0)}
                         </div>
                       )}
->>>>>>> Stashed changes
                     </div>
                     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
                       <div className="flex items-center gap-2">
