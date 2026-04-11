@@ -168,14 +168,17 @@ export function AppointmentDayGrid({
     }
   }, [referenceDayKey])
 
-  const nowLineOffsetPx = useMemo(() => {
+  /** Minutos locais “agora” no dia da grade (null se não for hoje ou fora do eixo). */
+  const nowPreciseMinutes = useMemo(() => {
     if (!referenceDayKey) return null
     if (localDayKey(new Date(nowMs)) !== referenceDayKey) return null
-    const d = new Date(nowMs)
-    const precise = getLocalPreciseMinutesSinceMidnight(d)
-    if (precise < dayStartMin || precise >= dayEndMin) return null
-    return minutesToContentY(precise, dayStartMin)
+    const p = getLocalPreciseMinutesSinceMidnight(new Date(nowMs))
+    if (p < dayStartMin || p >= dayEndMin) return null
+    return p
   }, [referenceDayKey, nowMs, dayStartMin, dayEndMin])
+
+  const nowLineOffsetPx =
+    nowPreciseMinutes == null ? null : minutesToContentY(nowPreciseMinutes, dayStartMin)
 
   const gridBackgroundStyle = useMemo(() => {
     const hourPx = (60 / SLOT_MINUTES) * ROW_PX
@@ -384,7 +387,7 @@ export function AppointmentDayGrid({
       >
         <div
           className={cn(
-            'flex min-w-0 w-full',
+            'relative flex min-w-0 w-full',
             'snap-x snap-mandatory md:snap-none',
           )}
         >
@@ -407,46 +410,58 @@ export function AppointmentDayGrid({
                 const isHour = mod === 0
                 const isHalf = mod === 30
                 const isQuarter = mod === 15 || mod === 45
+                const slotEnd = min + SLOT_MINUTES
+                const isPastSlot =
+                  nowPreciseMinutes != null && slotEnd <= nowPreciseMinutes
                 return (
                   <div
                     key={min}
-                    className="absolute right-0 box-border flex w-full items-start justify-end pr-1 sm:pr-2"
+                    className={cn(
+                      'absolute right-0 z-[5] box-border flex w-full items-start justify-end pr-1 sm:pr-2',
+                      isPastSlot && 'opacity-[0.42]',
+                    )}
                     style={{ top: slot * ROW_PX, height: ROW_PX }}
                   >
                     {isHour ? (
-                      <span className="pt-0.5 text-[11px] font-semibold tabular-nums leading-none text-foreground sm:text-xs">
+                      <span
+                        className={cn(
+                          'pt-0.5 text-[11px] font-semibold tabular-nums leading-none sm:text-xs',
+                          isPastSlot ? 'text-muted-foreground' : 'text-foreground',
+                        )}
+                      >
                         {minutesToLabel(min)}
                       </span>
                     ) : isHalf ? (
-                      <span className="pt-0.5 text-[10px] tabular-nums leading-none text-muted-foreground">
+                      <span
+                        className={cn(
+                          'pt-0.5 text-[10px] tabular-nums leading-none',
+                          isPastSlot ? 'text-muted-foreground/50' : 'text-muted-foreground',
+                        )}
+                      >
                         {minutesToLabel(min)}
                       </span>
                     ) : isQuarter ? (
-                      <span className="pt-0.5 text-[10px] tabular-nums leading-none text-muted-foreground/85">
+                      <span
+                        className={cn(
+                          'pt-0.5 text-[10px] tabular-nums leading-none',
+                          isPastSlot ? 'text-muted-foreground/40' : 'text-muted-foreground/85',
+                        )}
+                      >
                         {minutesToLabel(min)}
                       </span>
                     ) : (
-                      <span className="pt-1 text-[9px] tabular-nums leading-none text-muted-foreground/35">
+                      <span
+                        className={cn(
+                          'pt-1 text-[9px] tabular-nums leading-none',
+                          isPastSlot ? 'text-muted-foreground/25' : 'text-muted-foreground/35',
+                        )}
+                      >
                         ·
                       </span>
                     )}
                   </div>
                 )
               })}
-              {nowLineOffsetPx != null && (
-                <div
-                  className="pointer-events-none absolute right-0 z-[6] flex items-center pr-0.5 sm:pr-1"
-                  style={{ top: nowLineOffsetPx - 6, height: 12 }}
-                  aria-hidden
-                >
-                  <span
-                    className={cn(
-                      'h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-muted/60 dark:ring-background/80',
-                      NOW_LINE_CLASS,
-                    )}
-                  />
-                </div>
-              )}
             </div>
           </div>
 
@@ -525,16 +540,14 @@ export function AppointmentDayGrid({
                 </div>
 
                 <div className="relative box-border" style={{ height: gridHeight }}>
-                  <div className="pointer-events-none absolute inset-0" style={gridBackgroundStyle} />
-                  {nowLineOffsetPx != null && (
+                  <div className="pointer-events-none absolute inset-0 z-0" style={gridBackgroundStyle} />
+                  {nowLineOffsetPx != null && nowPreciseMinutes != null ? (
                     <div
-                      className="pointer-events-none absolute inset-x-0 z-[6]"
-                      style={{ top: nowLineOffsetPx - 1 }}
+                      className="pointer-events-none absolute inset-x-0 top-0 z-[5] bg-background/45 dark:bg-background/35"
+                      style={{ height: nowLineOffsetPx }}
                       aria-hidden
-                    >
-                      <div className={cn('h-0.5 w-full rounded-full opacity-95 shadow-sm', NOW_LINE_CLASS)} />
-                    </div>
-                  )}
+                    />
+                  ) : null}
 
                   {unavail.map((block, idx) => {
                     const uStart = timeToMinutes(block.start)
@@ -588,6 +601,8 @@ export function AppointmentDayGrid({
 
                     const startLbl = minutesToLabel(start)
                     const endLbl = minutesToLabel(fullEnd)
+                    const cardEndsInPast =
+                      nowPreciseMinutes != null && visEnd <= nowPreciseMinutes && a.status !== 'em_atendimento'
 
                     return (
                       <button
@@ -596,6 +611,7 @@ export function AppointmentDayGrid({
                         onClick={() => onBlockClick?.(a)}
                         className={cn(
                           'absolute z-[3] box-border flex flex-col gap-0.5 overflow-hidden rounded-md border-l-[3px] px-2 py-1.5 text-left transition',
+                          cardEndsInPast && 'opacity-[0.72] saturate-[0.85]',
                           'border-y border-r border-border/60 shadow-sm dark:border-border/50',
                           'hover:z-[4] hover:shadow-md hover:brightness-[1.01] active:scale-[0.995]',
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -664,6 +680,21 @@ export function AppointmentDayGrid({
               </div>
             )
           })}
+
+          {nowLineOffsetPx != null && nowPreciseMinutes != null ? (
+            <div
+              className="pointer-events-none absolute inset-x-0 z-[50]"
+              style={{ top: HEADER_ROW_PX + nowLineOffsetPx - 1 }}
+              aria-hidden
+            >
+              <div
+                className={cn(
+                  'h-[2px] w-full shadow-[0_1px_0_rgba(0,0,0,0.08)] dark:shadow-[0_1px_0_rgba(255,255,255,0.08)]',
+                  NOW_LINE_CLASS,
+                )}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
