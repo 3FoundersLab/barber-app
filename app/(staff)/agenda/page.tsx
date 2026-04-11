@@ -521,6 +521,7 @@ export default function BarbeiroAgendaPage() {
                     key={agendamento.id}
                     appointment={agendamento}
                     comandaNumero={comandaNumeroPorAgendamento[agendamento.id]}
+                    onCardClick={() => setDetailAppointment(agendamento)}
                     onCheckIn={handleCheckIn}
                     onComplete={(id) => handleStatusChange(id, 'concluido')}
                     onCancel={(id, motivo) => void handleCancelAppointment(id, motivo)}

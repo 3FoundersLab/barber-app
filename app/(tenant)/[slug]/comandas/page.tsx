@@ -52,11 +52,14 @@ export default function TenantComandasPage() {
 
   const dateKey = useMemo(() => formatDateKey(selectedDate), [selectedDate])
 
-  /** Em modo demo não dependemos de `comandas` real: cada fetch recriaria objetos e resetaria o editor aberto. */
+  /**
+   * Em modo demo mostramos dados sintéticos; fora do demo, a lista vem de `comandas`.
+   * Incluir sempre `comandas` nas deps cumpre as regras do React; em demo o corpo ignora `comandas`.
+   */
   const comandasExibicao = useMemo(() => {
     if (useDemoData && barbeariaId) return getDemoComandasParaLista(barbeariaId, dateKey)
     return comandas
-  }, [useDemoData, barbeariaId, dateKey, useDemoData ? '__demo__' : comandas])
+  }, [useDemoData, barbeariaId, dateKey, comandas])
 
   const showListLoading = isLoading && !useDemoData
 
