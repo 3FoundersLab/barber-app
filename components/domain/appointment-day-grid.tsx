@@ -151,7 +151,11 @@ export function AppointmentDayGrid({
     if (!referenceDayKey) return null
     if (localDayKey(new Date(nowMs)) !== referenceDayKey) return null
     const d = new Date(nowMs)
-    const precise = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60
+    const precise =
+      d.getHours() * 60 +
+      d.getMinutes() +
+      d.getSeconds() / 60 +
+      d.getMilliseconds() / 60000
     if (precise < dayStartMin || precise >= dayEndMin) return null
     return ((precise - dayStartMin) / SLOT_MINUTES) * ROW_PX
   }, [referenceDayKey, nowMs, dayStartMin, dayEndMin])
@@ -203,17 +207,14 @@ export function AppointmentDayGrid({
     const el = scrollerRef.current
     if (!el || referenceDayKey == null) return
 
-    const today = new Date()
-    const todayKey = localDayKey(today)
-    const viewingToday = referenceDayKey === todayKey
-
     const applyVerticalScroll = () => {
-      if (!viewingToday) {
+      const clock = new Date()
+      if (referenceDayKey !== localDayKey(clock)) {
         el.scrollTop = 0
         return
       }
 
-      const nowMin = today.getHours() * 60 + today.getMinutes()
+      const nowMin = clock.getHours() * 60 + clock.getMinutes()
       const TOP_PAD = 8
       const ctx = Math.max(0, scrollToNowContextMinutes)
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
@@ -55,6 +55,9 @@ export default function BarbeiroAgendaPage() {
     ...BARBEARIA_DIAS_FUNCIONAMENTO_PADRAO,
   ])
 
+  /** Evita aplicar resultados de um fetch antigo quando `selectedDate` muda durante o await. */
+  const loadAgendamentosSeq = useRef(0)
+
   const formatDateKey = (date: Date) => {
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -67,6 +70,9 @@ export default function BarbeiroAgendaPage() {
   }, [selectedDate])
 
   async function loadAgendamentos() {
+    const seq = ++loadAgendamentosSeq.current
+    const dateForQuery = new Date(selectedDate.getTime())
+
     setIsLoading(true)
     setError(null)
     const supabase = createClient()
@@ -74,6 +80,7 @@ export default function BarbeiroAgendaPage() {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
+      if (seq !== loadAgendamentosSeq.current) return
       setError('Usuário não autenticado')
       setAgendamentos([])
       setComandaNumeroPorAgendamento({})
@@ -99,6 +106,7 @@ export default function BarbeiroAgendaPage() {
       .single()
 
     if (!barbeiro) {
+      if (seq !== loadAgendamentosSeq.current) return
       setBarbeiroSelf(null)
       setError('Barbeiro não encontrado')
       setAgendamentos([])
@@ -110,6 +118,7 @@ export default function BarbeiroAgendaPage() {
       return
     }
 
+    if (seq !== loadAgendamentosSeq.current) return
     setBarbeiroSelf(barbeiro as Barbeiro)
 
     const bbId = barbeiro.barbearia_id
@@ -128,8 +137,10 @@ export default function BarbeiroAgendaPage() {
       setBarbeariaDiasFuncionamento([...BARBEARIA_DIAS_FUNCIONAMENTO_PADRAO])
     }
 
-    const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
-    const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
+    if (seq !== loadAgendamentosSeq.current) return
+
+    const monthStart = new Date(dateForQuery.getFullYear(), dateForQuery.getMonth(), 1)
+    const monthEnd = new Date(dateForQuery.getFullYear(), dateForQuery.getMonth() + 1, 0)
 
     const { data, error: queryError } = await supabase
       .from('agendamentos')
@@ -142,6 +153,8 @@ export default function BarbeiroAgendaPage() {
       .gte('data', formatDateKey(monthStart))
       .lte('data', formatDateKey(monthEnd))
       .order('horario', { ascending: true })
+
+    if (seq !== loadAgendamentosSeq.current) return
 
     if (queryError) {
       setError('Não foi possível carregar os agendamentos')
@@ -159,6 +172,7 @@ export default function BarbeiroAgendaPage() {
           .select('agendamento_id, numero')
           .eq('barbearia_id', bbIdComandas)
           .in('agendamento_id', ids)
+        if (seq !== loadAgendamentosSeq.current) return
         const map: Record<string, number> = {}
         for (const c of comandasRows ?? []) {
           if (c.agendamento_id != null && c.numero != null) {
@@ -169,7 +183,9 @@ export default function BarbeiroAgendaPage() {
       }
     }
 
-    setIsLoading(false)
+    if (seq === loadAgendamentosSeq.current) {
+      setIsLoading(false)
+    }
   }
 
   const handlePrevDay = () => {
