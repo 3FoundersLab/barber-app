@@ -468,14 +468,6 @@ export function ComandaEditorSheet({
                       </AlertTitle>
                     </Alert>
                   ) : null}
-                  {!demoMode && comanda.status !== 'aberta' ? (
-                    <Alert variant="info">
-                      <AlertTitle>
-                        Comanda {comanda.status === 'fechada' ? 'fechada' : 'cancelada'} — apenas consulta. Linhas,
-                        desconto e taxa não podem ser alterados; use comandas abertas para editar e fechar no caixa.
-                      </AlertTitle>
-                    </Alert>
-                  ) : null}
                   {error ? (
                     <Alert variant="danger">
                       <AlertTitle>{error}</AlertTitle>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
@@ -34,7 +34,6 @@ import {
 } from '@/lib/barbearia-dias-funcionamento'
 import { ensureComandaForAgendamento } from '@/lib/ensure-comanda-agendamento'
 import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
-import { useSupabaseAgendamentosRealtime } from '@/hooks/use-supabase-agendamentos-realtime'
 import { cn } from '@/lib/utils'
 import type { Agendamento, Barbeiro, Profile } from '@/types'
 
@@ -55,9 +54,6 @@ export default function BarbeiroAgendaPage() {
   const [barbeariaDiasFuncionamento, setBarbeariaDiasFuncionamento] = useState<number[]>(() => [
     ...BARBEARIA_DIAS_FUNCIONAMENTO_PADRAO,
   ])
-
-  const selectedDateRef = useRef(selectedDate)
-  selectedDateRef.current = selectedDate
 
   const formatDateKey = (date: Date) => {
     const year = date.getFullYear()
@@ -132,9 +128,8 @@ export default function BarbeiroAgendaPage() {
       setBarbeariaDiasFuncionamento([...BARBEARIA_DIAS_FUNCIONAMENTO_PADRAO])
     }
 
-    const refDay = selectedDateRef.current
-    const monthStart = new Date(refDay.getFullYear(), refDay.getMonth(), 1)
-    const monthEnd = new Date(refDay.getFullYear(), refDay.getMonth() + 1, 0)
+    const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+    const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
 
     const { data, error: queryError } = await supabase
       .from('agendamentos')
@@ -176,13 +171,6 @@ export default function BarbeiroAgendaPage() {
 
     setIsLoading(false)
   }
-
-  const loadAgendamentosRef = useRef(loadAgendamentos)
-  loadAgendamentosRef.current = loadAgendamentos
-
-  useSupabaseAgendamentosRealtime(Boolean(barbeiroSelf?.id), 'barbeiro', barbeiroSelf?.id, () => {
-    void loadAgendamentosRef.current()
-  })
 
   const handlePrevDay = () => {
     setSelectedDate((prev) => {

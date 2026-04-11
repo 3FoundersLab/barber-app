@@ -54,7 +54,6 @@ import {
 } from '@/lib/barbearia-dias-funcionamento'
 import { ensureComandaForAgendamento } from '@/lib/ensure-comanda-agendamento'
 import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
-import { useSupabaseAgendamentosRealtime } from '@/hooks/use-supabase-agendamentos-realtime'
 import { cn } from '@/lib/utils'
 import type { Agendamento, Barbeiro } from '@/types'
 
@@ -299,18 +298,6 @@ export default function AdminAgendamentosPage() {
       setIsLoading(false)
     }
   }
-
-  const loadAgendamentosRef = useRef(loadAgendamentos)
-  loadAgendamentosRef.current = loadAgendamentos
-
-  useSupabaseAgendamentosRealtime(
-    Boolean(barbeariaId) && !useDemoData,
-    'barbearia',
-    barbeariaId,
-    () => {
-      void loadAgendamentosRef.current()
-    },
-  )
 
   const handlePrevDay = () => {
     setSelectedDate((prev) => {

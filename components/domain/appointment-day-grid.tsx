@@ -62,49 +62,6 @@ function hashId(id: string): number {
   return Math.abs(h)
 }
 
-/** Horário local do utilizador em minutos desde 00:00 (com fração, alinhado à linha “agora”). */
-function getLocalPreciseMinutesSinceMidnight(d: Date): number {
-  return (
-    d.getHours() * 60 +
-    d.getMinutes() +
-    d.getSeconds() / 60 +
-    d.getMilliseconds() / 60000
-  )
-}
-
-/**
- * Posição vertical (px) do instante `minutesSinceMidnight` no eixo da grade (abaixo do cabeçalho).
- */
-function minutesToContentY(minutesSinceMidnight: number, dayStartMin: number): number {
-  return ((minutesSinceMidnight - dayStartMin) / SLOT_MINUTES) * ROW_PX
-}
-
-/** Instante local “agora” na grade do dia: linha sempre visível quando é hoje (clamp ao eixo). */
-function computeNowIndicator(
-  referenceDayKey: string,
-  nowMs: number,
-  dayStartMin: number,
-  dayEndMin: number,
-  gridHeight: number,
-): { rawMinutes: number; lineOffsetPx: number } | null {
-  if (localDayKey(new Date(nowMs)) !== referenceDayKey) return null
-  if (!(dayEndMin > dayStartMin) || gridHeight <= 0) return null
-
-  const raw = getLocalPreciseMinutesSinceMidnight(new Date(nowMs))
-
-  let lineOffsetPx: number
-  if (raw <= dayStartMin) {
-    lineOffsetPx = 0
-  } else if (raw >= dayEndMin) {
-    lineOffsetPx = Math.max(0, gridHeight - 1)
-  } else {
-    lineOffsetPx = minutesToContentY(raw, dayStartMin)
-    lineOffsetPx = Math.min(Math.max(0, lineOffsetPx), Math.max(0, gridHeight - 1))
-  }
-
-  return { rawMinutes: raw, lineOffsetPx }
-}
-
 function assignLanes(
   items: { id: string; start: number; end: number }[],
 ): { laneById: Map<string, number>; laneCount: number } {
@@ -138,17 +95,12 @@ export interface AppointmentDayGridProps {
   /** Faixas cinzas “Não atende” por profissional. */
   unavailableBlocks?: AppointmentUnavailableBlock[]
   /**
-   * Dia exibido na grade (data local). Por omissão usa o dia atual local.
-   * Se for hoje, mostra a linha vermelha “agora” (horário real) e alinha o scroll; noutros dias, sem linha.
+   * Dia exibido na grade (data local). Se for o dia atual do usuário, o scroll vertical
+   * posiciona ~1h antes do horário local; em outros dias, volta ao topo da timeline.
    */
   referenceDate?: Date
-  /** Minutos de contexto antes do “agora” quando `scrollToNowStrategy` é `context` (padrão 60). */
+  /** Minutos de contexto antes do “agora” ao alinhar o scroll (padrão 60). */
   scrollToNowContextMinutes?: number
-  /**
-   * `context`: coloca ~N minutos antes do instante atual junto ao topo útil (estilo Teams).
-   * `center`: centra o instante atual na viewport (útil em ecrãs altos).
-   */
-  scrollToNowStrategy?: 'context' | 'center'
 }
 
 export function AppointmentDayGrid({
@@ -159,13 +111,9 @@ export function AppointmentDayGrid({
   className,
   timeRange,
   unavailableBlocks,
-  referenceDate: referenceDateProp,
+  referenceDate,
   scrollToNowContextMinutes = 60,
-  scrollToNowStrategy = 'context',
 }: AppointmentDayGridProps) {
-  /** Dia da grade: por omissão “hoje” local, para a linha Agora aparecer mesmo se o pai não passar data. */
-  const referenceDate = referenceDateProp ?? new Date()
-
   const dayStartMin =
     parseAgendaClockToMinutes(timeRange?.start ?? HORARIOS_PADRAO.inicio) ?? 0
   const dayEndMin =
@@ -174,11 +122,15 @@ export function AppointmentDayGrid({
   const slotCount = Math.ceil(totalMinutes / SLOT_MINUTES)
   const gridHeight = slotCount * ROW_PX
 
-  const referenceDayKey = useMemo(() => localDayKey(referenceDate), [referenceDate])
+  const referenceDayKey = useMemo(() => {
+    if (!referenceDate) return null
+    return localDayKey(referenceDate)
+  }, [referenceDate])
 
   const [nowMs, setNowMs] = useState(() => Date.now())
 
   useEffect(() => {
+    if (!referenceDayKey) return
     if (localDayKey(new Date()) !== referenceDayKey) return
     const tick = () => setNowMs(Date.now())
     tick()
@@ -193,21 +145,14 @@ export function AppointmentDayGrid({
     }
   }, [referenceDayKey])
 
-  const nowIndicator = useMemo(
-    () => computeNowIndicator(referenceDayKey, nowMs, dayStartMin, dayEndMin, gridHeight),
-    [referenceDayKey, nowMs, dayStartMin, dayEndMin, gridHeight],
-  )
-
-  const nowRawMinutes = nowIndicator?.rawMinutes ?? null
-  const nowLineOffsetPx = nowIndicator?.lineOffsetPx ?? null
-
-  /** Altura da faixa “passado” (sombrear até à linha agora, ou dia inteiro após fecho). */
-  const pastShadeHeightPx = useMemo(() => {
-    if (!nowIndicator) return 0
-    if (nowIndicator.rawMinutes >= dayEndMin) return gridHeight
-    if (nowIndicator.rawMinutes <= dayStartMin) return 0
-    return nowIndicator.lineOffsetPx
-  }, [nowIndicator, dayEndMin, dayStartMin, gridHeight])
+  const nowLineOffsetPx = useMemo(() => {
+    if (!referenceDayKey) return null
+    if (localDayKey(new Date(nowMs)) !== referenceDayKey) return null
+    const d = new Date(nowMs)
+    const precise = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60
+    if (precise < dayStartMin || precise >= dayEndMin) return null
+    return ((precise - dayStartMin) / SLOT_MINUTES) * ROW_PX
+  }, [referenceDayKey, nowMs, dayStartMin, dayEndMin])
 
   const gridBackgroundStyle = useMemo(() => {
     const hourPx = (60 / SLOT_MINUTES) * ROW_PX
@@ -254,43 +199,35 @@ export function AppointmentDayGrid({
 
   useLayoutEffect(() => {
     const el = scrollerRef.current
-    if (!el) return
+    if (!el || referenceDayKey == null) return
+
+    const today = new Date()
+    const todayKey = localDayKey(today)
+    const viewingToday = referenceDayKey === todayKey
 
     const applyVerticalScroll = () => {
-      const clock = new Date()
-      const todayKey = localDayKey(clock)
-      const viewingToday = referenceDayKey === todayKey
-
       if (!viewingToday) {
         el.scrollTop = 0
         return
       }
 
-      const preciseNow = getLocalPreciseMinutesSinceMidnight(clock)
+      const nowMin = today.getHours() * 60 + today.getMinutes()
       const TOP_PAD = 8
       const ctx = Math.max(0, scrollToNowContextMinutes)
-      const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight)
 
-      if (preciseNow < dayStartMin) {
+      if (nowMin < dayStartMin) {
         el.scrollTop = 0
         return
       }
-      if (preciseNow >= dayEndMin) {
-        el.scrollTop = maxScroll
+      if (nowMin >= dayEndMin) {
+        el.scrollTop = Math.max(0, el.scrollHeight - el.clientHeight)
         return
       }
 
-      const nowY = HEADER_ROW_PX + minutesToContentY(preciseNow, dayStartMin)
-
-      if (scrollToNowStrategy === 'center') {
-        const desired = nowY - el.clientHeight / 2
-        el.scrollTop = Math.min(Math.max(0, desired), maxScroll)
-        return
-      }
-
-      const anchorMin = Math.max(dayStartMin, preciseNow - ctx)
-      const anchorY = HEADER_ROW_PX + minutesToContentY(anchorMin, dayStartMin)
-      el.scrollTop = Math.min(Math.max(0, anchorY - TOP_PAD), maxScroll)
+      const anchorMin = Math.max(dayStartMin, nowMin - ctx)
+      const y = HEADER_ROW_PX + ((anchorMin - dayStartMin) / SLOT_MINUTES) * ROW_PX
+      const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight)
+      el.scrollTop = Math.min(Math.max(0, y - TOP_PAD), maxScroll)
     }
 
     applyVerticalScroll()
@@ -303,14 +240,7 @@ export function AppointmentDayGrid({
       cancelAnimationFrame(raf1)
       cancelAnimationFrame(raf2)
     }
-  }, [
-    referenceDayKey,
-    dayStartMin,
-    dayEndMin,
-    slotCount,
-    scrollToNowContextMinutes,
-    scrollToNowStrategy,
-  ])
+  }, [referenceDayKey, dayStartMin, dayEndMin, slotCount, scrollToNowContextMinutes])
 
   const scrollByOneColumn = useCallback((dir: -1 | 1) => {
     const el = scrollerRef.current
@@ -416,7 +346,7 @@ export function AppointmentDayGrid({
       >
         <div
           className={cn(
-            'relative flex min-w-0 w-full',
+            'flex min-w-0 w-full',
             'snap-x snap-mandatory md:snap-none',
           )}
         >
@@ -439,57 +369,46 @@ export function AppointmentDayGrid({
                 const isHour = mod === 0
                 const isHalf = mod === 30
                 const isQuarter = mod === 15 || mod === 45
-                const slotEnd = min + SLOT_MINUTES
-                const isPastSlot = nowRawMinutes != null && slotEnd <= nowRawMinutes
                 return (
                   <div
                     key={min}
-                    className={cn(
-                      'absolute right-0 z-[5] box-border flex w-full items-start justify-end pr-1 sm:pr-2',
-                      isPastSlot && 'opacity-[0.42]',
-                    )}
+                    className="absolute right-0 box-border flex w-full items-start justify-end pr-1 sm:pr-2"
                     style={{ top: slot * ROW_PX, height: ROW_PX }}
                   >
                     {isHour ? (
-                      <span
-                        className={cn(
-                          'pt-0.5 text-[11px] font-semibold tabular-nums leading-none sm:text-xs',
-                          isPastSlot ? 'text-muted-foreground' : 'text-foreground',
-                        )}
-                      >
+                      <span className="pt-0.5 text-[11px] font-semibold tabular-nums leading-none text-foreground sm:text-xs">
                         {minutesToLabel(min)}
                       </span>
                     ) : isHalf ? (
-                      <span
-                        className={cn(
-                          'pt-0.5 text-[10px] tabular-nums leading-none',
-                          isPastSlot ? 'text-muted-foreground/50' : 'text-muted-foreground',
-                        )}
-                      >
+                      <span className="pt-0.5 text-[10px] tabular-nums leading-none text-muted-foreground">
                         {minutesToLabel(min)}
                       </span>
                     ) : isQuarter ? (
-                      <span
-                        className={cn(
-                          'pt-0.5 text-[10px] tabular-nums leading-none',
-                          isPastSlot ? 'text-muted-foreground/40' : 'text-muted-foreground/85',
-                        )}
-                      >
+                      <span className="pt-0.5 text-[10px] tabular-nums leading-none text-muted-foreground/85">
                         {minutesToLabel(min)}
                       </span>
                     ) : (
-                      <span
-                        className={cn(
-                          'pt-1 text-[9px] tabular-nums leading-none',
-                          isPastSlot ? 'text-muted-foreground/25' : 'text-muted-foreground/35',
-                        )}
-                      >
+                      <span className="pt-1 text-[9px] tabular-nums leading-none text-muted-foreground/35">
                         ·
                       </span>
                     )}
                   </div>
                 )
               })}
+              {nowLineOffsetPx != null && (
+                <div
+                  className="pointer-events-none absolute right-0 z-[6] flex items-center pr-0.5 sm:pr-1"
+                  style={{ top: nowLineOffsetPx - 6, height: 12 }}
+                  aria-hidden
+                >
+                  <span
+                    className={cn(
+                      'h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-muted/60 dark:ring-background/80',
+                      NOW_LINE_CLASS,
+                    )}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -568,14 +487,16 @@ export function AppointmentDayGrid({
                 </div>
 
                 <div className="relative box-border" style={{ height: gridHeight }}>
-                  <div className="pointer-events-none absolute inset-0 z-0" style={gridBackgroundStyle} />
-                  {pastShadeHeightPx > 0 ? (
+                  <div className="pointer-events-none absolute inset-0" style={gridBackgroundStyle} />
+                  {nowLineOffsetPx != null && (
                     <div
-                      className="pointer-events-none absolute inset-x-0 top-0 z-[5] bg-background/45 dark:bg-background/35"
-                      style={{ height: pastShadeHeightPx }}
+                      className="pointer-events-none absolute inset-x-0 z-[6]"
+                      style={{ top: nowLineOffsetPx - 1 }}
                       aria-hidden
-                    />
-                  ) : null}
+                    >
+                      <div className={cn('h-0.5 w-full rounded-full opacity-95 shadow-sm', NOW_LINE_CLASS)} />
+                    </div>
+                  )}
 
                   {unavail.map((block, idx) => {
                     const uStart = timeToMinutes(block.start)
@@ -629,8 +550,6 @@ export function AppointmentDayGrid({
 
                     const startLbl = minutesToLabel(start)
                     const endLbl = minutesToLabel(fullEnd)
-                    const cardEndsInPast =
-                      nowRawMinutes != null && visEnd <= nowRawMinutes && a.status !== 'em_atendimento'
 
                     return (
                       <button
@@ -639,7 +558,6 @@ export function AppointmentDayGrid({
                         onClick={() => onBlockClick?.(a)}
                         className={cn(
                           'absolute z-[3] box-border flex flex-col gap-0.5 overflow-hidden rounded-md border-l-[3px] px-2 py-1.5 text-left transition',
-                          cardEndsInPast && 'opacity-[0.72] saturate-[0.85]',
                           'border-y border-r border-border/60 shadow-sm dark:border-border/50',
                           'hover:z-[4] hover:shadow-md hover:brightness-[1.01] active:scale-[0.995]',
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -708,21 +626,6 @@ export function AppointmentDayGrid({
               </div>
             )
           })}
-
-          {nowIndicator != null ? (
-            <div
-              className="pointer-events-none absolute inset-x-0 z-[50]"
-              style={{ top: HEADER_ROW_PX + nowIndicator.lineOffsetPx - 1 }}
-              aria-label={`Horário local atual: ${minutesToLabel(Math.floor(nowIndicator.rawMinutes))}`}
-            >
-              <div
-                className={cn(
-                  'h-[3px] w-full rounded-[1px] shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_3px_rgba(232,17,35,0.35)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_1px_3px_rgba(255,107,107,0.35)]',
-                  NOW_LINE_CLASS,
-                )}
-              />
-            </div>
-          ) : null}
         </div>
       </div>
     </div>
