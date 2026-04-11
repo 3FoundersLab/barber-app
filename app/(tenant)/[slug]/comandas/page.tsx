@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight, ClipboardList, RefreshCw } from 'lucide-react'
 import { ComandaEditorSheet } from '@/components/domain/comanda-editor-sheet'
 import { PageContent } from '@/components/shared/page-container'
@@ -16,6 +16,7 @@ import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { formatTime } from '@/lib/constants'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
+import { useSupabaseComandasRealtime } from '@/hooks/use-supabase-comandas-realtime'
 import { getDemoComandasParaLista } from '@/lib/comanda-demo-data'
 import type { Comanda } from '@/types/comanda'
 import { cn } from '@/lib/utils'
@@ -106,6 +107,13 @@ export default function TenantComandasPage() {
   useEffect(() => {
     void loadComandas()
   }, [loadComandas])
+
+  const loadComandasRef = useRef(loadComandas)
+  loadComandasRef.current = loadComandas
+
+  useSupabaseComandasRealtime(Boolean(barbeariaId) && !useDemoData, barbeariaId, () => {
+    void loadComandasRef.current()
+  })
 
   useEffect(() => {
     if (!useDemoData && comandaAtiva?.id.startsWith('demo-comanda')) {
