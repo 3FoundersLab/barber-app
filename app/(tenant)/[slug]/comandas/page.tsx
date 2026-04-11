@@ -117,6 +117,15 @@ export default function TenantComandasPage() {
     }
   }, [useDemoData, comandaAtiva])
 
+  /** Após salvar (ex.: reativar cancelada), alinhar o painel ao registro recém-carregado. */
+  useEffect(() => {
+    if (!editorOpen || !comandaAtiva || useDemoData) return
+    const row = comandas.find((c) => c.id === comandaAtiva.id)
+    if (row && row !== comandaAtiva) {
+      setComandaAtiva(row)
+    }
+  }, [comandas, editorOpen, comandaAtiva, useDemoData])
+
   const backfillComAgendamentos = async () => {
     if (useDemoData) return
     if (!barbeariaId) return

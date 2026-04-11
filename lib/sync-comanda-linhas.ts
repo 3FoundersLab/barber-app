@@ -21,8 +21,12 @@ function num(v: unknown): number {
 }
 
 /**
- * Restaura estoque das linhas antigas, valida e aplica novas linhas de produto,
- * substitui linhas de serviço e produto na comanda.
+ * Integração estoque ↔ comanda (persistência).
+ *
+ * Ao salvar, auto-save ou **fechar e cobrar**, o editor chama este fluxo antes de gravar o status da
+ * comanda: (1) devolve ao estoque as quantidades das linhas de produto já gravadas; (2) valida as
+ * novas linhas contra o estoque atual; (3) baixa o estoque pelas novas quantidades; (4) regrava
+ * `comanda_produtos` / `comanda_servicos`. Não chame outra baixa só no fechamento — evita dupla contagem.
  */
 export async function syncComandaLinhas(
   supabase: SupabaseClient,
@@ -39,8 +43,15 @@ export async function syncComandaLinhas(
   if (errComanda || !comanda) {
     return { ok: false, message: 'Comanda não encontrada.' }
   }
-  if (comanda.status !== 'aberta') {
-    return { ok: false, message: 'Só é possível editar linhas em comandas abertas.' }
+  if (
+    comanda.status !== 'aberta' &&
+    comanda.status !== 'fechada' &&
+    comanda.status !== 'cancelada'
+  ) {
+    return {
+      ok: false,
+      message: 'Estado da comanda não permite editar linhas.',
+    }
   }
 
   const { data: oldProdutos, error: errOld } = await supabase

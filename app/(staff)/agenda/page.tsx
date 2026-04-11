@@ -1,11 +1,22 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+<<<<<<< Updated upstream
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+=======
+import { Calendar, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react'
+>>>>>>> Stashed changes
 import { PageContainer, PageContent } from '@/components/shared/page-container'
 import { AppPageHeader } from '@/components/shared/app-page-header'
 import { AppointmentCard } from '@/components/domain/appointment-card'
-import { AppointmentDayGrid } from '@/components/domain/appointment-day-grid'
+import {
+  AgendaAppointmentListVirtual,
+  AGENDA_LIST_VIRTUAL_THRESHOLD,
+} from '@/components/domain/agenda-appointment-list-virtual'
+import {
+  AppointmentDayGrid,
+  type AppointmentDayGridHandle,
+} from '@/components/domain/appointment-day-grid'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
@@ -49,6 +60,7 @@ export default function BarbeiroAgendaPage() {
   const [comandaNumeroPorAgendamento, setComandaNumeroPorAgendamento] = useState<Record<string, number>>(
     {},
   )
+<<<<<<< Updated upstream
   const [barbeariaHorarioAbertura, setBarbeariaHorarioAbertura] = useState<string | null>(null)
   const [barbeariaHorarioFechamento, setBarbeariaHorarioFechamento] = useState<string | null>(null)
   const [barbeariaDiasFuncionamento, setBarbeariaDiasFuncionamento] = useState<number[]>(() => [
@@ -57,6 +69,10 @@ export default function BarbeiroAgendaPage() {
 
   /** Evita aplicar resultados de um fetch antigo quando `selectedDate` muda durante o await. */
   const loadAgendamentosSeq = useRef(0)
+=======
+  const agendaGradeRef = useRef<AppointmentDayGridHandle>(null)
+  const [showIrParaAgoraFab, setShowIrParaAgoraFab] = useState(false)
+>>>>>>> Stashed changes
 
   const formatDateKey = (date: Date) => {
     const year = date.getFullYear()
@@ -68,6 +84,10 @@ export default function BarbeiroAgendaPage() {
   useEffect(() => {
     loadAgendamentos()
   }, [selectedDate])
+
+  useEffect(() => {
+    if (viewMode !== 'grade') setShowIrParaAgoraFab(false)
+  }, [viewMode])
 
   async function loadAgendamentos() {
     const seq = ++loadAgendamentosSeq.current
@@ -488,6 +508,7 @@ export default function BarbeiroAgendaPage() {
                 </CardContent>
               </Card>
             ) : (
+<<<<<<< Updated upstream
               <AppointmentDayGrid
                 barbeiros={[barbeiroSelf]}
                 appointments={appointmentsOfSelectedDate}
@@ -496,6 +517,31 @@ export default function BarbeiroAgendaPage() {
                 referenceDate={selectedDate}
                 timeRange={agendaTimeRange}
               />
+=======
+              <>
+                <AppointmentDayGrid
+                  ref={agendaGradeRef}
+                  barbeiros={[barbeiroSelf]}
+                  appointments={appointmentsOfSelectedDate}
+                  comandaByAgendamentoId={comandaNumeroPorAgendamento}
+                  onBlockClick={setDetailAppointment}
+                  referenceDate={selectedDate}
+                  onIrParaAgoraFabChange={setShowIrParaAgoraFab}
+                />
+                {showIrParaAgoraFab ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="fixed bottom-6 right-4 z-50 h-12 rounded-full border border-border bg-background/95 px-4 text-sm font-medium shadow-lg backdrop-blur-sm hover:bg-muted/90 md:right-8"
+                    onClick={() => agendaGradeRef.current?.scrollToNow({ behavior: 'smooth' })}
+                    aria-label="Ir para o horário atual na grade"
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4 shrink-0" aria-hidden />
+                    Ir para agora
+                  </Button>
+                ) : null}
+              </>
+>>>>>>> Stashed changes
             )}
           </>
         )}
@@ -515,6 +561,7 @@ export default function BarbeiroAgendaPage() {
                 <AppointmentListSkeleton count={3} className="contents" />
               </div>
             ) : appointmentsOfSelectedDate.length > 0 ? (
+<<<<<<< Updated upstream
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
                 {appointmentsOfSelectedDate.map((agendamento) => (
                   <AppointmentCard
@@ -530,6 +577,46 @@ export default function BarbeiroAgendaPage() {
                   />
                 ))}
               </div>
+=======
+              appointmentsOfSelectedDate.length > AGENDA_LIST_VIRTUAL_THRESHOLD ? (
+                <AgendaAppointmentListVirtual items={appointmentsOfSelectedDate}>
+                  {(agendamento) => (
+                    <AppointmentCard
+                      appointment={agendamento}
+                      comandaNumero={comandaNumeroPorAgendamento[agendamento.id]}
+                      onCardClick={(id) => {
+                        const row = agendamentos.find((x) => x.id === id) ?? null
+                        setDetailAppointment(row)
+                      }}
+                      onCheckIn={handleCheckIn}
+                      onComplete={(id) => handleStatusChange(id, 'concluido')}
+                      onCancel={(id, motivo) => void handleCancelAppointment(id, motivo)}
+                      onNoShow={(id) => handleStatusChange(id, 'faltou')}
+                      onMarkPaid={handleMarkPaid}
+                    />
+                  )}
+                </AgendaAppointmentListVirtual>
+              ) : (
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                  {appointmentsOfSelectedDate.map((agendamento) => (
+                    <AppointmentCard
+                      key={agendamento.id}
+                      appointment={agendamento}
+                      comandaNumero={comandaNumeroPorAgendamento[agendamento.id]}
+                      onCardClick={(id) => {
+                        const row = agendamentos.find((x) => x.id === id) ?? null
+                        setDetailAppointment(row)
+                      }}
+                      onCheckIn={handleCheckIn}
+                      onComplete={(id) => handleStatusChange(id, 'concluido')}
+                      onCancel={(id, motivo) => void handleCancelAppointment(id, motivo)}
+                      onNoShow={(id) => handleStatusChange(id, 'faltou')}
+                      onMarkPaid={handleMarkPaid}
+                    />
+                  ))}
+                </div>
+              )
+>>>>>>> Stashed changes
             ) : (
               <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center justify-center py-8 text-center">

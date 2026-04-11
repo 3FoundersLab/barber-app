@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  RotateCcw,
   User,
   Users,
 } from 'lucide-react'
@@ -16,7 +17,14 @@ import { PageContent } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { AppointmentAdminFormDialog } from '@/components/domain/appointment-admin-form-dialog'
 import { AppointmentCard } from '@/components/domain/appointment-card'
-import { AppointmentDayGrid } from '@/components/domain/appointment-day-grid'
+import {
+  AgendaAppointmentListVirtual,
+  AGENDA_LIST_VIRTUAL_THRESHOLD,
+} from '@/components/domain/agenda-appointment-list-virtual'
+import {
+  AppointmentDayGrid,
+  type AppointmentDayGridHandle,
+} from '@/components/domain/appointment-day-grid'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
@@ -115,6 +123,8 @@ export default function AdminAgendamentosPage() {
   const [appointmentFormOpen, setAppointmentFormOpen] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState<Agendamento | null>(null)
   const [fabPortalHost, setFabPortalHost] = useState<Element | null>(null)
+  const agendaGradeRef = useRef<AppointmentDayGridHandle>(null)
+  const [showIrParaAgoraFab, setShowIrParaAgoraFab] = useState(false)
   const [comandaNumeroPorAgendamento, setComandaNumeroPorAgendamento] = useState<Record<string, number>>(
     {},
   )
@@ -127,6 +137,10 @@ export default function AdminAgendamentosPage() {
   useEffect(() => {
     setFabPortalHost(document.body)
   }, [])
+
+  useEffect(() => {
+    if (viewMode !== 'grade') setShowIrParaAgoraFab(false)
+  }, [viewMode])
 
   const openNewAppointment = () => {
     setEditingAppointment(null)
@@ -790,6 +804,7 @@ export default function AdminAgendamentosPage() {
               </Card>
             ) : (
               <AppointmentDayGrid
+                ref={agendaGradeRef}
                 barbeiros={barbeirosNaGrade}
                 appointments={appointmentsOfSelectedDate}
                 comandaByAgendamentoId={comandaMapEfetivo}
@@ -797,6 +812,7 @@ export default function AdminAgendamentosPage() {
                 referenceDate={selectedDate}
                 timeRange={agendaTimeRange}
                 unavailableBlocks={useDemoData ? getAgendaDemoUnavailableBlocks() : undefined}
+                onIrParaAgoraFabChange={setShowIrParaAgoraFab}
               />
             )}
           </>
@@ -882,6 +898,7 @@ export default function AdminAgendamentosPage() {
                   <AppointmentListSkeleton count={6} className="contents" />
                 </div>
               ) : listFilteredSorted.length > 0 ? (
+<<<<<<< Updated upstream
                 listByPeriod.map(
                   ({ key, label, items }) =>
                     items.length === 0 ? null : (
@@ -909,22 +926,93 @@ export default function AdminAgendamentosPage() {
                                       if (row) beginEditAppointment(row)
                                     }
                                   : undefined
+=======
+                listFilteredSorted.length > AGENDA_LIST_VIRTUAL_THRESHOLD ? (
+                  <AgendaAppointmentListVirtual items={listFilteredSorted}>
+                    {(agendamento) => (
+                      <AppointmentCard
+                        appointment={agendamento}
+                        listLayout
+                        comandaNumero={comandaMapEfetivo[agendamento.id]}
+                        isNext={agendamento.id === nextAppointmentId}
+                        onCardClick={(id) => {
+                          const row = displayAgendamentos.find((x) => x.id === id) ?? null
+                          setDetailAppointment(row)
+                        }}
+                        onCheckIn={handleCheckIn}
+                        onComplete={(id) => handleStatusChange(id, 'concluido')}
+                        onCancel={(id, motivo) => void handleCancelAppointment(id, motivo)}
+                        onNoShow={(id) => handleStatusChange(id, 'faltou')}
+                        onMarkPaid={handleMarkPaid}
+                        onEdit={
+                          allowsAdminEditAppointment(agendamento, useDemoData)
+                            ? (id) => {
+                                const row = displayAgendamentos.find((x) => x.id === id)
+                                if (row) beginEditAppointment(row)
+>>>>>>> Stashed changes
                               }
-                              onViewHistory={() => {
-                                const nome = agendamento.cliente?.nome?.trim()
-                                if (nome) {
-                                  router.push(
-                                    `${base}/clientes?q=${encodeURIComponent(nome)}`,
-                                  )
-                                } else {
-                                  router.push(`${base}/clientes`)
+                            : undefined
+                        }
+                        onViewHistory={() => {
+                          const nome = agendamento.cliente?.nome?.trim()
+                          if (nome) {
+                            router.push(`${base}/clientes?q=${encodeURIComponent(nome)}`)
+                          } else {
+                            router.push(`${base}/clientes`)
+                          }
+                        }}
+                      />
+                    )}
+                  </AgendaAppointmentListVirtual>
+                ) : (
+                  listByPeriod.map(
+                    ({ key, label, items }) =>
+                      items.length === 0 ? null : (
+                        <section key={key} className="space-y-4">
+                          <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                            {label}
+                          </h3>
+                          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                            {items.map((agendamento) => (
+                              <AppointmentCard
+                                key={agendamento.id}
+                                appointment={agendamento}
+                                listLayout
+                                comandaNumero={comandaMapEfetivo[agendamento.id]}
+                                isNext={agendamento.id === nextAppointmentId}
+                                onCardClick={(id) => {
+                                  const row = displayAgendamentos.find((x) => x.id === id) ?? null
+                                  setDetailAppointment(row)
+                                }}
+                                onCheckIn={handleCheckIn}
+                                onComplete={(id) => handleStatusChange(id, 'concluido')}
+                                onCancel={(id, motivo) => void handleCancelAppointment(id, motivo)}
+                                onNoShow={(id) => handleStatusChange(id, 'faltou')}
+                                onMarkPaid={handleMarkPaid}
+                                onEdit={
+                                  allowsAdminEditAppointment(agendamento, useDemoData)
+                                    ? (id) => {
+                                        const row = displayAgendamentos.find((x) => x.id === id)
+                                        if (row) beginEditAppointment(row)
+                                      }
+                                    : undefined
                                 }
-                              }}
-                            />
-                          ))}
-                        </div>
-                      </section>
-                    ),
+                                onViewHistory={() => {
+                                  const nome = agendamento.cliente?.nome?.trim()
+                                  if (nome) {
+                                    router.push(
+                                      `${base}/clientes?q=${encodeURIComponent(nome)}`,
+                                    )
+                                  } else {
+                                    router.push(`${base}/clientes`)
+                                  }
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </section>
+                      ),
+                  )
                 )
               ) : (
                 <Card className="border-dashed border-2 bg-muted/20 shadow-none">
@@ -964,15 +1052,29 @@ export default function AdminAgendamentosPage() {
 
       {fabPortalHost && barbeariaId
         ? createPortal(
-            <Button
-              type="button"
-              size="icon"
-              className="fixed right-4 bottom-24 z-[60] h-14 w-14 rounded-full border-2 border-sky-300 bg-blue-600 text-white shadow-lg hover:bg-blue-700 dark:border-sky-300 dark:bg-blue-600 dark:hover:bg-blue-500 md:right-8 md:bottom-8"
-              onClick={openNewAppointment}
-              aria-label="Novo agendamento"
-            >
-              <Plus className="h-7 w-7" />
-            </Button>,
+            <div className="fixed right-4 bottom-24 z-[60] flex flex-col items-end gap-3 md:right-8 md:bottom-8">
+              {viewMode === 'grade' && showIrParaAgoraFab ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-12 rounded-full border border-border bg-background/95 px-4 text-sm font-medium shadow-lg backdrop-blur-sm hover:bg-muted/90"
+                  onClick={() => agendaGradeRef.current?.scrollToNow({ behavior: 'smooth' })}
+                  aria-label="Ir para o horário atual na grade"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4 shrink-0" aria-hidden />
+                  Ir para agora
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                size="icon"
+                className="h-14 w-14 rounded-full border-2 border-sky-300 bg-blue-600 text-white shadow-lg hover:bg-blue-700 dark:border-sky-300 dark:bg-blue-600 dark:hover:bg-blue-500"
+                onClick={openNewAppointment}
+                aria-label="Novo agendamento"
+              >
+                <Plus className="h-7 w-7" />
+              </Button>
+            </div>,
             fabPortalHost,
           )
         : null}

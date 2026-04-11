@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import {
   Banknote,
   Check,
@@ -98,7 +98,7 @@ interface AppointmentCardProps {
   className?: string
 }
 
-export function AppointmentCard({
+function AppointmentCardComponent({
   appointment,
   comandaNumero,
   onCheckIn,
@@ -643,3 +643,28 @@ export function AppointmentCard({
     </>
   )
 }
+
+function appointmentCardPropsAreEqual(
+  prev: AppointmentCardProps,
+  next: AppointmentCardProps,
+): boolean {
+  const a = prev.appointment
+  const b = next.appointment
+  return (
+    a.id === b.id &&
+    a.status === b.status &&
+    a.status_pagamento === b.status_pagamento &&
+    a.horario === b.horario &&
+    a.data === b.data &&
+    (a.servico?.nome ?? '') === (b.servico?.nome ?? '') &&
+    (a.cliente?.nome ?? '') === (b.cliente?.nome ?? '') &&
+    (a.barbeiro?.nome ?? '') === (b.barbeiro?.nome ?? '') &&
+    prev.comandaNumero === next.comandaNumero &&
+    prev.isNext === next.isNext &&
+    prev.listLayout === next.listLayout &&
+    prev.inSheet === next.inSheet &&
+    prev.showActions === next.showActions
+  )
+}
+
+export const AppointmentCard = memo(AppointmentCardComponent, appointmentCardPropsAreEqual)

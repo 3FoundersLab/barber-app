@@ -1,6 +1,15 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import {
   Ban,
   Check,
@@ -11,12 +20,18 @@ import {
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import {
+  AgendaNowLineMarker,
+  AGENDA_NOW_LINE_CLASS,
+} from '@/components/domain/agenda-current-time-line'
 import { ServicoAgendaIcon } from '@/lib/agenda-service-icons'
+import { agendaLocalDayKey, getAgendaNowLineTopPx } from '@/lib/agenda-now-line'
 import type { AgendaUnavailableBlock } from '@/lib/agenda-unavailable'
 import { HORARIOS_PADRAO, parseAgendaClockToMinutes } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { Agendamento, Barbeiro } from '@/types'
 
+/** No dia de hoje (referência = hoje local), o scroll inicial alinha o horário atual, não o topo da grade. */
 const SLOT_MINUTES = HORARIOS_PADRAO.intervalo
 const ROW_PX = 24
 const MIN_BLOCK_PX = 80
@@ -24,9 +39,6 @@ const MIN_BLOCK_PX = 80
 const MIN_APPOINTMENT_DURATION_MIN = 10
 /** Altura do cabeçalho (foto + nome) — deve bater com a célula vazia da coluna de horas. */
 const HEADER_ROW_PX = 72
-
-/** Cor da linha “agora” (estilo Teams / Outlook). */
-const NOW_LINE_CLASS = 'bg-[#e81123] dark:bg-[#ff6b6b]'
 
 /** Cartões com barra lateral colorida + fundo neutro (calendário estilo Teams). */
 const TEAM_EVENT_ACCENTS = [
@@ -49,13 +61,6 @@ function minutesToLabel(total: number): string {
   const h = Math.floor(total / 60)
   const m = total % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-}
-
-function localDayKey(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
 }
 
 function hashId(id: string): number {
@@ -85,6 +90,46 @@ function assignLanes(
   return { laneById, laneCount: Math.max(1, ends.length) }
 }
 
+const IR_PARA_AGORA_VIEWPORT_MARGIN_PX = 80
+
+/** Scroll vertical que posiciona ~1h antes do horário atual (mesma regra do mount). */
+function computeScrollTopForNowAnchor(
+  el: HTMLElement,
+  options: {
+    viewingToday: boolean
+    dayStartMin: number
+    dayEndMin: number
+    slotMinutes: number
+    rowPx: number
+    headerRowPx: number
+    scrollToNowContextMinutes: number
+    now: Date
+  },
+): number {
+  const TOP_PAD = 8
+  const {
+    viewingToday,
+    dayStartMin,
+    dayEndMin,
+    slotMinutes,
+    rowPx,
+    headerRowPx,
+    scrollToNowContextMinutes,
+    now,
+  } = options
+  if (!viewingToday) return 0
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  const ctx = Math.max(0, scrollToNowContextMinutes)
+  if (nowMin < dayStartMin) return 0
+  if (nowMin >= dayEndMin) {
+    return Math.max(0, el.scrollHeight - el.clientHeight)
+  }
+  const anchorMin = Math.max(dayStartMin, nowMin - ctx)
+  const y = headerRowPx + ((anchorMin - dayStartMin) / slotMinutes) * rowPx
+  const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight)
+  return Math.min(Math.max(0, y - TOP_PAD), maxScroll)
+}
+
 export interface AppointmentDayGridProps {
   barbeiros: Barbeiro[]
   appointments: Agendamento[]
@@ -103,19 +148,32 @@ export interface AppointmentDayGridProps {
   referenceDate?: Date
   /** Minutos de contexto antes do “agora” ao alinhar o scroll (padrão 60). */
   scrollToNowContextMinutes?: number
+  /**
+   * Quando a linha “agora” sai da área visível (scroll), recebe `true` para exibir FAB “Ir para agora”.
+   */
+  onIrParaAgoraFabChange?: (visible: boolean) => void
 }
 
-export function AppointmentDayGrid({
-  barbeiros,
-  appointments,
-  comandaByAgendamentoId,
-  onBlockClick,
-  className,
-  timeRange,
-  unavailableBlocks,
-  referenceDate,
-  scrollToNowContextMinutes = 60,
-}: AppointmentDayGridProps) {
+export type AppointmentDayGridHandle = {
+  scrollToNow: (opts?: { behavior?: ScrollBehavior }) => void
+}
+
+export const AppointmentDayGrid = forwardRef<AppointmentDayGridHandle, AppointmentDayGridProps>(
+  function AppointmentDayGrid(
+    {
+      barbeiros,
+      appointments,
+      comandaByAgendamentoId,
+      onBlockClick,
+      className,
+      timeRange,
+      unavailableBlocks,
+      referenceDate,
+      scrollToNowContextMinutes = 60,
+      onIrParaAgoraFabChange,
+    },
+    ref,
+  ) {
   const dayStartMin =
     parseAgendaClockToMinutes(timeRange?.start ?? HORARIOS_PADRAO.inicio) ?? 0
   const dayEndMin =
@@ -126,14 +184,14 @@ export function AppointmentDayGrid({
 
   const referenceDayKey = useMemo(() => {
     if (!referenceDate) return null
-    return localDayKey(referenceDate)
+    return agendaLocalDayKey(referenceDate)
   }, [referenceDate])
 
   const [nowMs, setNowMs] = useState(() => Date.now())
 
   useEffect(() => {
     if (!referenceDayKey) return
-    if (localDayKey(new Date()) !== referenceDayKey) return
+    if (agendaLocalDayKey(new Date()) !== referenceDayKey) return
     const tick = () => setNowMs(Date.now())
     tick()
     const id = window.setInterval(tick, 1000)
@@ -147,10 +205,24 @@ export function AppointmentDayGrid({
     }
   }, [referenceDayKey])
 
-  const nowLineOffsetPx = useMemo(() => {
+  const nowLineOffsetPx = useMemo(
+    () =>
+      getAgendaNowLineTopPx(
+        new Date(nowMs),
+        referenceDayKey,
+        dayStartMin,
+        dayEndMin,
+        SLOT_MINUTES,
+        ROW_PX,
+      ),
+    [referenceDayKey, nowMs, dayStartMin, dayEndMin],
+  )
+
+  /** “Agora” em minutos no dia local — para esmaecer blocos já passados (só no dia de hoje na grade). */
+  const nowMinuteAnchor = useMemo(() => {
     if (!referenceDayKey) return null
-    if (localDayKey(new Date(nowMs)) !== referenceDayKey) return null
     const d = new Date(nowMs)
+<<<<<<< Updated upstream
     const precise =
       d.getHours() * 60 +
       d.getMinutes() +
@@ -159,6 +231,11 @@ export function AppointmentDayGrid({
     if (precise < dayStartMin || precise >= dayEndMin) return null
     return ((precise - dayStartMin) / SLOT_MINUTES) * ROW_PX
   }, [referenceDayKey, nowMs, dayStartMin, dayEndMin])
+=======
+    if (agendaLocalDayKey(d) !== referenceDayKey) return null
+    return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60
+  }, [referenceDayKey, nowMs])
+>>>>>>> Stashed changes
 
   const gridBackgroundStyle = useMemo(() => {
     const hourPx = (60 / SLOT_MINUTES) * ROW_PX
@@ -203,10 +280,35 @@ export function AppointmentDayGrid({
     }
   }, [barbeiros.length, updateScrollEdges])
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollToNow: (opts) => {
+        const el = scrollerRef.current
+        if (!el || referenceDayKey == null) return
+        const today = new Date()
+        const viewingToday = referenceDayKey === agendaLocalDayKey(today)
+        const top = computeScrollTopForNowAnchor(el, {
+          viewingToday,
+          dayStartMin,
+          dayEndMin,
+          slotMinutes: SLOT_MINUTES,
+          rowPx: ROW_PX,
+          headerRowPx: HEADER_ROW_PX,
+          scrollToNowContextMinutes,
+          now: today,
+        })
+        el.scrollTo({ top, behavior: opts?.behavior ?? 'smooth' })
+      },
+    }),
+    [referenceDayKey, dayStartMin, dayEndMin, scrollToNowContextMinutes],
+  )
+
   useLayoutEffect(() => {
     const el = scrollerRef.current
     if (!el || referenceDayKey == null) return
 
+<<<<<<< Updated upstream
     const applyVerticalScroll = () => {
       const clock = new Date()
       if (referenceDayKey !== localDayKey(clock)) {
@@ -231,6 +333,23 @@ export function AppointmentDayGrid({
       const y = HEADER_ROW_PX + ((anchorMin - dayStartMin) / SLOT_MINUTES) * ROW_PX
       const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight)
       el.scrollTop = Math.min(Math.max(0, y - TOP_PAD), maxScroll)
+=======
+    const today = new Date()
+    const todayKey = agendaLocalDayKey(today)
+    const viewingToday = referenceDayKey === todayKey
+
+    const applyVerticalScroll = () => {
+      el.scrollTop = computeScrollTopForNowAnchor(el, {
+        viewingToday,
+        dayStartMin,
+        dayEndMin,
+        slotMinutes: SLOT_MINUTES,
+        rowPx: ROW_PX,
+        headerRowPx: HEADER_ROW_PX,
+        scrollToNowContextMinutes,
+        now: today,
+      })
+>>>>>>> Stashed changes
     }
 
     applyVerticalScroll()
@@ -243,7 +362,55 @@ export function AppointmentDayGrid({
       cancelAnimationFrame(raf1)
       cancelAnimationFrame(raf2)
     }
+<<<<<<< Updated upstream
   }, [referenceDayKey, dayStartMin, dayEndMin, gridHeight, scrollToNowContextMinutes])
+=======
+  }, [
+    referenceDayKey,
+    dayStartMin,
+    dayEndMin,
+    slotCount,
+    scrollToNowContextMinutes,
+    barbeiros.length,
+    appointments.length,
+  ])
+
+  const fabCallbackRef = useRef(onIrParaAgoraFabChange)
+  fabCallbackRef.current = onIrParaAgoraFabChange
+
+  useEffect(() => {
+    const cb = fabCallbackRef.current
+    if (!cb) return
+    const el = scrollerRef.current
+    if (!el) return
+
+    const updateFab = () => {
+      const onFab = fabCallbackRef.current
+      if (!onFab) return
+      const todayKey = agendaLocalDayKey(new Date())
+      const viewingToday = referenceDayKey != null && referenceDayKey === todayKey
+      if (!viewingToday || nowLineOffsetPx == null) {
+        onFab(false)
+        return
+      }
+      const lineY = HEADER_ROW_PX + nowLineOffsetPx
+      const top = el.scrollTop
+      const bottom = top + el.clientHeight
+      const margin = IR_PARA_AGORA_VIEWPORT_MARGIN_PX
+      const away = lineY < top + margin || lineY > bottom - margin
+      onFab(away)
+    }
+
+    updateFab()
+    el.addEventListener('scroll', updateFab, { passive: true })
+    const ro = new ResizeObserver(updateFab)
+    ro.observe(el)
+    return () => {
+      el.removeEventListener('scroll', updateFab)
+      ro.disconnect()
+    }
+  }, [referenceDayKey, nowLineOffsetPx, nowMs, onIrParaAgoraFabChange])
+>>>>>>> Stashed changes
 
   const scrollByOneColumn = useCallback((dir: -1 | 1) => {
     const el = scrollerRef.current
@@ -407,7 +574,7 @@ export function AppointmentDayGrid({
                   <span
                     className={cn(
                       'h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-muted/60 dark:ring-background/80',
-                      NOW_LINE_CLASS,
+                      AGENDA_NOW_LINE_CLASS,
                     )}
                   />
                 </div>
@@ -492,15 +659,11 @@ export function AppointmentDayGrid({
                 <div className="relative box-border" style={{ height: gridHeight }}>
                   {/* Fundo da grelha. Overlays decorativos na timeline: z ≤ 1 e pointer-events-none, para não bloquear cartões (z-[3]+). */}
                   <div className="pointer-events-none absolute inset-0" style={gridBackgroundStyle} />
-                  {nowLineOffsetPx != null && (
-                    <div
-                      className="pointer-events-none absolute inset-x-0 z-[6]"
-                      style={{ top: nowLineOffsetPx - 1 }}
-                      aria-hidden
-                    >
-                      <div className={cn('h-0.5 w-full rounded-full opacity-95 shadow-sm', NOW_LINE_CLASS)} />
-                    </div>
-                  )}
+                  <AgendaNowLineMarker
+                    topPx={nowLineOffsetPx}
+                    now={new Date(nowMs)}
+                    showClockLabel={colIndex === 0}
+                  />
 
                   {unavail.map((block, idx) => {
                     const uStart = timeToMinutes(block.start)
@@ -555,6 +718,13 @@ export function AppointmentDayGrid({
                     const startLbl = minutesToLabel(start)
                     const endLbl = minutesToLabel(fullEnd)
 
+                    const isPastBlock =
+                      nowMinuteAnchor != null &&
+                      end <= nowMinuteAnchor &&
+                      !inProgress &&
+                      !done &&
+                      !cancelled
+
                     return (
                       <button
                         key={a.id}
@@ -565,6 +735,7 @@ export function AppointmentDayGrid({
                           'border-y border-r border-border/60 shadow-sm dark:border-border/50',
                           'hover:z-[4] hover:shadow-md hover:brightness-[1.01] active:scale-[0.995]',
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          isPastBlock && 'opacity-[0.68] saturate-[0.88]',
                           done &&
                             'border-l-muted-foreground/50 bg-muted/80 text-foreground dark:border-l-muted-foreground/40',
                           cancelled &&
@@ -634,4 +805,4 @@ export function AppointmentDayGrid({
       </div>
     </div>
   )
-}
+})

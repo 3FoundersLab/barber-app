@@ -241,7 +241,11 @@ export type { EstoqueNivel, EstoqueProduto, EstoqueStatusFiltro } from './estoqu
 export type {
   Comanda,
   ComandaDescontoModo,
+  ComandaEstrutura,
+  ComandaEstruturaProduto,
+  ComandaEstruturaServico,
   ComandaFormaPagamento,
+  ComandaFormaPagamentoUi,
   ComandaProdutoDraft,
   ComandaProdutoLinha,
   ComandaServicoDraft,
