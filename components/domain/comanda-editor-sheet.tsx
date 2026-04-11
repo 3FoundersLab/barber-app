@@ -39,7 +39,7 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
+import { ResumoComanda } from '@/components/domain/resumo-comanda'
 import { cn } from '@/lib/utils'
 import type { Comanda, ComandaDescontoModo, ComandaFormaPagamento } from '@/types/comanda'
 import type { EstoqueProduto } from '@/types/estoque-produto'
@@ -694,37 +694,16 @@ export function ComandaEditorSheet({
                     </Select>
                   </div>
 
-                  <Card className="border-primary/30 bg-primary/5">
-                    <CardContent className="space-y-2 p-4 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Subtotal serviços</span>
-                        <span>{formatCurrency(totais.subtotalServicos)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Subtotal produtos</span>
-                        <span>{formatCurrency(totais.subtotalProdutos)}</span>
-                      </div>
-                      {totais.valorDesconto > 0 ? (
-                        <div className="flex justify-between text-amber-700 dark:text-amber-400">
-                          <span>Desconto</span>
-                          <span>− {formatCurrency(totais.valorDesconto)}</span>
-                        </div>
-                      ) : null}
-                      {totais.valorTaxaServico > 0 ? (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Taxa de serviço</span>
-                          <span>+ {formatCurrency(totais.valorTaxaServico)}</span>
-                        </div>
-                      ) : null}
-                      <Separator />
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-base font-semibold">Total</span>
-                        <span className="text-2xl font-bold tabular-nums text-primary">
-                          {formatCurrency(totais.totalFinal)}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <ResumoComanda
+                    key={comanda.id}
+                    subtotalServicos={totais.subtotalServicos}
+                    subtotalProdutos={totais.subtotalProdutos}
+                    desconto={totais.valorDesconto}
+                    taxaServico={totais.valorTaxaServico}
+                    total={totais.totalFinal}
+                    isSaving={saving}
+                    persistExpandedStorageKey="barber-app:comanda-resumo-expanded"
+                  />
 
                   {comanda.status === 'aberta' ? (
                     <div className="flex flex-col gap-2 pb-8 sm:flex-row sm:flex-wrap">
