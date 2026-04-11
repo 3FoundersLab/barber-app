@@ -107,6 +107,12 @@ export const AGENDA_FUNCIONAMENTO_PADRAO = {
   fim: '19:00',
 } as const
 
+/**
+ * Eixo vertical da grade de agendamentos: dia completo em formato 24 h (meia-noite a meia-noite).
+ * O fim `24:00` é tratado como 1440 min (exclusivo no desenho da linha do tempo), igual a {@link parseAgendaClockToMinutes}.
+ */
+export const AGENDA_GRADE_EIXO_24H = { start: '00:00', end: '24:00' } as const
+
 function agendaClockFromDb(value: string | null | undefined): string | null {
   if (value == null || typeof value !== 'string') return null
   const s = value.trim()

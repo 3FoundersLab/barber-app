@@ -13,6 +13,8 @@ export interface AgendaNowLineMarkerProps {
   topPx: number | null
   now: Date
   showClockLabel?: boolean
+  /** Tokens `date-fns` (ex.: `HH:mm:ss` para relógio ao vivo na grade). */
+  clockFormat?: string
   /** Pulso suave no traço (estilo do snippet de referência). */
   pulse?: boolean
   className?: string
@@ -25,6 +27,7 @@ export function AgendaNowLineMarker({
   topPx,
   now,
   showClockLabel = false,
+  clockFormat = 'HH:mm',
   pulse = false,
   className,
 }: AgendaNowLineMarkerProps) {
@@ -48,7 +51,7 @@ export function AgendaNowLineMarker({
             AGENDA_NOW_LINE_CLASS,
           )}
         >
-          {format(now, 'HH:mm')}
+          {format(now, clockFormat)}
         </span>
       ) : null}
     </div>

@@ -27,12 +27,12 @@ import {
 import { ServicoAgendaIcon } from '@/lib/agenda-service-icons'
 import { agendaLocalDayKey, getAgendaNowLineTopPx } from '@/lib/agenda-now-line'
 import type { AgendaUnavailableBlock } from '@/lib/agenda-unavailable'
-import { HORARIOS_PADRAO, parseAgendaClockToMinutes } from '@/lib/constants'
+import { AGENDA_GRADE_EIXO_24H, parseAgendaClockToMinutes } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { Agendamento, Barbeiro } from '@/types'
 
-/** No dia de hoje (referência = hoje local), o scroll inicial alinha o horário atual, não o topo da grade. */
-const SLOT_MINUTES = HORARIOS_PADRAO.intervalo
+/** Passo da régua à esquerda e da grade (estilo calendário tipo Teams; independente do intervalo de slots de reserva). */
+const SLOT_MINUTES = 15
 const ROW_PX = 24
 const MIN_BLOCK_PX = 80
 /** Duração mínima realista do bloco no eixo (não confundir com o passo da grade em minutos). */
@@ -57,9 +57,12 @@ function timeToMinutes(t: string): number {
   return parseAgendaClockToMinutes(t) ?? 9 * 60
 }
 
+/** Rótulo sempre em formato 24 h (00:00–24:00). */
 function minutesToLabel(total: number): string {
-  const h = Math.floor(total / 60)
-  const m = total % 60
+  const clamped = Math.max(0, Math.min(total, 24 * 60))
+  const whole = Math.floor(clamped)
+  const h = Math.floor(whole / 60)
+  const m = whole % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
@@ -92,7 +95,20 @@ function assignLanes(
 
 const IR_PARA_AGORA_VIEWPORT_MARGIN_PX = 80
 
-/** Scroll vertical que posiciona ~1h antes do horário atual (mesma regra do mount). */
+/**
+ * Fração da altura do viewport onde fica a linha “agora” (horário local do usuário),
+ * quando há espaço para manter `scrollToNowContextMinutes` acima dela.
+ * ~0,38 imita Agenda do Teams / Google Calendar (passado acima, futuro abaixo).
+ */
+const NOW_LINE_VIEWPORT_BIAS = 0.38
+
+const TOP_PAD_SCROLL = 8
+
+/**
+ * Scroll vertical no dia atual: usa `now` em horário local; mantém pelo menos o contexto
+ * (`scrollToNowContextMinutes`) visível acima da linha “agora” e, se couber, aproxima
+ * essa linha da posição `NOW_LINE_VIEWPORT_BIAS` no viewport.
+ */
 function computeScrollTopForNowAnchor(
   el: HTMLElement,
   options: {
@@ -106,7 +122,6 @@ function computeScrollTopForNowAnchor(
     now: Date
   },
 ): number {
-  const TOP_PAD = 8
   const {
     viewingToday,
     dayStartMin,
@@ -118,16 +133,24 @@ function computeScrollTopForNowAnchor(
     now,
   } = options
   if (!viewingToday) return 0
-  const nowMin = now.getHours() * 60 + now.getMinutes()
+  const nowMin =
+    now.getHours() * 60 +
+    now.getMinutes() +
+    now.getSeconds() / 60 +
+    now.getMilliseconds() / 60000
   const ctx = Math.max(0, scrollToNowContextMinutes)
   if (nowMin < dayStartMin) return 0
   if (nowMin >= dayEndMin) {
     return Math.max(0, el.scrollHeight - el.clientHeight)
   }
-  const anchorMin = Math.max(dayStartMin, nowMin - ctx)
-  const y = headerRowPx + ((anchorMin - dayStartMin) / slotMinutes) * rowPx
   const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight)
-  return Math.min(Math.max(0, y - TOP_PAD), maxScroll)
+  const nowY = headerRowPx + ((nowMin - dayStartMin) / slotMinutes) * rowPx
+  const ctxPx = (ctx / slotMinutes) * rowPx + TOP_PAD_SCROLL
+  const biasPx = NOW_LINE_VIEWPORT_BIAS * el.clientHeight
+  /** Distância do topo do viewport até a linha “agora”: no mínimo o contexto em px; ideal ~bias. */
+  const lineFromTop = Math.max(ctxPx, Math.min(biasPx, el.clientHeight * 0.48))
+  const raw = nowY - lineFromTop
+  return Math.min(Math.max(0, raw), maxScroll)
 }
 
 export interface AppointmentDayGridProps {
@@ -137,16 +160,17 @@ export interface AppointmentDayGridProps {
   comandaByAgendamentoId?: Record<string, number>
   onBlockClick?: (agendamento: Agendamento) => void
   className?: string
-  /** Sobrescreve horário de início/fim do eixo (ex.: 09:00–18:00). */
+  /** Início/fim do eixo da grade em relógio 24 h (ex.: 00:00–24:00 para o dia inteiro). */
   timeRange?: { start: string; end: string }
   /** Faixas cinzas “Não atende” por profissional. */
   unavailableBlocks?: AppointmentUnavailableBlock[]
   /**
    * Dia exibido na grade (data local). Se for o dia atual do usuário, o scroll vertical
-   * posiciona ~1h antes do horário local; em outros dias, volta ao topo da timeline.
+   * usa o relógio local e posiciona a linha “agora” de forma visível (estilo Teams), com
+   * pelo menos `scrollToNowContextMinutes` de agenda acima; em outros dias, volta ao topo.
    */
   referenceDate?: Date
-  /** Minutos de contexto antes do “agora” ao alinhar o scroll (padrão 60). */
+  /** Minutos de agenda a manter visíveis acima da linha “agora” ao abrir o dia (padrão 60). */
   scrollToNowContextMinutes?: number
   /**
    * Quando a linha “agora” sai da área visível (scroll), recebe `true` para exibir FAB “Ir para agora”.
@@ -175,9 +199,9 @@ export const AppointmentDayGrid = forwardRef<AppointmentDayGridHandle, Appointme
     ref,
   ) {
   const dayStartMin =
-    parseAgendaClockToMinutes(timeRange?.start ?? HORARIOS_PADRAO.inicio) ?? 0
+    parseAgendaClockToMinutes(timeRange?.start ?? AGENDA_GRADE_EIXO_24H.start) ?? 0
   const dayEndMin =
-    parseAgendaClockToMinutes(timeRange?.end ?? HORARIOS_PADRAO.fim) ?? 24 * 60
+    parseAgendaClockToMinutes(timeRange?.end ?? AGENDA_GRADE_EIXO_24H.end) ?? 24 * 60
   const totalMinutes = Math.max(0, dayEndMin - dayStartMin)
   const slotCount = Math.ceil(totalMinutes / SLOT_MINUTES)
   const gridHeight = slotCount * ROW_PX
@@ -192,15 +216,45 @@ export const AppointmentDayGrid = forwardRef<AppointmentDayGridHandle, Appointme
   useEffect(() => {
     if (!referenceDayKey) return
     if (agendaLocalDayKey(new Date()) !== referenceDayKey) return
-    const tick = () => setNowMs(Date.now())
-    tick()
-    const id = window.setInterval(tick, 1000)
+
+    let raf = 0
+    let lastEmit = 0
+    /** ~30 Hz: linha “agora” acompanha o relógio local sem exigir 60 re-renders/s. */
+    const EMIT_INTERVAL_MS = 32
+
+    const emit = () => {
+      lastEmit = performance.now()
+      setNowMs(Date.now())
+    }
+
+    const loop = () => {
+      raf = 0
+      if (document.visibilityState !== 'visible') return
+      const t = performance.now()
+      if (t - lastEmit >= EMIT_INTERVAL_MS) emit()
+      raf = requestAnimationFrame(loop)
+    }
+
+    const startLoop = () => {
+      if (raf) return
+      raf = requestAnimationFrame(loop)
+    }
+
+    emit()
+    startLoop()
+
     const onVis = () => {
-      if (document.visibilityState === 'visible') tick()
+      if (document.visibilityState === 'visible') {
+        emit()
+        startLoop()
+      } else {
+        cancelAnimationFrame(raf)
+        raf = 0
+      }
     }
     document.addEventListener('visibilitychange', onVis)
     return () => {
-      window.clearInterval(id)
+      cancelAnimationFrame(raf)
       document.removeEventListener('visibilitychange', onVis)
     }
   }, [referenceDayKey])
@@ -215,7 +269,7 @@ export const AppointmentDayGrid = forwardRef<AppointmentDayGridHandle, Appointme
         SLOT_MINUTES,
         ROW_PX,
       ),
-    [referenceDayKey, nowMs, dayStartMin, dayEndMin],
+    [referenceDayKey, nowMs, dayStartMin, dayEndMin, SLOT_MINUTES],
   )
 
   /** “Agora” em minutos no dia local — para esmaecer blocos já passados (só no dia de hoje na grade). */
@@ -624,6 +678,7 @@ export const AppointmentDayGrid = forwardRef<AppointmentDayGridHandle, Appointme
                     topPx={nowLineOffsetPx}
                     now={new Date(nowMs)}
                     showClockLabel={colIndex === 0}
+                    clockFormat="HH:mm:ss"
                   />
 
                   {unavail.map((block, idx) => {

@@ -30,6 +30,7 @@ import {
   DIAS_SEMANA_ABREV,
   formatDate,
   formatDateWeekdayLong,
+  AGENDA_GRADE_EIXO_24H,
   resolveBarbeariaAgendaTimeRange,
 } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
@@ -509,7 +510,7 @@ export default function BarbeiroAgendaPage() {
                   comandaByAgendamentoId={comandaNumeroPorAgendamento}
                   onBlockClick={setDetailAppointment}
                   referenceDate={selectedDate}
-                  timeRange={agendaTimeRange}
+                  timeRange={AGENDA_GRADE_EIXO_24H}
                   onIrParaAgoraFabChange={setShowIrParaAgoraFab}
                 />
                 {showIrParaAgoraFab ? (

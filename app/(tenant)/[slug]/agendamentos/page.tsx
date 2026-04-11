@@ -44,6 +44,7 @@ import { DateNavigatorCalendar } from '@/components/shared/date-navigator-calend
 import {
   DIAS_SEMANA_ABREV,
   formatDateWeekdayLong,
+  AGENDA_GRADE_EIXO_24H,
   resolveBarbeariaAgendaTimeRange,
 } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
@@ -593,7 +594,7 @@ export default function AdminAgendamentosPage() {
             </p>
             <p className="text-xs text-muted-foreground sm:text-sm">
               {viewMode === 'grade'
-                ? 'Grade por profissional · intervalos de 15 minutos'
+                ? 'Grade por profissional · 00:00–24:00 (24 h) · intervalos de 15 minutos'
                 : viewMode === 'calendar'
                   ? 'Calendário mensal — arraste para mover o dia do agendamento'
                   : 'Lista do dia selecionado'}
@@ -810,7 +811,7 @@ export default function AdminAgendamentosPage() {
                 comandaByAgendamentoId={comandaMapEfetivo}
                 onBlockClick={setDetailAppointment}
                 referenceDate={selectedDate}
-                timeRange={agendaTimeRange}
+                timeRange={AGENDA_GRADE_EIXO_24H}
                 unavailableBlocks={useDemoData ? getAgendaDemoUnavailableBlocks() : undefined}
                 onIrParaAgoraFabChange={setShowIrParaAgoraFab}
               />
