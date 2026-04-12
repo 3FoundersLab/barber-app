@@ -1,18 +1,18 @@
 import type { ChartConfig } from '@/components/ui/chart'
 
-/** Paleta padrão dos relatórios (gráficos Recharts). */
+/** Paleta dos relatórios — alinhada ao design system (`--ds-*` em `app/globals.css`). */
 export const relatoriosChartColors = {
-  primary: '#d97706',
-  secondary: '#3b82f6',
-  tertiary: '#10b981',
-  quaternary: '#8b5cf6',
-  background: '#fafafa',
-  grid: '#e5e5e5',
-  text: '#737373',
+  primary: 'var(--ds-color-primary)',
+  secondary: 'var(--ds-color-secondary-light)',
+  tertiary: 'var(--ds-color-success)',
+  quaternary: 'var(--ds-color-chart-violet)',
+  background: 'var(--ds-color-bg)',
+  grid: 'var(--ds-color-border)',
+  text: 'var(--ds-color-text-secondary)',
 } as const
 
 export const relatoriosChartFont = {
-  family: 'Inter, sans-serif',
+  family: 'var(--font-sans), ui-sans-serif, system-ui, sans-serif',
   size: 12,
 } as const
 

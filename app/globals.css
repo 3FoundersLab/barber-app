@@ -43,6 +43,42 @@
   --success-foreground: oklch(0.98 0.005 145);
   --warning: oklch(0.94 0.05 55);
   --warning-foreground: oklch(0.42 0.12 42);
+
+  /*
+   * Design system — paleta, tipografia, raios e sombra de cartão (documentação + utilitários `ds-*`).
+   * Não substitui --primary/--secondary do shadcn; use tokens `ds-*` em novos ecrãs ou `bg-ds-*` no @theme.
+   */
+  --ds-color-primary: #d97706;
+  --ds-color-primary-light: #fbbf24;
+  --ds-color-primary-dark: #b45309;
+  --ds-color-secondary: #0f766e;
+  --ds-color-secondary-light: #14b8a6;
+  --ds-color-bg: #fafaf9;
+  --ds-color-surface: #ffffff;
+  --ds-color-border: #e7e5e4;
+  --ds-color-text: #1c1917;
+  --ds-color-text-secondary: #78716c;
+  --ds-color-success: #22c55e;
+  --ds-color-warning: #f59e0b;
+  --ds-color-danger: #ef4444;
+  --ds-color-info: #3b82f6;
+  /* Série extra em gráficos (não é cor de marca principal) */
+  --ds-color-chart-violet: #8b5cf6;
+
+  --ds-text-kpi: 2.25rem;
+  --ds-text-title: 1.5rem;
+  --ds-text-subtitle: 1.125rem;
+  --ds-text-body: 0.875rem;
+  --ds-text-small: 0.75rem;
+
+  --ds-radius-sm: 6px;
+  --ds-radius-md: 12px;
+  --ds-radius-lg: 16px;
+  --ds-radius-xl: 24px;
+
+  --ds-card-shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.1),
+    0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
 .dark {
@@ -85,11 +121,48 @@
   --success-foreground: oklch(0.14 0.01 145);
   --warning: oklch(0.3 0.07 42);
   --warning-foreground: oklch(0.92 0.04 55);
+
+  --ds-color-bg: #1c1917;
+  --ds-color-surface: #292524;
+  --ds-color-border: #44403c;
+  --ds-color-text: #fafaf9;
+  --ds-color-text-secondary: #a8a29e;
+  --ds-card-shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.35),
+    0 1px 2px -1px rgb(0 0 0 / 0.3);
 }
 
 @theme inline {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-playfair), ui-serif, Georgia, 'Times New Roman', serif;
+
+  --color-ds-primary: var(--ds-color-primary);
+  --color-ds-primary-light: var(--ds-color-primary-light);
+  --color-ds-primary-dark: var(--ds-color-primary-dark);
+  --color-ds-secondary: var(--ds-color-secondary);
+  --color-ds-secondary-light: var(--ds-color-secondary-light);
+  --color-ds-bg: var(--ds-color-bg);
+  --color-ds-surface: var(--ds-color-surface);
+  --color-ds-border: var(--ds-color-border);
+  --color-ds-text: var(--ds-color-text);
+  --color-ds-text-secondary: var(--ds-color-text-secondary);
+  --color-ds-success: var(--ds-color-success);
+  --color-ds-warning: var(--ds-color-warning);
+  --color-ds-danger: var(--ds-color-danger);
+  --color-ds-info: var(--ds-color-info);
+  --color-ds-chart-violet: var(--ds-color-chart-violet);
+
+  --text-ds-kpi: var(--ds-text-kpi);
+  --text-ds-title: var(--ds-text-title);
+  --text-ds-subtitle: var(--ds-text-subtitle);
+  --text-ds-body: var(--ds-text-body);
+  --text-ds-small: var(--ds-text-small);
+
+  --radius-ds-sm: var(--ds-radius-sm);
+  --radius-ds-md: var(--ds-radius-md);
+  --radius-ds-lg: var(--ds-radius-lg);
+  --radius-ds-xl: var(--ds-radius-xl);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
@@ -163,6 +236,45 @@
 }
 
 @layer components {
+  /** Cartão alinhado ao design system (borda fina + sombra suave). */
+  .ds-card {
+    border-radius: var(--ds-radius-md);
+    border: 1px solid var(--ds-color-border);
+    background-color: var(--ds-color-surface);
+    box-shadow: var(--ds-card-shadow);
+  }
+
+  /** Título de secção — serif (Playfair). */
+  .ds-heading-section {
+    font-family: var(--font-display);
+    font-size: var(--ds-text-title);
+    line-height: 1.25;
+    font-weight: 600;
+    color: var(--ds-color-text);
+    letter-spacing: -0.02em;
+  }
+
+  /** Valor KPI — Inter, escala do design system. */
+  .ds-kpi-value {
+    font-family: var(--font-sans);
+    font-size: var(--ds-text-kpi);
+    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--ds-color-text);
+  }
+
+  .ds-body {
+    font-size: var(--ds-text-body);
+    line-height: 1.5;
+    color: var(--ds-color-text);
+  }
+
+  .ds-muted {
+    font-size: var(--ds-text-small);
+    color: var(--ds-color-text-secondary);
+  }
+
   /* Coluna principal alinhada à sidebar em overlay (DesktopSidebar define --shell-sidebar-inset). */
   @media (min-width: 768px) {
     [data-app-shell] > .app-shell-main {
