@@ -650,43 +650,42 @@ export function ComandaEditorSheet({
                     </Badge>
                   ) : null}
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-11 min-h-11 w-11 min-w-11 shrink-0 touch-manipulation sm:h-10 sm:min-h-10 sm:w-10 sm:min-w-10"
-                      aria-label="Menu da comanda"
-                    >
-                      <MoreVertical className="h-5 w-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52">
-                    {!demoMode &&
-                    comanda &&
-                    (comanda.status === 'aberta' ||
-                      comanda.status === 'fechada' ||
-                      comanda.status === 'cancelada') ? (
+                {!demoMode &&
+                comanda &&
+                (comanda.status === 'aberta' ||
+                  comanda.status === 'fechada' ||
+                  comanda.status === 'cancelada') ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-11 min-h-11 w-11 min-w-11 shrink-0 touch-manipulation sm:h-10 sm:min-h-10 sm:w-10 sm:min-w-10"
+                        aria-label="Menu da comanda"
+                      >
+                        <MoreVertical className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52">
                       <DropdownMenuItem disabled={saving} onClick={() => void handleSalvar()}>
                         Salvar agora
                       </DropdownMenuItem>
-                    ) : null}
-                    <DropdownMenuItem onClick={() => onOpenChange(false)}>Voltar / fechar painel</DropdownMenuItem>
-                    {comanda.status === 'aberta' && !demoMode ? (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          variant="destructive"
-                          disabled={saving}
-                          onClick={() => void handleCancelarComanda()}
-                        >
-                          Cancelar comanda
-                        </DropdownMenuItem>
-                      </>
-                    ) : null}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      {comanda.status === 'aberta' ? (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            variant="destructive"
+                            disabled={saving}
+                            onClick={() => void handleCancelarComanda()}
+                          >
+                            Cancelar comanda
+                          </DropdownMenuItem>
+                        </>
+                      ) : null}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
               </div>
               <SheetDescription asChild>
                 <p className="text-sm text-muted-foreground sm:ml-10">
