@@ -53,6 +53,7 @@ import { RelatoriosBarbeirosPainel } from '@/components/domain/relatorios-barbei
 import { RelatoriosClientesPainel } from '@/components/domain/relatorios-clientes-painel'
 import { RelatoriosOperacaoPainel } from '@/components/domain/relatorios-operacao-painel'
 import { RelatoriosProdutosRelatorioPainel } from '@/components/domain/relatorios-produtos-relatorio-painel'
+import { RelatoriosTendenciasPainel } from '@/components/domain/relatorios-tendencias-painel'
 import { RelatoriosVisaoGraficos } from '@/components/domain/relatorios-visao-graficos'
 import { estoqueCardStatus } from '@/lib/estoque-produto-utils'
 import { formatCurrency } from '@/lib/constants'
@@ -262,6 +263,8 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
   const [clientesAnalise, setClientesAnalise] = useState<ClienteCadastroAnalise[]>([])
   const [receitaProdutosPorBarbeiro, setReceitaProdutosPorBarbeiro] = useState<Record<string, number>>({})
   const [vendasProdutos120d, setVendasProdutos120d] = useState<VendaProdutoLinha[]>([])
+  const [receitaProdutoPorMesHist, setReceitaProdutoPorMesHist] = useState<Record<string, number>>({})
+  const [receitaProdutoPorDiaHist, setReceitaProdutoPorDiaHist] = useState<Record<string, number>>({})
 
   const { inicio, fim } = useMemo(
     () => intervaloPorPreset(preset, personalizadoInicio, personalizadoFim),
@@ -340,8 +343,7 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
       const histIni = toLocalDateKey(subMonths(startOfDay(new Date()), 36))
       const histFim = toLocalDateKey(endOfDay(new Date()))
 
-      const movIni = toLocalDateKey(subDays(startOfDay(new Date()), 120))
-      const movFim = toLocalDateKey(endOfDay(new Date()))
+      const cut120d = toLocalDateKey(subDays(startOfDay(new Date()), 120))
 
       const [rCli, rNovos, rEst, rComProd, rAgHist, rCliMeta, rCom120] = await Promise.all([
         supabase.from('clientes').select('*', { count: 'exact', head: true }).eq('barbearia_id', barbeariaId),
@@ -390,8 +392,8 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
           )
           .eq('barbearia_id', barbeariaId)
           .eq('status', 'fechada')
-          .gte('referencia_data', movIni)
-          .lte('referencia_data', movFim),
+          .gte('referencia_data', histIni)
+          .lte('referencia_data', histFim),
       ])
 
       type ComandaProdRow = {
@@ -446,26 +448,40 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
 
       if (rCom120.error) {
         setVendasProdutos120d([])
+        setReceitaProdutoPorMesHist({})
+        setReceitaProdutoPorDiaHist({})
       } else if (rCom120.data) {
         const linhas120: VendaProdutoLinha[] = []
+        const prodMes: Record<string, number> = {}
+        const prodDia: Record<string, number> = {}
         for (const row of rCom120.data as ComandaProdRow[]) {
+          const dk = row.referencia_data
+          const ym = dk.slice(0, 7)
           for (const l of row.comanda_produtos ?? []) {
             const pid = l.produto_estoque_id
-            if (!pid) continue
             const qty = Math.max(0, Math.floor(Number(l.quantidade) || 0))
             if (qty <= 0) continue
-            linhas120.push({
-              produto_estoque_id: String(pid),
-              nome: (l.nome && String(l.nome).trim()) || 'Produto',
-              referencia_data: row.referencia_data,
-              quantidade: qty,
-              receita: Number(l.preco_unitario) * qty,
-            })
+            const sub = Number(l.preco_unitario) * qty
+            prodMes[ym] = (prodMes[ym] ?? 0) + sub
+            prodDia[dk] = (prodDia[dk] ?? 0) + sub
+            if (pid && dk >= cut120d) {
+              linhas120.push({
+                produto_estoque_id: String(pid),
+                nome: (l.nome && String(l.nome).trim()) || 'Produto',
+                referencia_data: dk,
+                quantidade: qty,
+                receita: sub,
+              })
+            }
           }
         }
         setVendasProdutos120d(linhas120)
+        setReceitaProdutoPorMesHist(prodMes)
+        setReceitaProdutoPorDiaHist(prodDia)
       } else {
         setVendasProdutos120d([])
+        setReceitaProdutoPorMesHist({})
+        setReceitaProdutoPorDiaHist({})
       }
 
       if (rAtual.error) {
@@ -1048,6 +1064,11 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
             </TabsContent>
 
             <TabsContent value="tendencias" className="mt-0 space-y-4 print:hidden">
+              <RelatoriosTendenciasPainel
+                agHistorico={agHistClienteAnalise}
+                receitaProdutoPorMesHist={receitaProdutoPorMesHist}
+                receitaProdutoPorDiaHist={receitaProdutoPorDiaHist}
+              />
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Comparativo com período anterior</CardTitle>
