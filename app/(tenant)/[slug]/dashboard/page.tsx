@@ -3,18 +3,28 @@
 import { useEffect, useMemo, useState } from 'react'
 import { PageContent } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
-import { AdminDashboardPremium, type AdminDashboardStats } from '@/components/domain/admin-dashboard-premium'
+import { AdminDashboardPremium } from '@/components/domain/admin-dashboard-premium'
 import { Alert, AlertDescription, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { formatDateShort } from '@/lib/constants'
 import {
   buildAdminDashboardAlerts,
   buildDashboardResumoTendencia,
 } from '@/lib/build-admin-dashboard-alerts'
+import { buildAdminDashboardStatusHoje, type AdminDashboardStatusHoje } from '@/lib/build-admin-dashboard-status-hoje'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import type { Agendamento, Barbearia } from '@/types'
 import type { DashboardFatDiarioPonto } from '@/types/admin-dashboard'
+
+interface AdminDashboardStats {
+  agendamentosHoje: number
+  agendamentosMes: number
+  faturamentoHoje: number
+  faturamentoMes: number
+  totalClientes: number
+  totalBarbeiros: number
+}
 
 interface DashboardExtra {
   fatDiario: DashboardFatDiarioPonto[]
@@ -22,6 +32,7 @@ interface DashboardExtra {
   estoqueCritico: { nome: string; quantidade: number; minimo: number }[]
   clientesNovosUltimos7Dias: number
   mediaAgendamentosRecente: number
+  statusHoje: AdminDashboardStatusHoje
 }
 
 function ymdFromDate(d: Date): string {
@@ -29,6 +40,56 @@ function ymdFromDate(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
+}
+
+function addDaysYmd(ymd: string, deltaDays: number): string {
+  const [y, m, d] = ymd.split('-').map(Number)
+  const t = new Date(y, m - 1, d + deltaDays)
+  return ymdFromDate(t)
+}
+
+async function sumVendasProdutosNoDia(
+  supabase: ReturnType<typeof createClient>,
+  barbeariaId: string,
+  ymd: string,
+): Promise<number> {
+  const { data: comandas } = await supabase
+    .from('comandas')
+    .select('id')
+    .eq('barbearia_id', barbeariaId)
+    .eq('referencia_data', ymd)
+    .eq('status', 'fechada')
+  const ids = comandas?.map((c) => c.id) ?? []
+  if (!ids.length) return 0
+  const { data: lines } = await supabase.from('comanda_produtos').select('quantidade').in('comanda_id', ids)
+  return (lines ?? []).reduce((s, l) => s + (Number(l.quantidade) || 0), 0)
+}
+
+async function loadEquipeHoje(supabase: ReturnType<typeof createClient>, barbeariaId: string) {
+  const { data: rows, count } = await supabase
+    .from('barbeiros')
+    .select('id', { count: 'exact' })
+    .eq('barbearia_id', barbeariaId)
+    .eq('ativo', true)
+    .or('funcao_equipe.eq.barbeiro,funcao_equipe.eq.barbeiro_lider,funcao_equipe.is.null')
+  const ids = rows?.map((r) => r.id) ?? []
+  const n = count != null ? count : ids.length
+  const dow = new Date().getDay()
+  if (!ids.length) return { activeTotal: n, onDuty: 0 }
+  const { count: horarioQualquer } = await supabase
+    .from('horarios_trabalho')
+    .select('*', { count: 'exact', head: true })
+    .in('barbeiro_id', ids)
+    .eq('ativo', true)
+  if (!horarioQualquer) return { activeTotal: n, onDuty: n }
+  const { data: ht } = await supabase
+    .from('horarios_trabalho')
+    .select('barbeiro_id')
+    .in('barbeiro_id', ids)
+    .eq('dia_semana', dow)
+    .eq('ativo', true)
+  const onDuty = new Set(ht?.map((h) => h.barbeiro_id)).size
+  return { activeTotal: n, onDuty }
 }
 
 export default function AdminDashboardPage() {
@@ -93,6 +154,7 @@ export default function AdminDashboardPage() {
       const weekAgo = new Date()
       weekAgo.setDate(weekAgo.getDate() - 7)
       const weekAgoIso = weekAgo.toISOString()
+      const ymdSemanaAnterior = addDaysYmd(today, -7)
 
       const [
         { count: todayCount },
@@ -100,13 +162,17 @@ export default function AdminDashboardPage() {
         { data: todayRevenue },
         { data: monthRevenue },
         { count: clientsCount },
-        { count: barbersCount },
         { data: proximos },
         { data: fatRows },
         { data: pendPagRows },
         { count: count14 },
         { count: novos7 },
         { data: estoqueRows },
+        equipePack,
+        { data: todayAgRows },
+        { data: concl14Rows },
+        { count: concHojeCount },
+        vendasPack,
       ] = await Promise.all([
         supabase
           .from('agendamentos')
@@ -134,12 +200,6 @@ export default function AdminDashboardPage() {
           .from('clientes')
           .select('*', { count: 'exact', head: true })
           .eq('barbearia_id', barbeariaData.id),
-        supabase
-          .from('barbeiros')
-          .select('*', { count: 'exact', head: true })
-          .eq('barbearia_id', barbeariaData.id)
-          .eq('ativo', true)
-          .or('funcao_equipe.eq.barbeiro,funcao_equipe.eq.barbeiro_lider,funcao_equipe.is.null'),
         supabase
           .from('agendamentos')
           .select(
@@ -187,6 +247,34 @@ export default function AdminDashboardPage() {
         operacaoLiberada
           ? supabase.from('estoque_produtos').select('nome, quantidade, minimo').eq('barbearia_id', barbeariaData.id)
           : Promise.resolve({ data: null as { nome: string; quantidade: number; minimo: number }[] | null }),
+        loadEquipeHoje(supabase, barbeariaData.id),
+        supabase
+          .from('agendamentos')
+          .select('horario, status')
+          .eq('barbearia_id', barbeariaData.id)
+          .eq('data', today),
+        supabase
+          .from('agendamentos')
+          .select('data')
+          .eq('barbearia_id', barbeariaData.id)
+          .eq('status', 'concluido')
+          .gte('data', start14s)
+          .lte('data', today),
+        supabase
+          .from('agendamentos')
+          .select('*', { count: 'exact', head: true })
+          .eq('barbearia_id', barbeariaData.id)
+          .eq('data', today)
+          .eq('status', 'concluido'),
+        operacaoLiberada
+          ? (async () => {
+              const [hoje, semana] = await Promise.all([
+                sumVendasProdutosNoDia(supabase, barbeariaData.id, today),
+                sumVendasProdutosNoDia(supabase, barbeariaData.id, ymdSemanaAnterior),
+              ])
+              return { hoje, semana }
+            })()
+          : Promise.resolve({ hoje: 0, semana: 0 }),
       ])
 
       const fHoje = todayRevenue?.reduce((acc, a) => acc + Number(a.valor), 0) || 0
@@ -198,7 +286,7 @@ export default function AdminDashboardPage() {
         faturamentoHoje: fHoje,
         faturamentoMes: fMes,
         totalClientes: clientsCount || 0,
-        totalBarbeiros: barbersCount || 0,
+        totalBarbeiros: equipePack.activeTotal,
       })
 
       if (proximos) setProximosAgendamentos(proximos)
@@ -228,12 +316,27 @@ export default function AdminDashboardPage() {
             .slice(0, 5)
         : []
 
+      const statusHoje = buildAdminDashboardStatusHoje({
+        barbearia: barbeariaData,
+        todayYmd: today,
+        fatDiario,
+        faturamentoHojeConcluido: fHoje,
+        barbeirosEscalados: equipePack.onDuty,
+        barbeirosAtivos: equipePack.activeTotal,
+        agendamentosHojeLinhas: (todayAgRows ?? []) as { horario: string; status: string }[],
+        concluidosHojeCount: concHojeCount ?? 0,
+        concluidosDatas14d: (concl14Rows ?? []).map((r) => r.data as string),
+        vendasProdutosHoje: vendasPack.hoje,
+        vendasProdutosSemanaAnterior: vendasPack.semana,
+      })
+
       setExtra({
         fatDiario,
         recebimentosPendentesHoje: pendPagRows ?? [],
         estoqueCritico,
         clientesNovosUltimos7Dias: novos7 || 0,
         mediaAgendamentosRecente: (count14 || 0) / 14,
+        statusHoje,
       })
 
       setIsLoading(false)
@@ -308,7 +411,6 @@ export default function AdminDashboardPage() {
         <AdminDashboardPremium
           base={base}
           barbearia={barbearia}
-          stats={stats}
           proximosAgendamentos={proximosAgendamentos}
           fatDiario={extra?.fatDiario ?? []}
           tendenciaInsight={tendenciaInsight}
@@ -317,6 +419,7 @@ export default function AdminDashboardPage() {
           error={error}
           pagamentoPendentePlano={barbearia?.status_cadastro === 'pagamento_pendente'}
           operacaoLiberada={operacaoLiberada}
+          statusHoje={extra?.statusHoje ?? null}
         />
       </PageContent>
     </TenantPanelPageContainer>

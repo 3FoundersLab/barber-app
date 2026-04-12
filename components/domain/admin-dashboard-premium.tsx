@@ -12,33 +12,21 @@ import {
   Package,
   Scissors,
   Sparkles,
-  TrendingUp,
   Users,
   Wallet,
 } from 'lucide-react'
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { AppointmentStatusBadge } from '@/components/shared/status-badge'
-import {
-  AdminDashboardAppointmentRowSkeleton,
-  ClienteHomeBarbeariaSkeleton,
-  StatCardSkeletonGrid,
-} from '@/components/shared/loading-skeleton'
+import { AdminDashboardStatusCards } from '@/components/domain/admin-dashboard-status-cards'
+import { AdminDashboardAppointmentRowSkeleton, ClienteHomeBarbeariaSkeleton } from '@/components/shared/loading-skeleton'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { formatCurrency, formatTime } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import type { AdminDashboardStatusHoje } from '@/lib/build-admin-dashboard-status-hoje'
 import type { Agendamento, Barbearia } from '@/types'
 import type { AlertaDashboard, DashboardFatDiarioPonto } from '@/types/admin-dashboard'
-
-export interface AdminDashboardStats {
-  agendamentosHoje: number
-  agendamentosMes: number
-  faturamentoHoje: number
-  faturamentoMes: number
-  totalClientes: number
-  totalBarbeiros: number
-}
 
 const chartConfig = {
   fat: {
@@ -76,7 +64,6 @@ function IconWrap({ children, className }: { children: React.ReactNode; classNam
 export function AdminDashboardPremium(props: {
   base: string
   barbearia: Barbearia | null
-  stats: AdminDashboardStats | null
   proximosAgendamentos: Agendamento[]
   fatDiario: DashboardFatDiarioPonto[]
   tendenciaInsight: string
@@ -85,11 +72,11 @@ export function AdminDashboardPremium(props: {
   error: string | null
   pagamentoPendentePlano: boolean
   operacaoLiberada: boolean
+  statusHoje: AdminDashboardStatusHoje | null
 }) {
   const {
     base,
     barbearia,
-    stats,
     proximosAgendamentos,
     fatDiario,
     tendenciaInsight,
@@ -98,6 +85,7 @@ export function AdminDashboardPremium(props: {
     error,
     pagamentoPendentePlano,
     operacaoLiberada,
+    statusHoje,
   } = props
 
   const chartData = useMemo(
@@ -220,81 +208,18 @@ export function AdminDashboardPremium(props: {
             <div className="mb-3 flex items-end justify-between gap-2">
               <div>
                 <h2 id="dash-status-heading" className="text-base font-semibold tracking-tight">
-                  Como estamos hoje?
+                  Status em tempo real
                 </h2>
-                <p className="text-muted-foreground text-xs">Indicadores principais da operação</p>
+                <p className="text-muted-foreground text-xs">Indicadores do dia, metas dinâmicas e leitura rápida</p>
               </div>
             </div>
-            {isLoading ? (
-              <StatCardSkeletonGrid count={6} className="md:grid-cols-3 xl:grid-cols-6" />
-            ) : (
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-6">
-                <Card className="border-border/80 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="text-muted-foreground flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      <span className="text-[11px] font-medium uppercase tracking-wide">Hoje</span>
-                    </div>
-                    <p className="mt-2 text-2xl font-bold tabular-nums">{stats?.agendamentosHoje ?? 0}</p>
-                    <p className="text-muted-foreground text-xs">Agendamentos</p>
-                  </CardContent>
-                </Card>
-                <Card className="border-border/80 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="text-muted-foreground flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
-                      <span className="text-[11px] font-medium uppercase tracking-wide">Hoje</span>
-                    </div>
-                    <p className="mt-2 text-lg font-bold tabular-nums leading-tight sm:text-xl">
-                      {formatCurrency(stats?.faturamentoHoje ?? 0)}
-                    </p>
-                    <p className="text-muted-foreground text-xs">Faturamento</p>
-                  </CardContent>
-                </Card>
-                <Card className="border-border/80 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="text-muted-foreground flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      <span className="text-[11px] font-medium uppercase tracking-wide">Mês</span>
-                    </div>
-                    <p className="mt-2 text-lg font-bold tabular-nums leading-tight sm:text-xl">
-                      {formatCurrency(stats?.faturamentoMes ?? 0)}
-                    </p>
-                    <p className="text-muted-foreground text-xs">Faturamento acumulado</p>
-                  </CardContent>
-                </Card>
-                <Card className="border-border/80 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="text-muted-foreground flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      <span className="text-[11px] font-medium uppercase tracking-wide">Mês</span>
-                    </div>
-                    <p className="mt-2 text-2xl font-bold tabular-nums">{stats?.agendamentosMes ?? 0}</p>
-                    <p className="text-muted-foreground text-xs">Agendamentos</p>
-                  </CardContent>
-                </Card>
-                <Card className="border-border/80 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="text-muted-foreground flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      <span className="text-[11px] font-medium uppercase tracking-wide">Base</span>
-                    </div>
-                    <p className="mt-2 text-2xl font-bold tabular-nums">{stats?.totalClientes ?? 0}</p>
-                    <p className="text-muted-foreground text-xs">Clientes</p>
-                  </CardContent>
-                </Card>
-                <Card className="border-border/80 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="text-muted-foreground flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      <span className="text-[11px] font-medium uppercase tracking-wide">Equipe</span>
-                    </div>
-                    <p className="mt-2 text-2xl font-bold tabular-nums">{stats?.totalBarbeiros ?? 0}</p>
-                    <p className="text-muted-foreground text-xs">Barbeiros ativos</p>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+            <AdminDashboardStatusCards
+              base={base}
+              barbearia={barbearia}
+              status={statusHoje}
+              isLoading={isLoading}
+              operacaoLiberada={operacaoLiberada}
+            />
           </section>
 
           {/* Seção 3 — Tendências */}
