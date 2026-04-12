@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { eachDayOfInterval, endOfWeek, format, startOfDay, startOfWeek } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { formatCurrency } from '@/lib/constants'
 import { classificarServicoReceita } from '@/lib/relatorios-agregacao'
 import { toLocalDateKey } from '@/lib/relatorios-range'
@@ -365,7 +367,7 @@ function PizzaMixReceita({
   )
 }
 
-export function RelatoriosVisaoGraficos({
+function RelatoriosVisaoGraficosInner({
   inicio,
   fim,
   agendamentosPeriodo,
@@ -525,5 +527,50 @@ export function RelatoriosVisaoGraficos({
         </DialogContent>
       </Dialog>
     </>
+  )
+}
+
+/** Gráficos pesados só montam quando o bloco entra no viewport (performance). */
+export function RelatoriosVisaoGraficos(props: {
+  inicio: Date
+  fim: Date
+  agendamentosPeriodo: Agendamento[]
+  receitaProdutosPorDia: Record<string, number>
+}) {
+  const hostRef = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const el = hostRef.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e?.isIntersecting) setVisible(true)
+      },
+      { rootMargin: '120px', threshold: 0.06 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  return (
+    <div ref={hostRef} className="space-y-4">
+      {visible ? (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.28, ease: 'easeOut' }}
+        >
+          <RelatoriosVisaoGraficosInner {...props} />
+        </motion.div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2" aria-hidden>
+          <Skeleton className="h-[min(280px,42vw)] w-full rounded-xl" />
+          <Skeleton className="h-[min(280px,42vw)] w-full rounded-xl" />
+          <Skeleton className="h-[min(220px,40vw)] w-full rounded-xl" />
+          <Skeleton className="h-[min(220px,40vw)] w-full rounded-xl" />
+        </div>
+      )}
+    </div>
   )
 }

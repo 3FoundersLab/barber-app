@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -26,7 +27,6 @@ import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -38,7 +38,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import {
@@ -57,6 +66,11 @@ import { RelatoriosTendenciasPainel } from '@/components/domain/relatorios-tende
 import { RelatoriosVisaoGraficos } from '@/components/domain/relatorios-visao-graficos'
 import { estoqueCardStatus } from '@/lib/estoque-produto-utils'
 import { formatCurrency, ROLE_LABELS } from '@/lib/constants'
+import {
+  RELATORIOS_AUTO_REFRESH_MS,
+  RELATORIOS_CACHE_MS,
+  relatoriosDashboardCacheKey,
+} from '@/lib/relatorios-dashboard-cache'
 import { buildRelatorioPerformancePdfData } from '@/lib/relatorio-performance-pdf-data'
 import { exportRelatorioPerformancePdf } from '@/lib/relatorio-performance-pdf-export'
 import { RelatorioPerformancePdfDocument } from '@/components/domain/relatorio-performance-pdf-document'
@@ -132,33 +146,61 @@ function parseMinhasUnidades(
 function KpiVisaoCard({
   titulo,
   valorExibido,
-  comparar,
   atual,
   anterior,
   textoRodape,
+  dica,
+  onDrill,
 }: {
   titulo: string
   valorExibido: string
-  comparar: boolean
   atual: number
   anterior: number
   textoRodape: string
+  /** Texto do tooltip (acessível + contexto). */
+  dica: string
+  /** Drill-down: ex. mudar de aba. */
+  onDrill?: () => void
 }) {
-  return (
-    <Card className="min-w-0">
+  const card = (
+    <Card
+      className={cn(
+        'min-w-0',
+        onDrill &&
+          'cursor-pointer transition-colors hover:border-primary/45 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+      )}
+      onClick={onDrill}
+      role={onDrill ? 'button' : undefined}
+      tabIndex={onDrill ? 0 : undefined}
+      onKeyDown={
+        onDrill
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onDrill()
+              }
+            }
+          : undefined
+      }
+    >
       <CardHeader className="pb-2">
         <CardDescription>{titulo}</CardDescription>
         <CardTitle className="text-2xl tabular-nums tracking-tight">{valorExibido}</CardTitle>
       </CardHeader>
       <CardContent className="min-h-[44px] text-xs text-muted-foreground">
-        <TrendDelta
-          comparar={comparar}
-          atual={atual}
-          anterior={anterior}
-          textoRodape={textoRodape}
-        />
+        <TrendDelta comparar={true} atual={atual} anterior={anterior} textoRodape={textoRodape} />
       </CardContent>
     </Card>
+  )
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{card}</TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-[min(100vw-1rem,20rem)] text-balance">
+        {dica}
+        {onDrill ? <span className="mt-1 block text-[10px] opacity-90">Clique para abrir o detalhe sugerido.</span> : null}
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -245,7 +287,7 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
   const [preset, setPreset] = useState<RelatorioPeriodoPreset>('7d')
   const [personalizadoInicio, setPersonalizadoInicio] = useState<Date | null>(null)
   const [personalizadoFim, setPersonalizadoFim] = useState<Date | null>(null)
-  const [compararComAnterior, setCompararComAnterior] = useState(true)
+  const fetchCacheRef = useRef<{ key: string; at: number } | null>(null)
   const [tab, setTab] = useState('visao')
   /** Primeira carga (ou troca de unidade) concluída — evita sumir o grid quando o período vem vazio. */
   const [dadosProntos, setDadosProntos] = useState(false)
@@ -293,16 +335,25 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
 
   const textoRodapeKpi = useMemo(() => textoComparativoKpi(inicio, fim), [inicio, fim])
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: { force?: boolean }) => {
     if (!barbeariaId) return
+    const sk = toLocalDateKey(inicio)
+    const ek = toLocalDateKey(fim)
+    const cacheKey = relatoriosDashboardCacheKey(barbeariaId, sk, ek)
+    if (
+      !options?.force &&
+      fetchCacheRef.current?.key === cacheKey &&
+      Date.now() - fetchCacheRef.current.at < RELATORIOS_CACHE_MS
+    ) {
+      return
+    }
+
     setError(null)
     setRefreshing(true)
     try {
       const supabase = createClient()
       const i0 = inicio
       const f0 = fim
-      const sk = toLocalDateKey(i0)
-      const ek = toLocalDateKey(f0)
       const { inicio: ia, fim: fa } = intervaloAnteriorComparacao(i0, f0)
       const ska = toLocalDateKey(ia)
       const eka = toLocalDateKey(fa)
@@ -323,28 +374,23 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
         .order('data', { ascending: true })
         .order('horario', { ascending: true })
 
-      if (compararComAnterior) {
-        const [rAnt, rNovosAnt] = await Promise.all([
-          supabase
-            .from('agendamentos')
-            .select(sel)
-            .eq('barbearia_id', barbeariaId)
-            .gte('data', ska)
-            .lte('data', eka),
-          supabase
-            .from('clientes')
-            .select('id', { count: 'exact', head: true })
-            .eq('barbearia_id', barbeariaId)
-            .gte('created_at', ia.toISOString())
-            .lte('created_at', fa.toISOString()),
-        ])
-        if (rAnt.error) setAgAnterior([])
-        else setAgAnterior((rAnt.data ?? []) as Agendamento[])
-        setClientesNovosAnt(rNovosAnt.count ?? 0)
-      } else {
-        setAgAnterior([])
-        setClientesNovosAnt(0)
-      }
+      const [rAnt, rNovosAnt] = await Promise.all([
+        supabase
+          .from('agendamentos')
+          .select(sel)
+          .eq('barbearia_id', barbeariaId)
+          .gte('data', ska)
+          .lte('data', eka),
+        supabase
+          .from('clientes')
+          .select('id', { count: 'exact', head: true })
+          .eq('barbearia_id', barbeariaId)
+          .gte('created_at', ia.toISOString())
+          .lte('created_at', fa.toISOString()),
+      ])
+      if (rAnt.error) setAgAnterior([])
+      else setAgAnterior((rAnt.data ?? []) as Agendamento[])
+      setClientesNovosAnt(rNovosAnt.count ?? 0)
 
       const histIni = toLocalDateKey(subMonths(startOfDay(new Date()), 36))
       const histFim = toLocalDateKey(endOfDay(new Date()))
@@ -504,7 +550,7 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
         setEstoque((rEst.data ?? []).map((row) => mapEstoqueRowToProduto(row as EstoqueProdutoRow)))
 
       if (rAgHist.error) setAgHistClienteAnalise([])
-      else setAgHistClienteAnalise((rAgHist.data ?? []) as AgHistoricoCliente[])
+      else setAgHistClienteAnalise((rAgHist.data ?? []) as unknown as AgHistoricoCliente[])
 
       if (rCliMeta.error) {
         const rFallback = await supabase
@@ -525,11 +571,15 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
       } else {
         setClientesAnalise((rCliMeta.data ?? []) as ClienteCadastroAnalise[])
       }
+
+      if (!rAtual.error) {
+        fetchCacheRef.current = { key: cacheKey, at: Date.now() }
+      }
     } finally {
       setRefreshing(false)
       setDadosProntos(true)
     }
-  }, [barbeariaId, inicio, fim, compararComAnterior])
+  }, [barbeariaId, inicio, fim])
 
   useEffect(() => {
     let cancelled = false
@@ -584,6 +634,14 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
   useEffect(() => {
     if (!barbeariaId) return
     void load()
+  }, [barbeariaId, load])
+
+  useEffect(() => {
+    if (!barbeariaId) return
+    const id = window.setInterval(() => {
+      void load({ force: true })
+    }, RELATORIOS_AUTO_REFRESH_MS)
+    return () => window.clearInterval(id)
   }, [barbeariaId, load])
 
   useEffect(() => {
@@ -680,6 +738,49 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
     }))
   }, [atualFiltrado])
 
+  const insightProativos = useMemo(() => {
+    const out: { id: string; tipo: 'positivo' | 'alerta' | 'oportunidade'; titulo: string; descricao: string }[] = []
+    const vFat = pctChange(resAtual.fatConcluido, resAnt.fatConcluido)
+    if (vFat.pct <= -10) {
+      out.push({
+        id: 'fat-down',
+        tipo: 'alerta',
+        titulo: 'Queda forte no faturamento',
+        descricao: `Receita de serviços concluídos caiu ${Math.abs(vFat.pct).toFixed(1)}% vs período anterior equivalente.`,
+      })
+    } else if (vFat.pct >= 10) {
+      out.push({
+        id: 'fat-up',
+        tipo: 'positivo',
+        titulo: 'Faturamento em alta',
+        descricao: `Receita subiu ${vFat.pct.toFixed(1)}% em relação ao período anterior.`,
+      })
+    }
+    const vAg = pctChange(resAtual.total, resAnt.total)
+    if (vAg.pct <= -10) {
+      out.push({
+        id: 'ag-down',
+        tipo: 'alerta',
+        titulo: 'Menos movimento na agenda',
+        descricao: `Agendamentos totais caíram ${Math.abs(vAg.pct).toFixed(1)}% vs período equivalente.`,
+      })
+    }
+    const cancA = resAtual.cancelados + resAtual.faltas
+    const cancP = resAnt.cancelados + resAnt.faltas
+    if (resAtual.total >= 12 && cancP > 0 && cancA > cancP) {
+      const vC = pctChange(cancA, cancP)
+      if (vC.pct >= 15) {
+        out.push({
+          id: 'canc-up',
+          tipo: 'alerta',
+          titulo: 'Cancelamentos e faltas em subida',
+          descricao: `Cancelamentos + faltas aumentaram ${vC.pct.toFixed(0)}% vs período anterior. Vale reforçar confirmação e política de falta.`,
+        })
+      }
+    }
+    return out
+  }, [resAtual, resAnt])
+
   const nomeBarbeariaPdf = barbeariaMeta?.nome ?? unidades.find((u) => u.slug === slug)?.nome ?? 'Barbearia'
   const logoBarbeariaPdf = barbeariaMeta?.logo ?? null
 
@@ -693,7 +794,7 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
       geradoEm: new Date(),
       geradoPorNome: pdfUsuario?.nome ?? 'Usuário',
       geradoPorPapel: pdfUsuario?.papel ?? '—',
-      compararComAnterior,
+      compararComAnterior: true,
       textoRodapeKpi,
       periodoLabel,
       atualFiltrado,
@@ -720,7 +821,6 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
     inicio,
     fim,
     pdfUsuario,
-    compararComAnterior,
     textoRodapeKpi,
     periodoLabel,
     atualFiltrado,
@@ -922,23 +1022,16 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
                   </Select>
                 </div>
               ) : null}
-              <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/80 px-3 py-2">
-                <Switch
-                  id="rel-comparar"
-                  checked={compararComAnterior}
-                  onCheckedChange={(c) => setCompararComAnterior(Boolean(c))}
-                />
-                <Label htmlFor="rel-comparar" className="cursor-pointer text-sm leading-snug">
-                  Comparar com período anterior
-                </Label>
-              </div>
+              <p className="max-w-[14rem] text-[11px] leading-snug text-muted-foreground">
+                Variação dos KPIs compara sempre com o período anterior de mesma duração.
+              </p>
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
                 className="h-9 shrink-0 gap-1.5"
                 disabled={!barbeariaId || refreshing}
-                onClick={() => void load()}
+                onClick={() => void load({ force: true })}
               >
                 {refreshing ? <Spinner className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" aria-hidden />}
                 Atualizar
@@ -948,8 +1041,17 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
         </div>
 
         {!dadosProntos ? (
-          <div className="flex justify-center py-20">
-            <Spinner className="h-10 w-10 text-primary" />
+          <div className="space-y-4 py-6 print:hidden" aria-busy="true" aria-label="A carregar relatórios">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-[118px] rounded-xl" />
+              ))}
+            </div>
+            <Skeleton className="h-24 w-full max-w-2xl rounded-xl" />
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Skeleton className="h-[min(280px,50vw)] rounded-xl" />
+              <Skeleton className="h-[min(280px,50vw)] rounded-xl" />
+            </div>
           </div>
         ) : (
           <Tabs value={tab} onValueChange={setTab} className="space-y-4 print:block">
@@ -990,240 +1092,308 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
             </div>
 
             <TabsContent value="visao" className="mt-0 space-y-4 print:block">
-              <div>
-                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground print:hidden">
-                  Visão geral
-                </h2>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                  <KpiVisaoCard
-                    titulo="Faturamento"
-                    valorExibido={formatCurrency(resAtual.fatConcluido)}
-                    comparar={compararComAnterior}
-                    atual={resAtual.fatConcluido}
-                    anterior={resAnt.fatConcluido}
-                    textoRodape={textoRodapeKpi}
-                  />
-                  <KpiVisaoCard
-                    titulo="Atendimentos"
-                    valorExibido={String(resAtual.total)}
-                    comparar={compararComAnterior}
-                    atual={resAtual.total}
-                    anterior={resAnt.total}
-                    textoRodape={textoRodapeKpi}
-                  />
-                  <KpiVisaoCard
-                    titulo="Ocupação"
-                    valorExibido={`${resAtual.realizacao.toFixed(0)}%`}
-                    comparar={compararComAnterior}
-                    atual={resAtual.realizacao}
-                    anterior={resAnt.realizacao}
-                    textoRodape={textoRodapeKpi}
-                  />
-                  <KpiVisaoCard
-                    titulo="Ticket médio"
-                    valorExibido={formatCurrency(resAtual.ticketMedio)}
-                    comparar={compararComAnterior}
-                    atual={resAtual.ticketMedio}
-                    anterior={resAnt.ticketMedio}
-                    textoRodape={textoRodapeKpi}
-                  />
-                  <KpiVisaoCard
-                    titulo="Novos clientes"
-                    valorExibido={String(clientesNovos)}
-                    comparar={compararComAnterior}
-                    atual={clientesNovos}
-                    anterior={clientesNovosAnt}
-                    textoRodape={textoRodapeKpi}
-                  />
-                </div>
-              </div>
-              <Card className="border-dashed print:hidden">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Contexto</CardTitle>
-                  <CardDescription>
-                    Base total: <span className="font-medium text-foreground">{totalClientes}</span> clientes ·
-                    Concluídos no período: {resAtual.concluidos} · Alertas de estoque:{' '}
-                    <span className="font-medium text-foreground">
-                      {estoqueAlerta.baixo + estoqueAlerta.esgotado}
-                    </span>{' '}
-                    ({estoqueAlerta.esgotado} esgot., {estoqueAlerta.baixo} abaixo do mín.)
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-              <div className="print:hidden">
-                <RelatoriosVisaoGraficos
-                  inicio={inicio}
-                  fim={fim}
-                  agendamentosPeriodo={atualFiltrado}
-                  receitaProdutosPorDia={receitaProdutosPorDia}
-                />
-              </div>
+              {tab === 'visao' ? (
+                <>
+                  <div>
+                    <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground print:hidden">
+                      Visão geral
+                    </h2>
+                    <TooltipProvider delayDuration={280}>
+                      <motion.div
+                        className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeOut' }}
+                      >
+                        <KpiVisaoCard
+                          titulo="Faturamento"
+                          valorExibido={formatCurrency(resAtual.fatConcluido)}
+                          atual={resAtual.fatConcluido}
+                          anterior={resAnt.fatConcluido}
+                          textoRodape={textoRodapeKpi}
+                          dica="Soma dos valores de agendamentos concluídos no período. Clique para ver a aba Operação."
+                          onDrill={() => setTab('operacao')}
+                        />
+                        <KpiVisaoCard
+                          titulo="Atendimentos"
+                          valorExibido={String(resAtual.total)}
+                          atual={resAtual.total}
+                          anterior={resAnt.total}
+                          textoRodape={textoRodapeKpi}
+                          dica="Total de linhas na agenda (todos os estados). Clique para distribuição por status."
+                          onDrill={() => setTab('operacao')}
+                        />
+                        <KpiVisaoCard
+                          titulo="Ocupação"
+                          valorExibido={`${resAtual.realizacao.toFixed(0)}%`}
+                          atual={resAtual.realizacao}
+                          anterior={resAnt.realizacao}
+                          textoRodape={textoRodapeKpi}
+                          dica="Concluídos ÷ total de agendamentos no período. Clique para volume por hora."
+                          onDrill={() => setTab('operacao')}
+                        />
+                        <KpiVisaoCard
+                          titulo="Ticket médio"
+                          valorExibido={formatCurrency(resAtual.ticketMedio)}
+                          atual={resAtual.ticketMedio}
+                          anterior={resAnt.ticketMedio}
+                          textoRodape={textoRodapeKpi}
+                          dica="Faturamento de concluídos dividido pelo número de concluídos."
+                          onDrill={() => setTab('operacao')}
+                        />
+                        <KpiVisaoCard
+                          titulo="Novos clientes"
+                          valorExibido={String(clientesNovos)}
+                          atual={clientesNovos}
+                          anterior={clientesNovosAnt}
+                          textoRodape={textoRodapeKpi}
+                          dica="Cadastros novos no intervalo (created_at). Clique para análise de clientes."
+                          onDrill={() => setTab('clientes')}
+                        />
+                      </motion.div>
+                    </TooltipProvider>
+                  </div>
+                  {insightProativos.length > 0 ? (
+                    <Card className="border-amber-200/70 bg-amber-50/50 print:hidden dark:border-amber-900/45 dark:bg-amber-950/25">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base">Alertas inteligentes</CardTitle>
+                        <CardDescription>
+                          Deteção automática de mudanças fortes vs período anterior equivalente.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {insightProativos.map((it) => (
+                          <div
+                            key={it.id}
+                            role="status"
+                            className={cn(
+                              'rounded-lg border px-3 py-2 text-sm',
+                              it.tipo === 'alerta' && 'border-destructive/45 bg-destructive/5',
+                              it.tipo === 'positivo' && 'border-emerald-500/35 bg-emerald-500/8',
+                              it.tipo === 'oportunidade' && 'border-primary/35 bg-primary/5',
+                            )}
+                          >
+                            <p className="font-medium">{it.titulo}</p>
+                            <p className="text-xs leading-snug text-muted-foreground">{it.descricao}</p>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  ) : null}
+                  <Card className="border-dashed print:hidden">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">Contexto</CardTitle>
+                      <CardDescription>
+                        Base total: <span className="font-medium text-foreground">{totalClientes}</span> clientes ·
+                        Concluídos no período: {resAtual.concluidos} · Alertas de estoque:{' '}
+                        <span className="font-medium text-foreground">
+                          {estoqueAlerta.baixo + estoqueAlerta.esgotado}
+                        </span>{' '}
+                        ({estoqueAlerta.esgotado} esgot., {estoqueAlerta.baixo} abaixo do mín.)
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                  {atualFiltrado.length === 0 ? (
+                    <Empty className="mx-auto max-w-md border print:hidden">
+                      <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                          <BarChart3 className="size-6" aria-hidden />
+                        </EmptyMedia>
+                        <EmptyTitle>Sem agendamentos no período</EmptyTitle>
+                        <EmptyDescription>
+                          Altere o período rápido ou as datas personalizadas. Os gráficos aparecem quando houver dados na
+                          agenda.
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
+                  ) : (
+                    <div className="print:hidden">
+                      <RelatoriosVisaoGraficos
+                        inicio={inicio}
+                        fim={fim}
+                        agendamentosPeriodo={atualFiltrado}
+                        receitaProdutosPorDia={receitaProdutosPorDia}
+                      />
+                    </div>
+                  )}
+                </>
+              ) : null}
             </TabsContent>
 
             <TabsContent value="operacao" className="mt-0 space-y-4 print:hidden">
-              <RelatoriosOperacaoPainel
-                agendamentos={atualFiltrado}
-                servicosRank={servicosRank}
-                produtosConsumidos={produtosConsumidosRank}
-              />
-              <div className="grid gap-4 lg:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Distribuição por status</CardTitle>
-                    <CardDescription>Proporção dos agendamentos no período</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {statusDistribuicao.map(({ k, n, pct }) => (
-                      <div key={k} className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span>{STATUS_LABEL[k]}</span>
-                          <span className="tabular-nums text-muted-foreground">
-                            {n} ({pct.toFixed(0)}%)
-                          </span>
+              {tab === 'operacao' ? (
+                <>
+                  <RelatoriosOperacaoPainel
+                    agendamentos={atualFiltrado}
+                    servicosRank={servicosRank}
+                    produtosConsumidos={produtosConsumidosRank}
+                  />
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Distribuição por status</CardTitle>
+                        <CardDescription>Proporção dos agendamentos no período</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {statusDistribuicao.map(({ k, n, pct }) => (
+                          <div key={k} className="space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span>{STATUS_LABEL[k]}</span>
+                              <span className="tabular-nums text-muted-foreground">
+                                {n} ({pct.toFixed(0)}%)
+                              </span>
+                            </div>
+                            <Progress value={pct} className="h-2" />
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Volume por hora do dia</CardTitle>
+                        <CardDescription>Início do agendamento (hora local)</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex h-28 items-end justify-between gap-0.5">
+                          {picos.map(({ hora, v, pct }) => (
+                            <div key={hora} className="flex h-full min-w-0 flex-1 flex-col justify-end">
+                              <div
+                                className="w-full rounded-t bg-primary/70 dark:bg-primary/50"
+                                style={{ height: `${Math.max(6, pct)}%` }}
+                                title={`${hora}h — ${v} agend.`}
+                              />
+                            </div>
+                          ))}
                         </div>
-                        <Progress value={pct} className="h-2" />
+                        <p className="mt-2 text-center text-[10px] text-muted-foreground">0h – 23h</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Indicadores rápidos</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-lg border border-border/60 p-3 text-sm">
+                        <p className="text-muted-foreground">Cancelamentos</p>
+                        <p className="text-xl font-semibold">{resAtual.cancelados}</p>
                       </div>
-                    ))}
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Volume por hora do dia</CardTitle>
-                    <CardDescription>Início do agendamento (hora local)</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex h-28 items-end justify-between gap-0.5">
-                      {picos.map(({ hora, v, pct }) => (
-                        <div key={hora} className="flex h-full min-w-0 flex-1 flex-col justify-end">
-                          <div
-                            className="w-full rounded-t bg-primary/70 dark:bg-primary/50"
-                            style={{ height: `${Math.max(6, pct)}%` }}
-                            title={`${hora}h — ${v} agend.`}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <p className="mt-2 text-center text-[10px] text-muted-foreground">0h – 23h</p>
-                  </CardContent>
-                </Card>
-              </div>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Indicadores rápidos</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-lg border border-border/60 p-3 text-sm">
-                    <p className="text-muted-foreground">Cancelamentos</p>
-                    <p className="text-xl font-semibold">{resAtual.cancelados}</p>
-                  </div>
-                  <div className="rounded-lg border border-border/60 p-3 text-sm">
-                    <p className="text-muted-foreground">Faltas</p>
-                    <p className="text-xl font-semibold">{resAtual.faltas}</p>
-                  </div>
-                  <div className="rounded-lg border border-border/60 p-3 text-sm">
-                    <p className="text-muted-foreground">Futuros / em curso</p>
-                    <p className="text-xl font-semibold">{resAtual.agendadosOuEm}</p>
-                  </div>
-                </CardContent>
-              </Card>
+                      <div className="rounded-lg border border-border/60 p-3 text-sm">
+                        <p className="text-muted-foreground">Faltas</p>
+                        <p className="text-xl font-semibold">{resAtual.faltas}</p>
+                      </div>
+                      <div className="rounded-lg border border-border/60 p-3 text-sm">
+                        <p className="text-muted-foreground">Futuros / em curso</p>
+                        <p className="text-xl font-semibold">{resAtual.agendadosOuEm}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              ) : null}
             </TabsContent>
 
             <TabsContent value="clientes" className="mt-0 space-y-4 print:hidden">
-              <RelatoriosClientesPainel
-                totalClientes={totalClientes}
-                agHistorico={agHistClienteAnalise}
-                clientesCadastro={clientesAnalise}
-                notaHistorico="Agendamentos analisados: últimos 36 meses."
-              />
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Clientes mais frequentes</CardTitle>
-                  <CardDescription>Ordenado por número de agendamentos no período (top 20)</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[min(420px,55vh)] pr-3">
-                    <ul className="space-y-2">
-                      {clientesRank.map((c, i) => (
-                        <li
-                          key={c.id}
-                          className="flex items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm"
-                        >
-                          <span className="min-w-0 truncate">
-                            <span className="text-muted-foreground">{i + 1}. </span>
-                            {c.nome}
-                          </span>
-                          <span className="shrink-0 tabular-nums text-muted-foreground">
-                            {c.visitas} visita(s) · {formatCurrency(c.fat)}
-                          </span>
-                        </li>
-                      ))}
-                      {clientesRank.length === 0 ? (
-                        <li className="text-sm text-muted-foreground">Nenhum agendamento no período.</li>
-                      ) : null}
-                    </ul>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+              {tab === 'clientes' ? (
+                <>
+                  <RelatoriosClientesPainel
+                    totalClientes={totalClientes}
+                    agHistorico={agHistClienteAnalise}
+                    clientesCadastro={clientesAnalise}
+                    notaHistorico="Agendamentos analisados: últimos 36 meses."
+                  />
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Clientes mais frequentes</CardTitle>
+                      <CardDescription>Ordenado por número de agendamentos no período (top 20)</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-[min(420px,55vh)] pr-3">
+                        <ul className="space-y-2">
+                          {clientesRank.map((c, i) => (
+                            <li
+                              key={c.id}
+                              className="flex items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm"
+                            >
+                              <span className="min-w-0 truncate">
+                                <span className="text-muted-foreground">{i + 1}. </span>
+                                {c.nome}
+                              </span>
+                              <span className="shrink-0 tabular-nums text-muted-foreground">
+                                {c.visitas} visita(s) · {formatCurrency(c.fat)}
+                              </span>
+                            </li>
+                          ))}
+                          {clientesRank.length === 0 ? (
+                            <li className="text-sm text-muted-foreground">Nenhum agendamento no período.</li>
+                          ) : null}
+                        </ul>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                </>
+              ) : null}
             </TabsContent>
 
             <TabsContent value="barbeiros" className="mt-0 space-y-4 print:hidden">
-              <RelatoriosBarbeirosPainel
-                agendamentos={atualFiltrado}
-                receitaProdutosPorBarbeiro={receitaProdutosPorBarbeiro}
-                inicio={inicio}
-                fim={fim}
-              />
+              {tab === 'barbeiros' ? (
+                <RelatoriosBarbeirosPainel
+                  agendamentos={atualFiltrado}
+                  receitaProdutosPorBarbeiro={receitaProdutosPorBarbeiro}
+                  inicio={inicio}
+                  fim={fim}
+                />
+              ) : null}
             </TabsContent>
 
             <TabsContent value="produtos" className="mt-0 space-y-4 print:hidden">
-              <RelatoriosProdutosRelatorioPainel
-                estoque={estoque}
-                vendasProdutos120d={vendasProdutos120d}
-                servicosRankNomes={servicosRank.map((s) => ({ nome: s.nome, q: s.q }))}
-              />
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Package className="h-4 w-4" aria-hidden />
-                    Estoque (SKU)
-                  </CardTitle>
-                  <CardDescription>Resumo de risco — detalhe na página Estoque</CardDescription>
-                </CardHeader>
-                <CardContent className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-lg bg-muted/40 p-3 text-center">
-                    <p className="text-2xl font-bold">{estoqueAlerta.total}</p>
-                    <p className="text-xs text-muted-foreground">Itens cadastrados</p>
-                  </div>
-                  <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 p-3 text-center dark:border-amber-900/50 dark:bg-amber-950/30">
-                    <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{estoqueAlerta.baixo}</p>
-                    <p className="text-xs text-amber-800/90 dark:text-amber-200/90">Abaixo do mínimo</p>
-                  </div>
-                  <div className="rounded-lg border border-red-200/80 bg-red-50/80 p-3 text-center dark:border-red-900/50 dark:bg-red-950/30">
-                    <p className="text-2xl font-bold text-red-900 dark:text-red-100">{estoqueAlerta.esgotado}</p>
-                    <p className="text-xs text-red-800/90 dark:text-red-200/90">Esgotados</p>
-                  </div>
-                </CardContent>
-              </Card>
+              {tab === 'produtos' ? (
+                <>
+                  <RelatoriosProdutosRelatorioPainel
+                    estoque={estoque}
+                    vendasProdutos120d={vendasProdutos120d}
+                    servicosRankNomes={servicosRank.map((s) => ({ nome: s.nome, q: s.q }))}
+                  />
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Package className="h-4 w-4" aria-hidden />
+                        Estoque (SKU)
+                      </CardTitle>
+                      <CardDescription>Resumo de risco — detalhe na página Estoque</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-lg bg-muted/40 p-3 text-center">
+                        <p className="text-2xl font-bold">{estoqueAlerta.total}</p>
+                        <p className="text-xs text-muted-foreground">Itens cadastrados</p>
+                      </div>
+                      <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 p-3 text-center dark:border-amber-900/50 dark:bg-amber-950/30">
+                        <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{estoqueAlerta.baixo}</p>
+                        <p className="text-xs text-amber-800/90 dark:text-amber-200/90">Abaixo do mínimo</p>
+                      </div>
+                      <div className="rounded-lg border border-red-200/80 bg-red-50/80 p-3 text-center dark:border-red-900/50 dark:bg-red-950/30">
+                        <p className="text-2xl font-bold text-red-900 dark:text-red-100">{estoqueAlerta.esgotado}</p>
+                        <p className="text-xs text-red-800/90 dark:text-red-200/90">Esgotados</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              ) : null}
             </TabsContent>
 
             <TabsContent value="tendencias" className="mt-0 space-y-4 print:hidden">
-              <RelatoriosTendenciasPainel
-                agHistorico={agHistClienteAnalise}
-                receitaProdutoPorMesHist={receitaProdutoPorMesHist}
-                receitaProdutoPorDiaHist={receitaProdutoPorDiaHist}
-              />
-              <Card>
+              {tab === 'tendencias' ? (
+                <>
+                  <RelatoriosTendenciasPainel
+                    agHistorico={agHistClienteAnalise}
+                    receitaProdutoPorMesHist={receitaProdutoPorMesHist}
+                    receitaProdutoPorDiaHist={receitaProdutoPorDiaHist}
+                  />
+                  <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Comparativo com período anterior</CardTitle>
                   <CardDescription>
-                    {compararComAnterior ? (
-                      <>
-                        Janela de comparação: {format(iniAnt, 'dd/MM/yyyy', { locale: ptBR })} –{' '}
-                        {format(fimAnt, 'dd/MM/yyyy', { locale: ptBR })}
-                      </>
-                    ) : (
-                      <>Ligue o comparativo nos filtros globais para carregar o período anterior.</>
-                    )}
+                    Janela de comparação: {format(iniAnt, 'dd/MM/yyyy', { locale: ptBR })} –{' '}
+                    {format(fimAnt, 'dd/MM/yyyy', { locale: ptBR })}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -1233,7 +1403,7 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
                     <p className="text-xs text-muted-foreground">antes {formatCurrency(resAnt.fatConcluido)}</p>
                     <div className="mt-2">
                       <TrendDelta
-                        comparar={compararComAnterior}
+                        comparar
                         atual={resAtual.fatConcluido}
                         anterior={resAnt.fatConcluido}
                         textoRodape={textoRodapeKpi}
@@ -1246,7 +1416,7 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
                     <p className="text-xs text-muted-foreground">antes {resAnt.total}</p>
                     <div className="mt-2">
                       <TrendDelta
-                        comparar={compararComAnterior}
+                        comparar
                         atual={resAtual.total}
                         anterior={resAnt.total}
                         textoRodape={textoRodapeKpi}
@@ -1259,7 +1429,7 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
                     <p className="text-xs text-muted-foreground">antes {resAnt.realizacao.toFixed(1)}%</p>
                     <div className="mt-2">
                       <TrendDelta
-                        comparar={compararComAnterior}
+                        comparar
                         atual={resAtual.realizacao}
                         anterior={resAnt.realizacao}
                         textoRodape={textoRodapeKpi}
@@ -1274,7 +1444,7 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
                     <p className="text-xs text-muted-foreground">antes {resAnt.cancelados + resAnt.faltas}</p>
                     <div className="mt-2">
                       <TrendDelta
-                        comparar={compararComAnterior}
+                        comparar
                         atual={resAtual.cancelados + resAtual.faltas}
                         anterior={resAnt.cancelados + resAnt.faltas}
                         textoRodape={textoRodapeKpi}
@@ -1283,6 +1453,8 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
                   </div>
                 </CardContent>
               </Card>
+                </>
+              ) : null}
             </TabsContent>
           </Tabs>
         )}

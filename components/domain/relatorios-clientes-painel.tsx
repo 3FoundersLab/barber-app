@@ -76,7 +76,7 @@ function KpiMini({
   )
 }
 
-function TimelineNovosSvg(data: ReturnType<typeof timelineNovosPorMes>) {
+function TimelineNovosSvg({ data }: { data: ReturnType<typeof timelineNovosPorMes> }) {
   const max = Math.max(1, ...data.map((d) => d.n))
   const w = 360
   const h = 100
@@ -186,7 +186,7 @@ function PizzaOrigem({
   )
 }
 
-function BarrasIdade(data: ReturnType<typeof distribuicaoFaixaEtaria>) {
+function BarrasIdade({ data }: { data: ReturnType<typeof distribuicaoFaixaEtaria> }) {
   const max = Math.max(1, ...data.map((d) => d.n))
   return (
     <div className="space-y-2">
