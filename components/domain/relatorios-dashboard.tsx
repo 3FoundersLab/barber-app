@@ -56,12 +56,15 @@ import { RelatoriosProdutosRelatorioPainel } from '@/components/domain/relatorio
 import { RelatoriosTendenciasPainel } from '@/components/domain/relatorios-tendencias-painel'
 import { RelatoriosVisaoGraficos } from '@/components/domain/relatorios-visao-graficos'
 import { estoqueCardStatus } from '@/lib/estoque-produto-utils'
-import { formatCurrency } from '@/lib/constants'
+import { formatCurrency, ROLE_LABELS } from '@/lib/constants'
+import { buildRelatorioPerformancePdfData } from '@/lib/relatorio-performance-pdf-data'
+import { exportRelatorioPerformancePdf } from '@/lib/relatorio-performance-pdf-export'
+import { RelatorioPerformancePdfDocument } from '@/components/domain/relatorio-performance-pdf-document'
 import { cn } from '@/lib/utils'
 import type { AgHistoricoCliente, ClienteCadastroAnalise } from '@/lib/relatorios-clientes-analise'
 import { mapEstoqueRowToProduto, type EstoqueProdutoRow } from '@/lib/map-estoque-produto'
 import type { VendaProdutoLinha } from '@/lib/relatorios-produtos-relatorio'
-import type { Agendamento, AppointmentStatus } from '@/types'
+import type { Agendamento, AppointmentStatus, UserRole } from '@/types'
 import type { EstoqueProduto } from '@/types/estoque-produto'
 
 function pctChange(atual: number, anterior: number): { pct: number; up: boolean | null } {
@@ -265,6 +268,9 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
   const [vendasProdutos120d, setVendasProdutos120d] = useState<VendaProdutoLinha[]>([])
   const [receitaProdutoPorMesHist, setReceitaProdutoPorMesHist] = useState<Record<string, number>>({})
   const [receitaProdutoPorDiaHist, setReceitaProdutoPorDiaHist] = useState<Record<string, number>>({})
+  const [barbeariaMeta, setBarbeariaMeta] = useState<{ nome: string; logo: string | null } | null>(null)
+  const [pdfUsuario, setPdfUsuario] = useState<{ nome: string; papel: string } | null>(null)
+  const [pdfExportPhase, setPdfExportPhase] = useState<'idle' | 'generating' | 'done'>('idle')
 
   const { inicio, fim } = useMemo(
     () => intervaloPorPreset(preset, personalizadoInicio, personalizadoFim),
@@ -580,6 +586,52 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
     void load()
   }, [barbeariaId, load])
 
+  useEffect(() => {
+    if (!barbeariaId) return
+    let cancelled = false
+    void (async () => {
+      const supabase = createClient()
+      const { data } = await supabase.from('barbearias').select('nome, logo').eq('id', barbeariaId).maybeSingle()
+      if (cancelled) return
+      if (data) {
+        const row = data as { nome?: string | null; logo?: string | null }
+        setBarbeariaMeta({
+          nome: (row.nome && String(row.nome).trim()) || 'Barbearia',
+          logo: row.logo && String(row.logo).trim() ? String(row.logo).trim() : null,
+        })
+      } else {
+        setBarbeariaMeta(null)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [barbeariaId])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user || cancelled) return
+      const { data } = await supabase.from('profiles').select('nome, role').eq('id', user.id).maybeSingle()
+      if (cancelled) return
+      if (data) {
+        const row = data as { nome?: string | null; role?: UserRole | null }
+        const nome = (row.nome && String(row.nome).trim()) || 'Usuário'
+        const papel = row.role ? ROLE_LABELS[row.role] ?? String(row.role) : '—'
+        setPdfUsuario({ nome, papel })
+      } else {
+        setPdfUsuario(null)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const atualFiltrado = useMemo(
     () => agendamentosNoIntervalo(agAtual, startKey, endKey),
     [agAtual, startKey, endKey],
@@ -628,9 +680,89 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
     }))
   }, [atualFiltrado])
 
-  const handlePrint = () => {
-    window.print()
-  }
+  const nomeBarbeariaPdf = barbeariaMeta?.nome ?? unidades.find((u) => u.slug === slug)?.nome ?? 'Barbearia'
+  const logoBarbeariaPdf = barbeariaMeta?.logo ?? null
+
+  const pdfData = useMemo(() => {
+    if (!dadosProntos) return null
+    return buildRelatorioPerformancePdfData({
+      barbeariaNome: nomeBarbeariaPdf,
+      barbeariaLogoUrl: logoBarbeariaPdf,
+      inicio,
+      fim,
+      geradoEm: new Date(),
+      geradoPorNome: pdfUsuario?.nome ?? 'Usuário',
+      geradoPorPapel: pdfUsuario?.papel ?? '—',
+      compararComAnterior,
+      textoRodapeKpi,
+      periodoLabel,
+      atualFiltrado,
+      resAtual: resAtual,
+      resAnt: resAnt,
+      clientesNovos,
+      clientesNovosAnt,
+      totalClientes,
+      estoqueAlerta,
+      statusDistribuicao: statusDistribuicao.map((s) => ({ k: s.k, n: s.n, pct: s.pct })),
+      statusLabel: STATUS_LABEL,
+      picos,
+      servicosRank,
+      receitaProdutosPorBarbeiro,
+      receitaProdutosPorDia,
+      produtosConsumidosRank,
+      agHistClienteAnalise,
+      clientesAnalise,
+    })
+  }, [
+    dadosProntos,
+    nomeBarbeariaPdf,
+    logoBarbeariaPdf,
+    inicio,
+    fim,
+    pdfUsuario,
+    compararComAnterior,
+    textoRodapeKpi,
+    periodoLabel,
+    atualFiltrado,
+    resAtual,
+    resAnt,
+    clientesNovos,
+    clientesNovosAnt,
+    totalClientes,
+    estoqueAlerta,
+    statusDistribuicao,
+    picos,
+    servicosRank,
+    receitaProdutosPorBarbeiro,
+    receitaProdutosPorDia,
+    produtosConsumidosRank,
+    agHistClienteAnalise,
+    clientesAnalise,
+  ])
+
+  useEffect(() => {
+    if (pdfExportPhase !== 'done') return
+    const t = window.setTimeout(() => setPdfExportPhase('idle'), 3000)
+    return () => window.clearTimeout(t)
+  }, [pdfExportPhase])
+
+  const handleExportPdf = useCallback(async () => {
+    if (!pdfData || pdfExportPhase === 'generating') return
+    setPdfExportPhase('generating')
+    setError(null)
+    try {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      })
+      const el = document.getElementById('relatorio-performance-pdf-root')
+      if (!el) throw new Error('Elemento PDF não encontrado')
+      await exportRelatorioPerformancePdf(el)
+      setPdfExportPhase('done')
+    } catch {
+      setPdfExportPhase('idle')
+      setError('Não foi possível gerar o PDF. Tente novamente ou verifique bloqueadores de download.')
+    }
+  }, [pdfData, pdfExportPhase])
 
   return (
     <TenantPanelPageContainer>
@@ -642,13 +774,24 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
         headingActions={
           <Button
             type="button"
-            variant="outline"
             size="sm"
-            className="gap-1.5 print:hidden"
-            onClick={handlePrint}
+            disabled={!pdfData || refreshing || pdfExportPhase === 'generating'}
+            className="print:hidden flex items-center gap-2 bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-60"
+            onClick={() => void handleExportPdf()}
           >
-            <Download className="h-4 w-4" aria-hidden />
-            Exportar PDF
+            {pdfExportPhase === 'generating' ? (
+              <>
+                <Spinner className="h-4 w-4 text-white" />
+                Gerando…
+              </>
+            ) : pdfExportPhase === 'done' ? (
+              <>Download pronto!</>
+            ) : (
+              <>
+                <Download className="h-4 w-4" aria-hidden />
+                Exportar PDF
+              </>
+            )}
           </Button>
         }
       />
@@ -1144,6 +1287,8 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
           </Tabs>
         )}
       </PageContent>
+
+      <RelatorioPerformancePdfDocument data={pdfData} />
     </TenantPanelPageContainer>
   )
 }
