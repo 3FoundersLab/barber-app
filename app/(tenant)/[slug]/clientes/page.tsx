@@ -127,6 +127,8 @@ export default function AdminClientesPage() {
     telefone: '',
     email: '',
     notas: '',
+    origem_canal: '',
+    data_nascimento: '',
   })
 
   useEffect(() => {
@@ -248,6 +250,8 @@ export default function AdminClientesPage() {
       telefone: '',
       email: '',
       notas: '',
+      origem_canal: '',
+      data_nascimento: '',
     })
     setIsDialogOpen(true)
   }
@@ -259,6 +263,8 @@ export default function AdminClientesPage() {
       telefone: maskTelefoneBr(cliente.telefone || ''),
       email: normalizeEmailInput(cliente.email || ''),
       notas: cliente.notas || '',
+      origem_canal: cliente.origem_canal ?? '',
+      data_nascimento: cliente.data_nascimento ? cliente.data_nascimento.slice(0, 10) : '',
     })
     setIsDialogOpen(true)
   }
@@ -288,6 +294,8 @@ export default function AdminClientesPage() {
       telefone: formData.telefone,
       email: formData.email || null,
       notas: formData.notas || null,
+      origem_canal: formData.origem_canal?.trim() ? formData.origem_canal.trim().toLowerCase() : null,
+      data_nascimento: formData.data_nascimento?.trim() ? formData.data_nascimento.trim() : null,
     }
 
     if (editingCliente) {
@@ -494,6 +502,42 @@ export default function AdminClientesPage() {
                 placeholder="email@exemplo.com"
                 inputMode="email"
                 autoComplete="email"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="origem">Canal de origem (opcional)</Label>
+              <Select
+                value={formData.origem_canal || '__nao__'}
+                onValueChange={(v) =>
+                  setFormData({ ...formData, origem_canal: v === '__nao__' ? '' : v })
+                }
+              >
+                <SelectTrigger id="origem">
+                  <SelectValue placeholder="Selecionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__nao__">Não informado</SelectItem>
+                  <SelectItem value="instagram">Instagram</SelectItem>
+                  <SelectItem value="indicacao">Indicação</SelectItem>
+                  <SelectItem value="walk_in">Walk-in</SelectItem>
+                  <SelectItem value="google">Google</SelectItem>
+                  <SelectItem value="site">Site</SelectItem>
+                  <SelectItem value="facebook">Facebook</SelectItem>
+                  <SelectItem value="tiktok">TikTok</SelectItem>
+                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                  <SelectItem value="outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="nascimento">Data de nascimento (opcional)</Label>
+              <Input
+                id="nascimento"
+                type="date"
+                value={formData.data_nascimento}
+                onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
               />
             </div>
 

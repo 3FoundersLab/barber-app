@@ -15,11 +15,10 @@ import {
   Users,
   UserCircle,
   Package,
-  Scissors,
   Activity,
   BarChart3,
 } from 'lucide-react'
-import { endOfDay, format, startOfDay, subDays } from 'date-fns'
+import { endOfDay, format, startOfDay, subDays, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PageContent } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
@@ -50,11 +49,17 @@ import {
   type RelatorioPeriodoPreset,
 } from '@/lib/relatorios-range'
 import { tenantBarbeariaBasePath } from '@/lib/routes'
+import { RelatoriosBarbeirosPainel } from '@/components/domain/relatorios-barbeiros-painel'
+import { RelatoriosClientesPainel } from '@/components/domain/relatorios-clientes-painel'
 import { RelatoriosOperacaoPainel } from '@/components/domain/relatorios-operacao-painel'
+import { RelatoriosProdutosRelatorioPainel } from '@/components/domain/relatorios-produtos-relatorio-painel'
 import { RelatoriosVisaoGraficos } from '@/components/domain/relatorios-visao-graficos'
 import { estoqueCardStatus } from '@/lib/estoque-produto-utils'
 import { formatCurrency } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import type { AgHistoricoCliente, ClienteCadastroAnalise } from '@/lib/relatorios-clientes-analise'
+import { mapEstoqueRowToProduto, type EstoqueProdutoRow } from '@/lib/map-estoque-produto'
+import type { VendaProdutoLinha } from '@/lib/relatorios-produtos-relatorio'
 import type { Agendamento, AppointmentStatus } from '@/types'
 import type { EstoqueProduto } from '@/types/estoque-produto'
 
@@ -176,24 +181,6 @@ function resumoOperacional(list: Agendamento[]) {
   return { total, concluidos, cancelados, faltas, agendadosOuEm, fatConcluido, ticketMedio, realizacao }
 }
 
-function porBarbeiro(list: Agendamento[]) {
-  const m = new Map<string, { nome: string; q: number; concl: number; fat: number }>()
-  for (const a of list) {
-    const id = a.barbeiro_id
-    const nome = a.barbeiro?.nome ?? '—'
-    const cur = m.get(id) ?? { nome, q: 0, concl: 0, fat: 0 }
-    cur.q += 1
-    if (a.status === 'concluido') {
-      cur.concl += 1
-      cur.fat += Number(a.valor) || 0
-    }
-    m.set(id, cur)
-  }
-  return [...m.entries()]
-    .map(([id, v]) => ({ id, ...v }))
-    .sort((a, b) => b.fat - a.fat)
-}
-
 function porCliente(list: Agendamento[]) {
   const m = new Map<string, { nome: string; visitas: number; fat: number }>()
   for (const a of list) {
@@ -270,6 +257,11 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
   /** Soma (preço × qtd) de `comanda_produtos` em comandas fechadas, por `referencia_data`. */
   const [receitaProdutosPorDia, setReceitaProdutosPorDia] = useState<Record<string, number>>({})
   const [produtosConsumidosRank, setProdutosConsumidosRank] = useState<{ nome: string; qtd: number }[]>([])
+  /** Até 36 meses para análise de público (RFV, coorte, LTV). */
+  const [agHistClienteAnalise, setAgHistClienteAnalise] = useState<AgHistoricoCliente[]>([])
+  const [clientesAnalise, setClientesAnalise] = useState<ClienteCadastroAnalise[]>([])
+  const [receitaProdutosPorBarbeiro, setReceitaProdutosPorBarbeiro] = useState<Record<string, number>>({})
+  const [vendasProdutos120d, setVendasProdutos120d] = useState<VendaProdutoLinha[]>([])
 
   const { inicio, fim } = useMemo(
     () => intervaloPorPreset(preset, personalizadoInicio, personalizadoFim),
@@ -345,7 +337,13 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
         setClientesNovosAnt(0)
       }
 
-      const [rCli, rNovos, rEst, rComProd] = await Promise.all([
+      const histIni = toLocalDateKey(subMonths(startOfDay(new Date()), 36))
+      const histFim = toLocalDateKey(endOfDay(new Date()))
+
+      const movIni = toLocalDateKey(subDays(startOfDay(new Date()), 120))
+      const movFim = toLocalDateKey(endOfDay(new Date()))
+
+      const [rCli, rNovos, rEst, rComProd, rAgHist, rCliMeta, rCom120] = await Promise.all([
         supabase.from('clientes').select('*', { count: 'exact', head: true }).eq('barbearia_id', barbeariaId),
         supabase
           .from('clientes')
@@ -356,35 +354,84 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
         supabase.from('estoque_produtos').select('*').eq('barbearia_id', barbeariaId).order('nome'),
         supabase
           .from('comandas')
-          .select('referencia_data, comanda_produtos(nome, preco_unitario, quantidade)')
+          .select(
+            'referencia_data, barbeiro_id, comanda_produtos(produto_estoque_id, nome, preco_unitario, quantidade)',
+          )
           .eq('barbearia_id', barbeariaId)
           .eq('status', 'fechada')
           .gte('referencia_data', sk)
           .lte('referencia_data', ek),
+        supabase
+          .from('agendamentos')
+          .select(
+            `
+            cliente_id,
+            data,
+            horario,
+            status,
+            valor,
+            servico_id,
+            barbeiro_id,
+            servico:servicos(nome),
+            barbeiro:barbeiros(nome)
+          `,
+          )
+          .eq('barbearia_id', barbeariaId)
+          .gte('data', histIni)
+          .lte('data', histFim),
+        supabase
+          .from('clientes')
+          .select('id, nome, created_at, origem_canal, data_nascimento')
+          .eq('barbearia_id', barbeariaId),
+        supabase
+          .from('comandas')
+          .select(
+            'referencia_data, barbeiro_id, comanda_produtos(produto_estoque_id, nome, preco_unitario, quantidade)',
+          )
+          .eq('barbearia_id', barbeariaId)
+          .eq('status', 'fechada')
+          .gte('referencia_data', movIni)
+          .lte('referencia_data', movFim),
       ])
 
       type ComandaProdRow = {
         referencia_data: string
-        comanda_produtos?: { nome: string; preco_unitario: number; quantidade: number }[] | null
+        barbeiro_id: string
+        comanda_produtos?:
+          | {
+              produto_estoque_id?: string | null
+              nome: string
+              preco_unitario: number
+              quantidade: number
+            }[]
+          | null
       }
       const receitaProd: Record<string, number> = {}
       const prodQtd = new Map<string, number>()
+      const receitaPorBarbeiro: Record<string, number> = {}
       if (rComProd.error) {
         setReceitaProdutosPorDia({})
         setProdutosConsumidosRank([])
+        setReceitaProdutosPorBarbeiro({})
       } else if (rComProd.data) {
         for (const row of rComProd.data as ComandaProdRow[]) {
           const dk = row.referencia_data
+          const bid = row.barbeiro_id
           const lines = row.comanda_produtos
           if (!lines?.length) continue
           for (const l of lines) {
             const qty = Math.max(0, Math.floor(Number(l.quantidade) || 0))
-            receitaProd[dk] = (receitaProd[dk] ?? 0) + Number(l.preco_unitario) * qty
+            const sub = Number(l.preco_unitario) * qty
+            receitaProd[dk] = (receitaProd[dk] ?? 0) + sub
+            if (bid) {
+              receitaPorBarbeiro[bid] = (receitaPorBarbeiro[bid] ?? 0) + sub
+            }
             const nomeP = (l.nome && String(l.nome).trim()) || 'Produto'
             prodQtd.set(nomeP, (prodQtd.get(nomeP) ?? 0) + qty)
           }
         }
         setReceitaProdutosPorDia(receitaProd)
+        setReceitaProdutosPorBarbeiro(receitaPorBarbeiro)
         setProdutosConsumidosRank(
           [...prodQtd.entries()]
             .map(([nome, qtd]) => ({ nome, qtd }))
@@ -394,6 +441,31 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
       } else {
         setReceitaProdutosPorDia({})
         setProdutosConsumidosRank([])
+        setReceitaProdutosPorBarbeiro({})
+      }
+
+      if (rCom120.error) {
+        setVendasProdutos120d([])
+      } else if (rCom120.data) {
+        const linhas120: VendaProdutoLinha[] = []
+        for (const row of rCom120.data as ComandaProdRow[]) {
+          for (const l of row.comanda_produtos ?? []) {
+            const pid = l.produto_estoque_id
+            if (!pid) continue
+            const qty = Math.max(0, Math.floor(Number(l.quantidade) || 0))
+            if (qty <= 0) continue
+            linhas120.push({
+              produto_estoque_id: String(pid),
+              nome: (l.nome && String(l.nome).trim()) || 'Produto',
+              referencia_data: row.referencia_data,
+              quantidade: qty,
+              receita: Number(l.preco_unitario) * qty,
+            })
+          }
+        }
+        setVendasProdutos120d(linhas120)
+      } else {
+        setVendasProdutos120d([])
       }
 
       if (rAtual.error) {
@@ -406,7 +478,31 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
       setTotalClientes(rCli.count ?? 0)
       setClientesNovos(rNovos.count ?? 0)
       if (rEst.error) setEstoque([])
-      else setEstoque((rEst.data ?? []) as EstoqueProduto[])
+      else
+        setEstoque((rEst.data ?? []).map((row) => mapEstoqueRowToProduto(row as EstoqueProdutoRow)))
+
+      if (rAgHist.error) setAgHistClienteAnalise([])
+      else setAgHistClienteAnalise((rAgHist.data ?? []) as AgHistoricoCliente[])
+
+      if (rCliMeta.error) {
+        const rFallback = await supabase
+          .from('clientes')
+          .select('id, nome, created_at')
+          .eq('barbearia_id', barbeariaId)
+        if (!rFallback.error && rFallback.data) {
+          setClientesAnalise(
+            (rFallback.data as { id: string; nome: string; created_at: string }[]).map((c) => ({
+              ...c,
+              origem_canal: null,
+              data_nascimento: null,
+            })),
+          )
+        } else {
+          setClientesAnalise([])
+        }
+      } else {
+        setClientesAnalise((rCliMeta.data ?? []) as ClienteCadastroAnalise[])
+      }
     } finally {
       setRefreshing(false)
       setDadosProntos(true)
@@ -480,7 +576,6 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
   const resAtual = useMemo(() => resumoOperacional(atualFiltrado), [atualFiltrado])
   const resAnt = useMemo(() => resumoOperacional(anteriorFiltrado), [anteriorFiltrado])
 
-  const barbeirosRank = useMemo(() => porBarbeiro(atualFiltrado), [atualFiltrado])
   const clientesRank = useMemo(() => porCliente(atualFiltrado), [atualFiltrado])
   const servicosRank = useMemo(() => porServico(atualFiltrado), [atualFiltrado])
   const picos = useMemo(() => picosPorHora(atualFiltrado), [atualFiltrado])
@@ -874,7 +969,13 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
               </Card>
             </TabsContent>
 
-            <TabsContent value="clientes" className="mt-0 print:hidden">
+            <TabsContent value="clientes" className="mt-0 space-y-4 print:hidden">
+              <RelatoriosClientesPainel
+                totalClientes={totalClientes}
+                agHistorico={agHistClienteAnalise}
+                clientesCadastro={clientesAnalise}
+                notaHistorico="Agendamentos analisados: últimos 36 meses."
+              />
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Clientes mais frequentes</CardTitle>
@@ -906,68 +1007,21 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
               </Card>
             </TabsContent>
 
-            <TabsContent value="barbeiros" className="mt-0 print:hidden">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Produtividade por profissional</CardTitle>
-                  <CardDescription>Concluídos e faturamento associado no período</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[min(420px,55vh)] pr-3">
-                    <ul className="space-y-2">
-                      {barbeirosRank.map((b, i) => (
-                        <li
-                          key={b.id}
-                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm"
-                        >
-                          <span className="min-w-0 truncate font-medium">
-                            <span className="text-muted-foreground">{i + 1}. </span>
-                            {b.nome}
-                          </span>
-                          <span className="shrink-0 text-xs text-muted-foreground">
-                            {b.concl} concl. · {formatCurrency(b.fat)}
-                          </span>
-                        </li>
-                      ))}
-                      {barbeirosRank.length === 0 ? (
-                        <li className="text-sm text-muted-foreground">Nenhum dado no período.</li>
-                      ) : null}
-                    </ul>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+            <TabsContent value="barbeiros" className="mt-0 space-y-4 print:hidden">
+              <RelatoriosBarbeirosPainel
+                agendamentos={atualFiltrado}
+                receitaProdutosPorBarbeiro={receitaProdutosPorBarbeiro}
+                inicio={inicio}
+                fim={fim}
+              />
             </TabsContent>
 
             <TabsContent value="produtos" className="mt-0 space-y-4 print:hidden">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Scissors className="h-4 w-4" aria-hidden />
-                    Serviços mais vendidos
-                  </CardTitle>
-                  <CardDescription>Quantidade de agendamentos e receita em concluídos</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {servicosRank.slice(0, 15).map((s, i) => (
-                      <li
-                        key={s.id}
-                        className="flex justify-between gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm"
-                      >
-                        <span className="min-w-0 truncate">
-                          {i + 1}. {s.nome}
-                        </span>
-                        <span className="shrink-0 tabular-nums text-muted-foreground">
-                          {s.q} · {formatCurrency(s.fat)}
-                        </span>
-                      </li>
-                    ))}
-                    {servicosRank.length === 0 ? (
-                      <li className="text-sm text-muted-foreground">Nenhum serviço no período.</li>
-                    ) : null}
-                  </ul>
-                </CardContent>
-              </Card>
+              <RelatoriosProdutosRelatorioPainel
+                estoque={estoque}
+                vendasProdutos120d={vendasProdutos120d}
+                servicosRankNomes={servicosRank.map((s) => ({ nome: s.nome, q: s.q }))}
+              />
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">

@@ -101,6 +101,10 @@ export interface Cliente {
   telefone: string
   email?: string
   notas?: string
+  /** Canal de aquisição (relatórios), ex.: instagram, walk_in. */
+  origem_canal?: string | null
+  /** Data de nascimento opcional (faixa etária nos relatórios). */
+  data_nascimento?: string | null
   created_at: string
   updated_at: string
   // Relacionamentos
