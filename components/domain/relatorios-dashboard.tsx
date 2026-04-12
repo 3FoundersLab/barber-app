@@ -50,6 +50,7 @@ import {
   type RelatorioPeriodoPreset,
 } from '@/lib/relatorios-range'
 import { tenantBarbeariaBasePath } from '@/lib/routes'
+import { RelatoriosOperacaoPainel } from '@/components/domain/relatorios-operacao-painel'
 import { RelatoriosVisaoGraficos } from '@/components/domain/relatorios-visao-graficos'
 import { estoqueCardStatus } from '@/lib/estoque-produto-utils'
 import { formatCurrency } from '@/lib/constants'
@@ -268,6 +269,7 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
   const [clientesNovosAnt, setClientesNovosAnt] = useState(0)
   /** Soma (preço × qtd) de `comanda_produtos` em comandas fechadas, por `referencia_data`. */
   const [receitaProdutosPorDia, setReceitaProdutosPorDia] = useState<Record<string, number>>({})
+  const [produtosConsumidosRank, setProdutosConsumidosRank] = useState<{ nome: string; qtd: number }[]>([])
 
   const { inicio, fim } = useMemo(
     () => intervaloPorPreset(preset, personalizadoInicio, personalizadoFim),
@@ -354,7 +356,7 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
         supabase.from('estoque_produtos').select('*').eq('barbearia_id', barbeariaId).order('nome'),
         supabase
           .from('comandas')
-          .select('referencia_data, comanda_produtos(preco_unitario, quantidade)')
+          .select('referencia_data, comanda_produtos(nome, preco_unitario, quantidade)')
           .eq('barbearia_id', barbeariaId)
           .eq('status', 'fechada')
           .gte('referencia_data', sk)
@@ -363,25 +365,35 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
 
       type ComandaProdRow = {
         referencia_data: string
-        comanda_produtos?: { preco_unitario: number; quantidade: number }[] | null
+        comanda_produtos?: { nome: string; preco_unitario: number; quantidade: number }[] | null
       }
       const receitaProd: Record<string, number> = {}
+      const prodQtd = new Map<string, number>()
       if (rComProd.error) {
         setReceitaProdutosPorDia({})
+        setProdutosConsumidosRank([])
       } else if (rComProd.data) {
         for (const row of rComProd.data as ComandaProdRow[]) {
           const dk = row.referencia_data
           const lines = row.comanda_produtos
           if (!lines?.length) continue
-          const sub = lines.reduce(
-            (s, l) => s + Number(l.preco_unitario) * Math.max(0, Math.floor(Number(l.quantidade) || 0)),
-            0,
-          )
-          receitaProd[dk] = (receitaProd[dk] ?? 0) + sub
+          for (const l of lines) {
+            const qty = Math.max(0, Math.floor(Number(l.quantidade) || 0))
+            receitaProd[dk] = (receitaProd[dk] ?? 0) + Number(l.preco_unitario) * qty
+            const nomeP = (l.nome && String(l.nome).trim()) || 'Produto'
+            prodQtd.set(nomeP, (prodQtd.get(nomeP) ?? 0) + qty)
+          }
         }
         setReceitaProdutosPorDia(receitaProd)
+        setProdutosConsumidosRank(
+          [...prodQtd.entries()]
+            .map(([nome, qtd]) => ({ nome, qtd }))
+            .sort((a, b) => b.qtd - a.qtd)
+            .slice(0, 40),
+        )
       } else {
         setReceitaProdutosPorDia({})
+        setProdutosConsumidosRank([])
       }
 
       if (rAtual.error) {
@@ -795,6 +807,11 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
             </TabsContent>
 
             <TabsContent value="operacao" className="mt-0 space-y-4 print:hidden">
+              <RelatoriosOperacaoPainel
+                agendamentos={atualFiltrado}
+                servicosRank={servicosRank}
+                produtosConsumidos={produtosConsumidosRank}
+              />
               <div className="grid gap-4 lg:grid-cols-2">
                 <Card>
                   <CardHeader>
