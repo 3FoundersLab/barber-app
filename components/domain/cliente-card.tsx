@@ -1,15 +1,9 @@
 'use client'
 
-import { History, Mail, MoreVertical, Pencil, Phone, Trash2 } from 'lucide-react'
+import { History, Mail, Pencil, Phone, Trash2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import type { Cliente } from '@/types'
@@ -195,37 +189,26 @@ export function ClienteCard({
             ) : null}
 
             {showOverflowMenu ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     className={cn(
                       actionIconBtnClass,
-                      'text-muted-foreground data-[state=open]:bg-background data-[state=open]:text-foreground data-[state=open]:shadow-sm dark:data-[state=open]:bg-background/60',
+                      'text-muted-foreground hover:text-destructive dark:hover:text-destructive',
                     )}
-                    aria-label={`Mais opções para ${cliente.nome}`}
-                    aria-haspopup="menu"
+                    aria-label={`Excluir ${cliente.nome}`}
+                    onClick={() => onDelete!(cliente.id)}
                   >
-                    <MoreVertical className="size-[1.125rem]" strokeWidth={2} aria-hidden />
+                    <Trash2 className="size-[1.125rem]" strokeWidth={2} aria-hidden />
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  sideOffset={8}
-                  className="min-w-[11rem] rounded-xl border-border/80 p-1.5 shadow-lg"
-                >
-                  <DropdownMenuItem
-                    variant="destructive"
-                    className="min-h-10 cursor-pointer gap-2 rounded-lg px-3 py-2 text-sm"
-                    onSelect={() => onDelete!(cliente.id)}
-                  >
-                    <Trash2 className="size-4 shrink-0" aria-hidden />
-                    Excluir cliente
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </TooltipTrigger>
+                <TooltipContent side="top" sideOffset={6}>
+                  Excluir cliente
+                </TooltipContent>
+              </Tooltip>
             ) : null}
           </div>
         ) : null}
