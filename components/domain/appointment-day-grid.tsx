@@ -20,10 +20,7 @@ import {
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import {
-  AgendaNowLineMarker,
-  AGENDA_NOW_LINE_CLASS,
-} from '@/components/domain/agenda-current-time-line'
+import { AgendaNowLineMarker } from '@/components/domain/agenda-current-time-line'
 import { ServicoAgendaIcon } from '@/lib/agenda-service-icons'
 import { agendaLocalDayKey, getAgendaNowLineTopPx } from '@/lib/agenda-now-line'
 import type { AgendaUnavailableBlock } from '@/lib/agenda-unavailable'
@@ -543,7 +540,7 @@ export const AppointmentDayGrid = forwardRef<AppointmentDayGridHandle, Appointme
             )}
           >
             <div
-              className="box-border flex w-full shrink-0 items-center justify-end border-b border-border/80 bg-muted/30 px-1 py-1 sm:px-2 dark:bg-muted/25"
+              className="box-border flex w-full shrink-0 items-center justify-center border-b border-border/80 bg-muted/30 px-1 py-1 sm:px-2 dark:bg-muted/25"
               style={{ height: HEADER_ROW_PX }}
               aria-hidden
             />
@@ -557,7 +554,7 @@ export const AppointmentDayGrid = forwardRef<AppointmentDayGridHandle, Appointme
                 return (
                   <div
                     key={min}
-                    className="absolute right-0 box-border flex w-full items-start justify-end pr-1 sm:pr-2"
+                    className="absolute inset-x-0 box-border flex w-full items-start justify-center px-0.5 sm:px-1"
                     style={{ top: slot * ROW_PX, height: ROW_PX }}
                   >
                     {isHour ? (
@@ -580,20 +577,6 @@ export const AppointmentDayGrid = forwardRef<AppointmentDayGridHandle, Appointme
                   </div>
                 )
               })}
-              {nowLineOffsetPx != null && (
-                <div
-                  className="pointer-events-none absolute right-0 z-[6] flex items-center pr-0.5 sm:pr-1"
-                  style={{ top: nowLineOffsetPx - 6, height: 12 }}
-                  aria-hidden
-                >
-                  <span
-                    className={cn(
-                      'h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-muted/60 dark:ring-background/80',
-                      AGENDA_NOW_LINE_CLASS,
-                    )}
-                  />
-                </div>
-              )}
             </div>
           </div>
 
@@ -674,12 +657,7 @@ export const AppointmentDayGrid = forwardRef<AppointmentDayGridHandle, Appointme
                 <div className="relative box-border" style={{ height: gridHeight }}>
                   {/* Fundo da grelha. Overlays decorativos na timeline: z ≤ 1 e pointer-events-none, para não bloquear cartões (z-[3]+). */}
                   <div className="pointer-events-none absolute inset-0" style={gridBackgroundStyle} />
-                  <AgendaNowLineMarker
-                    topPx={nowLineOffsetPx}
-                    now={new Date(nowMs)}
-                    showClockLabel={colIndex === 0}
-                    clockFormat="HH:mm:ss"
-                  />
+                  <AgendaNowLineMarker topPx={nowLineOffsetPx} now={new Date(nowMs)} />
 
                   {unavail.map((block, idx) => {
                     const uStart = timeToMinutes(block.start)
