@@ -8,6 +8,7 @@ import {
   CreditCard,
   Minus,
   MoreVertical,
+  Pencil,
   Plus,
   Search,
   Smartphone,
@@ -64,6 +65,7 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
 import type { Comanda, ComandaDescontoModo, ComandaFormaPagamento } from '@/types/comanda'
@@ -114,6 +116,8 @@ export function ComandaEditorSheet({
   const [formaPagamento, setFormaPagamento] = useState<ComandaFormaPagamento | ''>('')
 
   const [buscaProduto, setBuscaProduto] = useState('')
+  /** Comanda fechada/cancelada: edição só após tocar no lápis (evita alteração acidental). */
+  const [modoCorrecaoFechadaCancelada, setModoCorrecaoFechadaCancelada] = useState(false)
   const [categoriaFiltroEstoque, setCategoriaFiltroEstoque] = useState<string>('todas')
   /** Quantidade já reservada na comanda ao abrir (para calcular teto: estoque DB + committed). */
   const [committedProduto, setCommittedProduto] = useState<Record<string, number>>({})
@@ -488,6 +492,7 @@ export function ComandaEditorSheet({
         if (demoMode) return
         const c = comandaRef.current
         if (!c || (c.status !== 'aberta' && c.status !== 'fechada' && c.status !== 'cancelada')) return
+        if ((c.status === 'fechada' || c.status === 'cancelada') && !modoCorrecaoFechadaCancelada) return
         setAutoSaveState('saving')
         setError(null)
         const ok = await performPersistRef.current(true)
@@ -500,11 +505,24 @@ export function ComandaEditorSheet({
       })()
     }, 1000)
     return () => window.clearTimeout(t)
-  }, [draftFingerprint, open, demoMode, loading, quietRefreshing, saving, comanda?.id])
+  }, [
+    draftFingerprint,
+    open,
+    demoMode,
+    loading,
+    quietRefreshing,
+    saving,
+    comanda?.id,
+    modoCorrecaoFechadaCancelada,
+  ])
 
   useEffect(() => {
     lastSavedDraftFingerprintRef.current = null
   }, [comanda?.id])
+
+  useEffect(() => {
+    setModoCorrecaoFechadaCancelada(false)
+  }, [comanda?.id, open])
 
   const handleSalvar = async () => {
     if (demoMode) {
@@ -516,6 +534,12 @@ export function ComandaEditorSheet({
       (comanda.status !== 'aberta' &&
         comanda.status !== 'fechada' &&
         comanda.status !== 'cancelada')
+    ) {
+      return
+    }
+    if (
+      (comanda.status === 'fechada' || comanda.status === 'cancelada') &&
+      !modoCorrecaoFechadaCancelada
     ) {
       return
     }
@@ -614,8 +638,7 @@ export function ComandaEditorSheet({
   const podeEditar =
     comanda != null &&
     (comanda.status === 'aberta' ||
-      comanda.status === 'fechada' ||
-      comanda.status === 'cancelada')
+      ((comanda.status === 'fechada' || comanda.status === 'cancelada') && modoCorrecaoFechadaCancelada))
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -650,6 +673,36 @@ export function ComandaEditorSheet({
                     </Badge>
                   ) : null}
                 </div>
+                {!demoMode && comanda && (comanda.status === 'fechada' || comanda.status === 'cancelada') ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                          'h-11 min-h-11 w-11 min-w-11 shrink-0 touch-manipulation sm:h-10 sm:min-h-10 sm:w-10 sm:min-w-10',
+                          modoCorrecaoFechadaCancelada &&
+                            'bg-primary/12 text-primary shadow-sm dark:bg-primary/20 dark:text-primary',
+                        )}
+                        aria-pressed={modoCorrecaoFechadaCancelada}
+                        aria-label={
+                          modoCorrecaoFechadaCancelada
+                            ? 'Desativar edição da comanda'
+                            : 'Permitir alterar comanda fechada ou cancelada'
+                        }
+                        onClick={() => setModoCorrecaoFechadaCancelada((v) => !v)}
+                      >
+                        <Pencil className="h-5 w-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={6} className="max-w-[16rem]">
+                      {modoCorrecaoFechadaCancelada
+                        ? 'Toque de novo para só visualizar (sem alterar).'
+                        : 'Ative para corrigir lançamentos: serviços, produtos, desconto, taxa e pagamento.'}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : null}
                 {!demoMode &&
                 comanda &&
                 (comanda.status === 'aberta' ||
@@ -668,7 +721,10 @@ export function ComandaEditorSheet({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-52">
-                      <DropdownMenuItem disabled={saving} onClick={() => void handleSalvar()}>
+                      <DropdownMenuItem
+                        disabled={saving || !podeEditar}
+                        onClick={() => void handleSalvar()}
+                      >
                         Salvar agora
                       </DropdownMenuItem>
                       {comanda.status === 'aberta' ? (
@@ -717,16 +773,17 @@ export function ComandaEditorSheet({
                   {!demoMode && comanda.status === 'fechada' ? (
                     <Alert variant="neutral">
                       <AlertTitle>
-                        Comanda fechada: você pode ajustar serviços, produtos, desconto, taxa e forma de pagamento. Ao
-                        salvar, o estoque é recalculado em relação às linhas anteriores.
+                        Comanda fechada: use o lápis no topo para habilitar alterações (serviços, produtos, desconto,
+                        taxa e forma de pagamento). Ao salvar, o estoque é recalculado em relação às linhas anteriores.
                       </AlertTitle>
                     </Alert>
                   ) : null}
                   {!demoMode && comanda.status === 'cancelada' ? (
                     <Alert variant="warning">
                       <AlertTitle>
-                        Comanda cancelada: confira ou corrija dados. Ao salvar, as linhas são gravadas, o estoque é
-                        ajustado e a comanda volta para o status Aberta para você poder fechar novamente se precisar.
+                        Comanda cancelada: use o lápis no topo para habilitar correções. Ao salvar, as linhas são
+                        gravadas, o estoque é ajustado e a comanda volta para o status Aberta para você poder fechar
+                        novamente se precisar.
                       </AlertTitle>
                     </Alert>
                   ) : null}
@@ -1124,7 +1181,12 @@ export function ComandaEditorSheet({
                   type="button"
                   className="min-h-11 w-full touch-manipulation font-semibold"
                   variant="default"
-                  disabled={saving || demoMode}
+                  disabled={saving || demoMode || !podeEditar}
+                  title={
+                    !podeEditar && !demoMode
+                      ? 'Toque no lápis no topo da comanda para habilitar alterações'
+                      : undefined
+                  }
                   onClick={() => void handleSalvar()}
                 >
                   {saving ? <Spinner className="mr-2 h-4 w-4" /> : null}
