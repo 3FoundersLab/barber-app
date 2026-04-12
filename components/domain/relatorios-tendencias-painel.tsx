@@ -3,8 +3,17 @@
 import { useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Lightbulb, TrendingDown, TrendingUp } from 'lucide-react'
+import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
+import { BarChart3, CalendarRange, Lightbulb, TrendingDown, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart'
+import { KPICard } from '@/components/ui/kpi-card'
 import { formatCurrency } from '@/lib/constants'
 import type { AgHistoricoCliente } from '@/lib/relatorios-clientes-analise'
 import {
@@ -19,126 +28,43 @@ import {
   serieBarrasCategoriasUltimosMeses,
   seriePrevisaoDiaria,
   serieReceitaMensalDoisAnos,
+  type DiaPrevisao,
 } from '@/lib/relatorios-tendencias-analise'
+import {
+  relatoriosChartColors,
+  relatoriosChartFont,
+  relatoriosRechartsAnimationProps,
+  tendenciasPrevisaoChartConfig,
+  tendenciasStackChartConfig,
+  tendenciasYoYChartConfig,
+} from '@/lib/relatorios-chart-config'
 import { cn } from '@/lib/utils'
 
-function GraficoYoY({ data }: { data: ReturnType<typeof serieReceitaMensalDoisAnos> }) {
-  const w = 520
-  const h = 200
-  const padL = 40
-  const padR = 12
-  const padT = 16
-  const padB = 32
-  const innerW = w - padL - padR
-  const innerH = h - padT - padB
-  const maxY = Math.max(
-    1,
-    ...data.flatMap((d) => [d.anoAnterior, d.anoAtual != null ? d.anoAtual : 0]),
-  )
-  const n = data.length
-  const x = (i: number) => padL + (n <= 1 ? innerW / 2 : (i / (n - 1)) * innerW)
-  const y = (v: number) => padT + innerH - (v / maxY) * innerH
-  const ptsA = data
-    .map((d, i) => (d.anoAtual != null ? `${x(i)},${y(d.anoAtual)}` : null))
-    .filter(Boolean)
-    .join(' ')
-  const ptsP = data.map((d, i) => `${x(i)},${y(d.anoAnterior)}`).join(' ')
-  return (
-    <svg width={w} height={h} className="mx-auto max-w-full" aria-label="Receita mensal ano atual vs anterior">
-      <polyline points={ptsP} fill="none" className="stroke-muted-foreground/70" strokeWidth={2} strokeDasharray="4 3" />
-      <polyline points={ptsA} fill="none" className="stroke-primary" strokeWidth={2} />
-      {data.map((d, i) => (
-        <text key={d.mes} x={x(i)} y={h - 8} textAnchor="middle" className="fill-muted-foreground text-[9px] capitalize">
-          {d.label}
-        </text>
-      ))}
-      <text x={padL} y={12} className="fill-primary text-[10px]">
-        {new Date().getFullYear()}
-      </text>
-      <text x={padL + 36} y={12} className="fill-muted-foreground text-[10px]">
-        {new Date().getFullYear() - 1} (tracejado)
-      </text>
-    </svg>
-  )
+function formatAxisCurrency(v: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(v)
 }
 
-function GraficoBarrasEmpilhadas({ data }: { data: ReturnType<typeof serieBarrasCategoriasUltimosMeses> }) {
-  const w = 520
-  const h = 200
-  const padL = 36
-  const padB = 28
-  const innerW = w - padL - 12
-  const innerH = h - padB - 12
-  const bw = innerW / Math.max(1, data.length)
-  const maxT = Math.max(1, ...data.map((d) => d.cortes + d.barbas + d.outros + d.produtos))
-  return (
-    <svg width={w} height={h} className="mx-auto max-w-full" aria-label="Receita por categoria">
-      {data.map((d, i) => {
-        const x = padL + i * bw + 2
-        const wbar = bw - 4
-        const segs = [
-          { v: d.cortes, cls: 'fill-emerald-500/85' },
-          { v: d.barbas, cls: 'fill-amber-500/85' },
-          { v: d.outros, cls: 'fill-muted-foreground/50' },
-          { v: d.produtos, cls: 'fill-primary/85' },
-        ]
-        let bottom = padT + innerH
-        return (
-          <g key={d.mesKey}>
-            {segs.map((s, j) => {
-              const hgt = (s.v / maxT) * innerH
-              const y0 = bottom - hgt
-              bottom = y0
-              return <rect key={j} x={x} y={y0} width={wbar} height={Math.max(0, hgt)} className={s.cls} rx={1} />
-            })}
-            <text x={x + wbar / 2} y={h - 6} textAnchor="middle" className="fill-muted-foreground text-[8px]">
-              {d.label}
-            </text>
-          </g>
-        )
-      })}
-    </svg>
-  )
-}
-
-function GraficoPrevisao({ serie }: { serie: ReturnType<typeof seriePrevisaoDiaria> }) {
-  const w = 560
-  const h = 160
-  const padL = 32
-  const padB = 22
-  const innerW = w - padL - 8
-  const innerH = h - padB - 8
-  const hist = serie.filter((s) => s.historico != null)
-  const prev = serie.filter((s) => s.previsto != null)
-  const maxY = Math.max(1, ...serie.map((s) => Math.max(s.historico ?? 0, s.previsto ?? 0)))
-  const n = serie.length
-  const xAt = (i: number) => padL + (n <= 1 ? innerW / 2 : (i / (n - 1)) * innerW)
-  const yAt = (v: number) => 8 + innerH - (v / maxY) * innerH
-  const ptsHist = hist
-    .map((s) => {
-      const i = serie.indexOf(s)
-      return `${xAt(i)},${yAt(s.historico ?? 0)}`
-    })
-    .join(' ')
-  let ptsPrev = ''
-  if (hist.length && prev.length) {
-    const last = hist[hist.length - 1]
-    const li = serie.indexOf(last)
-    ptsPrev =
-      `${xAt(li)},${yAt(last.historico ?? 0)} ` +
-      prev.map((s) => `${xAt(serie.indexOf(s))},${yAt(s.previsto ?? 0)}`).join(' ')
+function previsaoComTraco(serie: DiaPrevisao[]) {
+  let lastHistI = -1
+  for (let i = 0; i < serie.length; i++) {
+    if (serie[i]!.historico != null) lastHistI = i
   }
-  return (
-    <svg width={w} height={h} className="mx-auto max-w-full" aria-label="Previsão de receita">
-      <polyline points={ptsHist} fill="none" className="stroke-primary" strokeWidth={2} />
-      {ptsPrev ? (
-        <polyline points={ptsPrev} fill="none" className="stroke-primary/60" strokeWidth={2} strokeDasharray="5 4" />
-      ) : null}
-      <text x={padL} y={14} className="fill-muted-foreground text-[9px]">
-        Sólido: histórico · Tracejado: média diária (próx. 30 dias)
-      </text>
-    </svg>
-  )
+  const temPrev = serie.some((s) => s.previsto != null)
+  return serie.map((s, i) => {
+    let tracoPrevisto: number | null = null
+    if (s.previsto != null) tracoPrevisto = s.previsto
+    else if (temPrev && i === lastHistI && lastHistI >= 0) tracoPrevisto = s.historico
+    return {
+      ...s,
+      historico: s.historico ?? undefined,
+      tracoPrevisto: tracoPrevisto ?? undefined,
+    }
+  })
 }
 
 export function RelatoriosTendenciasPainel({
@@ -175,6 +101,21 @@ export function RelatoriosTendenciasPainel({
     [agHistorico, receitaProdutoPorMesHist, ref],
   )
   const prev30 = useMemo(() => seriePrevisaoDiaria(totalDia, ref, 45, 30), [totalDia, ref])
+  const prev30Chart = useMemo(() => previsaoComTraco(prev30), [prev30])
+
+  const yoyData = useMemo(
+    () =>
+      yoy.map((d) => ({
+        ...d,
+        anoAtual: d.anoAtual ?? undefined,
+        anoAnterior: d.anoAnterior,
+      })),
+    [yoy],
+  )
+
+  const chartFontClass = cn(
+    'font-sans text-[12px] [&_.recharts-cartesian-axis-tick_text]:fill-[#737373] [&_.recharts-legend-item-text]:fill-[#737373]',
+  )
 
   return (
     <div className="space-y-4">
@@ -186,68 +127,42 @@ export function RelatoriosTendenciasPainel({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Este mês vs mês passado</CardDescription>
-            <CardTitle className="text-lg leading-tight capitalize">{compMes.mesAtualLabel}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1 text-sm">
-            <p className="tabular-nums text-muted-foreground">
-              Parcial atual: <span className="font-semibold text-foreground">{formatCurrency(compMes.mesAtualParcial)}</span>
-            </p>
-            <p className="tabular-nums text-muted-foreground">
-              Mês anterior (fechado):{' '}
-              <span className="font-semibold text-foreground">{formatCurrency(compMes.mesAnteriorCompleto)}</span>
-            </p>
-            {compMes.variacaoPct != null ? (
-              <p className={cn('text-xs font-medium', compMes.variacaoPct >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-800 dark:text-amber-300')}>
-                {compMes.variacaoPct >= 0 ? '+' : ''}
-                {compMes.variacaoPct}% vs mês anterior (receita total)
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">Sem base para variação.</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Este ano vs ano passado (YTD)</CardDescription>
-            <CardTitle className="text-lg">Jan — {format(ref, 'MMM', { locale: ptBR })}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1 text-sm">
-            <p className="tabular-nums text-muted-foreground">
-              {compAno.anoAtual}:{' '}
-              <span className="font-semibold text-foreground">{formatCurrency(compAno.ytdAtual)}</span>
-            </p>
-            <p className="tabular-nums text-muted-foreground">
-              {compAno.anoAtual - 1}:{' '}
-              <span className="font-semibold text-foreground">{formatCurrency(compAno.ytdAnterior)}</span>
-            </p>
-            {compAno.variacaoPct != null ? (
-              <p
-                className={cn(
-                  'text-xs font-medium',
-                  compAno.variacaoPct >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-800 dark:text-amber-300',
-                )}
-              >
-                {compAno.variacaoPct >= 0 ? '+' : ''}
-                {compAno.variacaoPct}%
-              </p>
-            ) : null}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Projeção próximo mês</CardDescription>
-            <CardTitle className="text-lg capitalize">{proj.proxMesLabel}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1 text-sm">
-            <p className="text-2xl font-semibold tabular-nums">{formatCurrency(proj.valor)}</p>
-            <p className="text-xs text-muted-foreground">
-              Média diária últimos 60 dias ({formatCurrency(proj.mediaDiaria)}) × {proj.diasProxMes} dias.
-            </p>
-          </CardContent>
-        </Card>
+        <KPICard
+          title="Este mês vs mês passado"
+          value={formatCurrency(compMes.mesAtualParcial)}
+          change={compMes.variacaoPct ?? undefined}
+          changeLabel="vs mês anterior (receita total)"
+          icon={CalendarRange}
+          trend={
+            compMes.variacaoPct == null ? 'neutral' : compMes.variacaoPct > 0 ? 'up' : compMes.variacaoPct < 0 ? 'down' : 'neutral'
+          }
+          color="amber"
+        />
+        <KPICard
+          title={`YTD — Jan a ${format(ref, 'MMM', { locale: ptBR })}`}
+          value={formatCurrency(compAno.ytdAtual)}
+          change={compAno.variacaoPct ?? undefined}
+          changeLabel={`vs ${compAno.anoAtual - 1} (mesmo período)`}
+          icon={BarChart3}
+          trend={
+            compAno.variacaoPct == null
+              ? 'neutral'
+              : compAno.variacaoPct > 0
+                ? 'up'
+                : compAno.variacaoPct < 0
+                  ? 'down'
+                  : 'neutral'
+          }
+          color="blue"
+        />
+        <KPICard
+          title={`Projeção ${proj.proxMesLabel}`}
+          value={formatCurrency(proj.valor)}
+          changeLabel={`Média diária (${formatCurrency(proj.mediaDiaria)}) × ${proj.diasProxMes} dias`}
+          icon={TrendingUp}
+          trend="neutral"
+          color="green"
+        />
       </div>
 
       <Card>
@@ -283,8 +198,55 @@ export function RelatoriosTendenciasPainel({
           <CardTitle className="text-base">Receita mensal — ano atual vs anterior</CardTitle>
           <CardDescription>Serviços concluídos + produtos (comandas)</CardDescription>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <GraficoYoY data={yoy} />
+        <CardContent className="overflow-x-auto pl-0">
+          <ChartContainer
+            config={tendenciasYoYChartConfig}
+            className={cn(
+              'aspect-auto h-[260px] min-h-[220px] w-full min-w-[320px] justify-stretch [&_.recharts-responsive-container]:!h-full',
+              chartFontClass,
+            )}
+            style={{ fontFamily: relatoriosChartFont.family, fontSize: relatoriosChartFont.size }}
+          >
+            <LineChart data={yoyData} margin={{ top: 8, right: 8, left: 4, bottom: 4 }}>
+              <CartesianGrid
+                strokeDasharray="4 6"
+                vertical={false}
+                stroke={relatoriosChartColors.grid}
+                strokeOpacity={0.9}
+              />
+              <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                width={48}
+                tickFormatter={(v) => formatAxisCurrency(Number(v))}
+              />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Line
+                type="monotone"
+                dataKey="anoAnterior"
+                stroke="var(--color-anoAnterior)"
+                strokeWidth={2}
+                strokeDasharray="5 4"
+                dot={false}
+                name="anoAnterior"
+                connectNulls
+                {...relatoriosRechartsAnimationProps}
+              />
+              <Line
+                type="monotone"
+                dataKey="anoAtual"
+                stroke="var(--color-anoAtual)"
+                strokeWidth={2}
+                dot={false}
+                name="anoAtual"
+                connectNulls
+                {...relatoriosRechartsAnimationProps}
+              />
+            </LineChart>
+          </ChartContainer>
         </CardContent>
       </Card>
 
@@ -293,32 +255,101 @@ export function RelatoriosTendenciasPainel({
           <CardTitle className="text-base">Crescimento por categoria (12 meses)</CardTitle>
           <CardDescription>Barras empilhadas: cortes, barbas, outros, produtos</CardDescription>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <div className="mb-2 flex flex-wrap gap-3 text-[10px] text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <span className="inline-block size-2.5 rounded-sm bg-emerald-500/85" /> Cortes
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="inline-block size-2.5 rounded-sm bg-amber-500/85" /> Barbas
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="inline-block size-2.5 rounded-sm bg-muted-foreground/50" /> Outros
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="inline-block size-2.5 rounded-sm bg-primary/85" /> Produtos
-            </span>
-          </div>
-          <GraficoBarrasEmpilhadas data={stacks} />
+        <CardContent className="overflow-x-auto pl-0">
+          <ChartContainer
+            config={tendenciasStackChartConfig}
+            className={cn(
+              'aspect-auto h-[280px] min-h-[240px] w-full min-w-[320px] justify-stretch [&_.recharts-responsive-container]:!h-full',
+              chartFontClass,
+            )}
+            style={{ fontFamily: relatoriosChartFont.family, fontSize: relatoriosChartFont.size }}
+          >
+            <BarChart data={stacks} margin={{ top: 28, right: 8, left: 4, bottom: 4 }} barCategoryGap="18%">
+              <CartesianGrid
+                strokeDasharray="4 6"
+                vertical={false}
+                stroke={relatoriosChartColors.grid}
+                strokeOpacity={0.9}
+              />
+              <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                width={48}
+                tickFormatter={(v) => formatAxisCurrency(Number(v))}
+              />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Bar dataKey="cortes" stackId="a" fill="var(--color-cortes)" radius={[0, 0, 0, 0]} {...relatoriosRechartsAnimationProps} />
+              <Bar dataKey="barbas" stackId="a" fill="var(--color-barbas)" {...relatoriosRechartsAnimationProps} />
+              <Bar dataKey="outros" stackId="a" fill="var(--color-outros)" {...relatoriosRechartsAnimationProps} />
+              <Bar
+                dataKey="produtos"
+                stackId="a"
+                fill="var(--color-produtos)"
+                radius={[4, 4, 0, 0]}
+                {...relatoriosRechartsAnimationProps}
+              />
+            </BarChart>
+          </ChartContainer>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Previsão — próximos 30 dias</CardTitle>
-          <CardDescription>Linha pontilhada: média diária recente aplicada ao horizonte</CardDescription>
+          <CardDescription>Linha tracejada: média diária recente aplicada ao horizonte</CardDescription>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <GraficoPrevisao serie={prev30} />
+        <CardContent className="overflow-x-auto pl-0">
+          <ChartContainer
+            config={tendenciasPrevisaoChartConfig}
+            className={cn(
+              'aspect-auto h-[240px] min-h-[200px] w-full min-w-[320px] justify-stretch [&_.recharts-responsive-container]:!h-full',
+              chartFontClass,
+            )}
+            style={{ fontFamily: relatoriosChartFont.family, fontSize: relatoriosChartFont.size }}
+          >
+            <LineChart data={prev30Chart} margin={{ top: 8, right: 8, left: 4, bottom: 4 }}>
+              <CartesianGrid
+                strokeDasharray="4 6"
+                vertical={false}
+                stroke={relatoriosChartColors.grid}
+                strokeOpacity={0.9}
+              />
+              <XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={16} />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                width={44}
+                tickFormatter={(v) => formatAxisCurrency(Number(v))}
+              />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Line
+                type="monotone"
+                dataKey="historico"
+                stroke="var(--color-historico)"
+                strokeWidth={2}
+                dot={false}
+                name="historico"
+                connectNulls
+                {...relatoriosRechartsAnimationProps}
+              />
+              <Line
+                type="monotone"
+                dataKey="tracoPrevisto"
+                stroke="var(--color-previsto)"
+                strokeWidth={2}
+                strokeDasharray="5 4"
+                dot={false}
+                name="previsto"
+                connectNulls
+                {...relatoriosRechartsAnimationProps}
+              />
+            </LineChart>
+          </ChartContainer>
         </CardContent>
       </Card>
     </div>

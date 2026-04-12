@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { RankingTable } from '@/components/ui/ranking-table'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -11,20 +12,12 @@ import {
 } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/constants'
 import {
-  type BarbeiroRankingRow,
   rankingBarbeirosCompleto,
   radarHabilidadesBarbeiro,
   timelineFaturamentoBarbeiro,
 } from '@/lib/relatorios-barbeiros-analise'
 import { cn } from '@/lib/utils'
 import type { Agendamento } from '@/types'
-
-function medalha(i: number): string {
-  if (i === 0) return '🥇'
-  if (i === 1) return '🥈'
-  if (i === 2) return '🥉'
-  return `${i + 1}º`
-}
 
 function RadarBarbeiroSvg({
   data,
@@ -78,10 +71,13 @@ function RadarBarbeiroSvg({
   )
 }
 
-function TimelineSvg(
-  dias: ReturnType<typeof timelineFaturamentoBarbeiro>,
-  titulo: string,
-) {
+function TimelineSvg({
+  dias,
+  titulo,
+}: {
+  dias: ReturnType<typeof timelineFaturamentoBarbeiro>
+  titulo: string
+}) {
   const w = 400
   const h = 120
   const pad = 28
@@ -134,6 +130,23 @@ export function RelatoriosBarbeirosPainel({
     () => rankingBarbeirosCompleto(agendamentos, receitaProdutosPorBarbeiro),
     [agendamentos, receitaProdutosPorBarbeiro],
   )
+
+  const rankingTableRows = useMemo(() => {
+    const avatarById = new Map<string, string | null>()
+    for (const a of agendamentos) {
+      const id = a.barbeiro_id
+      if (!avatarById.has(id)) avatarById.set(id, a.barbeiro?.avatar ?? null)
+    }
+    return ranking.map((r) => ({
+      id: r.id,
+      name: r.nome,
+      value: r.faturamentoTotal,
+      avatarUrl: avatarById.get(r.id) ?? null,
+    }))
+  }, [agendamentos, ranking])
+
+  const rankingById = useMemo(() => new Map(ranking.map((r) => [r.id, r])), [ranking])
+
   const maxProd = useMemo(
     () => Math.max(1, ...ranking.map((r) => r.faturamentoProdutos)),
     [ranking],
@@ -176,11 +189,41 @@ export function RelatoriosBarbeirosPainel({
           {ranking.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum agendamento no período.</p>
           ) : (
-            <ul className="space-y-2">
-              {ranking.map((b, i) => (
-                <RankingLinha key={b.id} b={b} i={i} />
-              ))}
-            </ul>
+            <RankingTable
+              rows={rankingTableRows}
+              valueHeader="Faturamento"
+              formatValue={formatCurrency}
+              pageSize={8}
+              exportFileName="ranking-barbeiros.csv"
+              csvHeaders={[
+                'Posição',
+                'Nome',
+                'Faturamento total',
+                'Serviços',
+                'Produtos',
+                'Atend. concluídos',
+                'Ticket médio',
+                'Retenção %',
+                'Pico',
+                'Signature',
+              ]}
+              toCsvCells={(row, rank) => {
+                const r = rankingById.get(row.id)
+                if (!r) return [rank, row.name, row.value]
+                return [
+                  rank,
+                  r.nome,
+                  r.faturamentoTotal,
+                  r.faturamentoServicos,
+                  r.faturamentoProdutos,
+                  r.concluidos,
+                  r.ticketMedio,
+                  r.taxaRetencaoPct,
+                  r.horarioPico,
+                  r.servicoSignature,
+                ]
+              }}
+            />
           )}
         </CardContent>
       </Card>
@@ -271,29 +314,5 @@ export function RelatoriosBarbeirosPainel({
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-function RankingLinha({ b, i }: { b: BarbeiroRankingRow; i: number }) {
-  const estrela = b.notaEstimada != null ? `${b.notaEstimada}⭐` : '—'
-  return (
-    <li
-      className={cn(
-        'grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1 rounded-xl border border-border/60 px-3 py-2.5 sm:grid-cols-[auto_1fr_auto_auto_auto_auto]',
-      )}
-    >
-      <span className="text-lg tabular-nums" aria-hidden>
-        {medalha(i)}
-      </span>
-      <span className="min-w-0 font-medium leading-tight">{b.nome}</span>
-      <span className="col-span-2 text-right text-sm font-semibold tabular-nums sm:col-span-1 sm:text-left">
-        {formatCurrency(b.faturamentoTotal)}
-      </span>
-      <span className="text-xs tabular-nums text-muted-foreground sm:text-sm">{b.concluidos} atend.</span>
-      <span className="text-xs tabular-nums text-muted-foreground sm:text-sm">{estrela}</span>
-      <span className="col-span-3 text-right text-xs tabular-nums text-muted-foreground sm:col-span-1 sm:text-left">
-        {formatCurrency(b.ticketMedio)} ticket
-      </span>
-    </li>
   )
 }
