@@ -50,6 +50,7 @@ import {
   type RelatorioPeriodoPreset,
 } from '@/lib/relatorios-range'
 import { tenantBarbeariaBasePath } from '@/lib/routes'
+import { RelatoriosVisaoGraficos } from '@/components/domain/relatorios-visao-graficos'
 import { estoqueCardStatus } from '@/lib/estoque-produto-utils'
 import { formatCurrency } from '@/lib/constants'
 import { cn } from '@/lib/utils'
@@ -265,6 +266,8 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
   const [totalClientes, setTotalClientes] = useState(0)
   const [clientesNovos, setClientesNovos] = useState(0)
   const [clientesNovosAnt, setClientesNovosAnt] = useState(0)
+  /** Soma (preço × qtd) de `comanda_produtos` em comandas fechadas, por `referencia_data`. */
+  const [receitaProdutosPorDia, setReceitaProdutosPorDia] = useState<Record<string, number>>({})
 
   const { inicio, fim } = useMemo(
     () => intervaloPorPreset(preset, personalizadoInicio, personalizadoFim),
@@ -340,7 +343,7 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
         setClientesNovosAnt(0)
       }
 
-      const [rCli, rNovos, rEst] = await Promise.all([
+      const [rCli, rNovos, rEst, rComProd] = await Promise.all([
         supabase.from('clientes').select('*', { count: 'exact', head: true }).eq('barbearia_id', barbeariaId),
         supabase
           .from('clientes')
@@ -349,7 +352,37 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
           .gte('created_at', i0.toISOString())
           .lte('created_at', f0.toISOString()),
         supabase.from('estoque_produtos').select('*').eq('barbearia_id', barbeariaId).order('nome'),
+        supabase
+          .from('comandas')
+          .select('referencia_data, comanda_produtos(preco_unitario, quantidade)')
+          .eq('barbearia_id', barbeariaId)
+          .eq('status', 'fechada')
+          .gte('referencia_data', sk)
+          .lte('referencia_data', ek),
       ])
+
+      type ComandaProdRow = {
+        referencia_data: string
+        comanda_produtos?: { preco_unitario: number; quantidade: number }[] | null
+      }
+      const receitaProd: Record<string, number> = {}
+      if (rComProd.error) {
+        setReceitaProdutosPorDia({})
+      } else if (rComProd.data) {
+        for (const row of rComProd.data as ComandaProdRow[]) {
+          const dk = row.referencia_data
+          const lines = row.comanda_produtos
+          if (!lines?.length) continue
+          const sub = lines.reduce(
+            (s, l) => s + Number(l.preco_unitario) * Math.max(0, Math.floor(Number(l.quantidade) || 0)),
+            0,
+          )
+          receitaProd[dk] = (receitaProd[dk] ?? 0) + sub
+        }
+        setReceitaProdutosPorDia(receitaProd)
+      } else {
+        setReceitaProdutosPorDia({})
+      }
 
       if (rAtual.error) {
         setError('Não foi possível carregar agendamentos do período.')
@@ -751,6 +784,14 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
                   </CardDescription>
                 </CardHeader>
               </Card>
+              <div className="print:hidden">
+                <RelatoriosVisaoGraficos
+                  inicio={inicio}
+                  fim={fim}
+                  agendamentosPeriodo={atualFiltrado}
+                  receitaProdutosPorDia={receitaProdutosPorDia}
+                />
+              </div>
             </TabsContent>
 
             <TabsContent value="operacao" className="mt-0 space-y-4 print:hidden">
