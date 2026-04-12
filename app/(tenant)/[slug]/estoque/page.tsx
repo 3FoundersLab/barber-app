@@ -42,7 +42,11 @@ import {
 } from '@/lib/estoque-categoria-icons'
 import { ESTOQUE_PRODUTOS_MOCK } from '@/lib/estoque-produto-mock'
 import { mapEstoqueRowToProduto, type EstoqueProdutoRow } from '@/lib/map-estoque-produto'
-import { nivelEstoquePorQuantidade } from '@/lib/estoque-produto-utils'
+import {
+  estoqueCardStatus,
+  nivelEstoquePorQuantidade,
+  type EstoqueCardStatus,
+} from '@/lib/estoque-produto-utils'
 import { createClient } from '@/lib/supabase/client'
 import { toUserFriendlyErrorMessage } from '@/lib/to-user-friendly-error'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
@@ -64,6 +68,13 @@ function parseQuantidadeObrigatoria(raw: string): number | null {
   const n = Number(t)
   if (!Number.isFinite(n) || n < 0) return null
   return Math.max(0, Math.floor(n))
+}
+
+/** Mesma regra do card: esgotado e estoque baixo aparecem primeiro na grade. */
+function rankEstoqueCardPrioridade(status: EstoqueCardStatus): number {
+  if (status === 'esgotado') return 0
+  if (status === 'baixo') return 1
+  return 2
 }
 
 export default function TenantEstoquePage() {
@@ -265,7 +276,17 @@ export default function TenantEstoquePage() {
       }
       return true
     })
-    list = [...list].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+    list = [...list].sort((a, b) => {
+      const sa = estoqueCardStatus(a.quantidade, a.minimo)
+      const sb = estoqueCardStatus(b.quantidade, b.minimo)
+      const ra = rankEstoqueCardPrioridade(sa)
+      const rb = rankEstoqueCardPrioridade(sb)
+      if (ra !== rb) return ra - rb
+      const qa = Math.max(0, Math.floor(a.quantidade))
+      const qb = Math.max(0, Math.floor(b.quantidade))
+      if (qa !== qb) return qa - qb
+      return a.nome.localeCompare(b.nome, 'pt-BR')
+    })
     return list
   }, [produtosParaExibicao, busca, categoriaFiltro, statusFiltro])
 
