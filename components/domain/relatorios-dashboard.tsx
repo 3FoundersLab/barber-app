@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -18,12 +19,15 @@ import {
   Activity,
   BarChart3,
 } from 'lucide-react'
-import { format } from 'date-fns'
+import { endOfDay, format, startOfDay, subDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PageContent } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -41,9 +45,11 @@ import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import {
   intervaloAnteriorComparacao,
   intervaloPorPreset,
+  textoComparativoKpi,
   toLocalDateKey,
   type RelatorioPeriodoPreset,
 } from '@/lib/relatorios-range'
+import { tenantBarbeariaBasePath } from '@/lib/routes'
 import { estoqueCardStatus } from '@/lib/estoque-produto-utils'
 import { formatCurrency } from '@/lib/constants'
 import { cn } from '@/lib/utils'
@@ -56,24 +62,92 @@ function pctChange(atual: number, anterior: number): { pct: number; up: boolean 
   return { pct, up: pct > 0 ? true : pct < 0 ? false : null }
 }
 
-function TrendDelta({ atual, anterior }: { atual: number; anterior: number }) {
+function TrendDelta({
+  atual,
+  anterior,
+  comparar,
+  textoRodape,
+}: {
+  atual: number
+  anterior: number
+  comparar: boolean
+  textoRodape: string
+}) {
+  if (!comparar) {
+    return (
+      <span className="leading-snug text-muted-foreground">
+        Ative &quot;Comparar com período anterior&quot; para ver variação.
+      </span>
+    )
+  }
   const { pct, up } = pctChange(atual, anterior)
   if (up === null && Math.abs(pct) < 0.05) {
     return (
-      <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
-        <Minus className="h-3 w-3" aria-hidden />
-        estável
+      <span className="inline-flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground">
+        <Minus className="h-3 w-3 shrink-0" aria-hidden />
+        <span>estável {textoRodape}</span>
       </span>
     )
   }
   const Icon = up ? ArrowUpRight : ArrowDownRight
   const cls = up ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'
   return (
-    <span className={cn('inline-flex items-center gap-0.5 text-xs font-medium', cls)}>
-      <Icon className="h-3.5 w-3.5" aria-hidden />
-      {up ? '+' : ''}
-      {pct.toFixed(1)}% vs período anterior
+    <span className={cn('inline-flex flex-wrap items-center gap-x-1 text-xs font-medium', cls)}>
+      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      <span>
+        {up ? '+' : ''}
+        {pct.toFixed(1)}% {textoRodape}
+      </span>
     </span>
+  )
+}
+
+type MinhaUnidade = { id: string; nome: string; slug: string }
+
+function parseMinhasUnidades(
+  rows: { barbearias?: MinhaUnidade | MinhaUnidade[] | null }[] | null,
+): MinhaUnidade[] {
+  const byId = new Map<string, MinhaUnidade>()
+  for (const row of rows ?? []) {
+    const raw = row.barbearias
+    const b = Array.isArray(raw) ? raw[0] : raw
+    if (b?.id && b.slug) {
+      byId.set(b.id, { id: b.id, nome: b.nome?.trim() || b.slug, slug: b.slug })
+    }
+  }
+  return [...byId.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
+}
+
+function KpiVisaoCard({
+  titulo,
+  valorExibido,
+  comparar,
+  atual,
+  anterior,
+  textoRodape,
+}: {
+  titulo: string
+  valorExibido: string
+  comparar: boolean
+  atual: number
+  anterior: number
+  textoRodape: string
+}) {
+  return (
+    <Card className="min-w-0">
+      <CardHeader className="pb-2">
+        <CardDescription>{titulo}</CardDescription>
+        <CardTitle className="text-2xl tabular-nums tracking-tight">{valorExibido}</CardTitle>
+      </CardHeader>
+      <CardContent className="min-h-[44px] text-xs text-muted-foreground">
+        <TrendDelta
+          comparar={comparar}
+          atual={atual}
+          anterior={anterior}
+          textoRodape={textoRodape}
+        />
+      </CardContent>
+    </Card>
   )
 }
 
@@ -172,8 +246,13 @@ interface RelatoriosDashboardProps {
 }
 
 export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
+  const router = useRouter()
   const [barbeariaId, setBarbeariaId] = useState<string | null>(null)
+  const [unidades, setUnidades] = useState<MinhaUnidade[]>([])
   const [preset, setPreset] = useState<RelatorioPeriodoPreset>('7d')
+  const [personalizadoInicio, setPersonalizadoInicio] = useState<Date | null>(null)
+  const [personalizadoFim, setPersonalizadoFim] = useState<Date | null>(null)
+  const [compararComAnterior, setCompararComAnterior] = useState(true)
   const [tab, setTab] = useState('visao')
   /** Primeira carga (ou troca de unidade) concluída — evita sumir o grid quando o período vem vazio. */
   const [dadosProntos, setDadosProntos] = useState(false)
@@ -185,10 +264,11 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
   const [estoque, setEstoque] = useState<EstoqueProduto[]>([])
   const [totalClientes, setTotalClientes] = useState(0)
   const [clientesNovos, setClientesNovos] = useState(0)
+  const [clientesNovosAnt, setClientesNovosAnt] = useState(0)
 
   const { inicio, fim } = useMemo(
-    () => intervaloPorPreset(preset, null, null),
-    [preset],
+    () => intervaloPorPreset(preset, personalizadoInicio, personalizadoFim),
+    [preset, personalizadoInicio, personalizadoFim],
   )
   const startKey = toLocalDateKey(inicio)
   const endKey = toLocalDateKey(fim)
@@ -205,75 +285,88 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
     [inicio, fim],
   )
 
+  const textoRodapeKpi = useMemo(() => textoComparativoKpi(inicio, fim), [inicio, fim])
+
   const load = useCallback(async () => {
     if (!barbeariaId) return
     setError(null)
     setRefreshing(true)
     try {
-    const supabase = createClient()
-    const { inicio: i0, fim: f0 } = intervaloPorPreset(preset, null, null)
-    const sk = toLocalDateKey(i0)
-    const ek = toLocalDateKey(f0)
-    const { inicio: ia, fim: fa } = intervaloAnteriorComparacao(i0, f0)
-    const ska = toLocalDateKey(ia)
-    const eka = toLocalDateKey(fa)
+      const supabase = createClient()
+      const i0 = inicio
+      const f0 = fim
+      const sk = toLocalDateKey(i0)
+      const ek = toLocalDateKey(f0)
+      const { inicio: ia, fim: fa } = intervaloAnteriorComparacao(i0, f0)
+      const ska = toLocalDateKey(ia)
+      const eka = toLocalDateKey(fa)
 
-    const sel = `
+      const sel = `
       *,
       cliente:clientes(*),
       barbeiro:barbeiros(*),
       servico:servicos(*)
     `
 
-    const [
-      rAtual,
-      rAnt,
-      rCli,
-      rNovos,
-      rEst,
-    ] = await Promise.all([
-      supabase
+      const rAtual = await supabase
         .from('agendamentos')
         .select(sel)
         .eq('barbearia_id', barbeariaId)
         .gte('data', sk)
         .lte('data', ek)
         .order('data', { ascending: true })
-        .order('horario', { ascending: true }),
-      supabase
-        .from('agendamentos')
-        .select(sel)
-        .eq('barbearia_id', barbeariaId)
-        .gte('data', ska)
-        .lte('data', eka),
-      supabase.from('clientes').select('*', { count: 'exact', head: true }).eq('barbearia_id', barbeariaId),
-      supabase
-        .from('clientes')
-        .select('id', { count: 'exact', head: true })
-        .eq('barbearia_id', barbeariaId)
-        .gte('created_at', i0.toISOString())
-        .lte('created_at', f0.toISOString()),
-      supabase.from('estoque_produtos').select('*').eq('barbearia_id', barbeariaId).order('nome'),
-    ])
+        .order('horario', { ascending: true })
 
-    if (rAtual.error) {
-      setError('Não foi possível carregar agendamentos do período.')
-      setAgAtual([])
-    } else {
-      setAgAtual((rAtual.data ?? []) as Agendamento[])
-    }
-    if (rAnt.error) setAgAnterior([])
-    else setAgAnterior((rAnt.data ?? []) as Agendamento[])
+      if (compararComAnterior) {
+        const [rAnt, rNovosAnt] = await Promise.all([
+          supabase
+            .from('agendamentos')
+            .select(sel)
+            .eq('barbearia_id', barbeariaId)
+            .gte('data', ska)
+            .lte('data', eka),
+          supabase
+            .from('clientes')
+            .select('id', { count: 'exact', head: true })
+            .eq('barbearia_id', barbeariaId)
+            .gte('created_at', ia.toISOString())
+            .lte('created_at', fa.toISOString()),
+        ])
+        if (rAnt.error) setAgAnterior([])
+        else setAgAnterior((rAnt.data ?? []) as Agendamento[])
+        setClientesNovosAnt(rNovosAnt.count ?? 0)
+      } else {
+        setAgAnterior([])
+        setClientesNovosAnt(0)
+      }
 
-    setTotalClientes(rCli.count ?? 0)
-    setClientesNovos(rNovos.count ?? 0)
-    if (rEst.error) setEstoque([])
-    else setEstoque((rEst.data ?? []) as EstoqueProduto[])
+      const [rCli, rNovos, rEst] = await Promise.all([
+        supabase.from('clientes').select('*', { count: 'exact', head: true }).eq('barbearia_id', barbeariaId),
+        supabase
+          .from('clientes')
+          .select('id', { count: 'exact', head: true })
+          .eq('barbearia_id', barbeariaId)
+          .gte('created_at', i0.toISOString())
+          .lte('created_at', f0.toISOString()),
+        supabase.from('estoque_produtos').select('*').eq('barbearia_id', barbeariaId).order('nome'),
+      ])
+
+      if (rAtual.error) {
+        setError('Não foi possível carregar agendamentos do período.')
+        setAgAtual([])
+      } else {
+        setAgAtual((rAtual.data ?? []) as Agendamento[])
+      }
+
+      setTotalClientes(rCli.count ?? 0)
+      setClientesNovos(rNovos.count ?? 0)
+      if (rEst.error) setEstoque([])
+      else setEstoque((rEst.data ?? []) as EstoqueProduto[])
     } finally {
       setRefreshing(false)
       setDadosProntos(true)
     }
-  }, [barbeariaId, preset])
+  }, [barbeariaId, inicio, fim, compararComAnterior])
 
   useEffect(() => {
     let cancelled = false
@@ -304,6 +397,26 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
       cancelled = true
     }
   }, [slug])
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadUnidades() {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user || cancelled) return
+      const { data: buRows } = await supabase
+        .from('barbearia_users')
+        .select('barbearias ( id, nome, slug )')
+        .eq('user_id', user.id)
+      if (!cancelled) setUnidades(parseMinhasUnidades(buRows))
+    }
+    void loadUnidades()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!barbeariaId) return
@@ -404,42 +517,135 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
           </Button>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl border border-border/80 bg-muted/20 p-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between md:p-4 print:border-0 print:bg-transparent">
-          <div className="flex min-w-0 flex-col gap-1.5 sm:flex-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Período</span>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={preset}
-                onValueChange={(v) => setPreset(v as RelatorioPeriodoPreset)}
-                disabled={!barbeariaId}
-              >
-                <SelectTrigger className="h-9 w-full min-w-[10rem] sm:w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7d">Últimos 7 dias</SelectItem>
-                  <SelectItem value="30d">Últimos 30 dias</SelectItem>
-                  <SelectItem value="mes">Este mês</SelectItem>
-                  <SelectItem value="mes_anterior">Mês anterior</SelectItem>
-                </SelectContent>
-              </Select>
-              <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                <CalendarRange className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
-                <span className="font-medium text-foreground">{periodoLabel}</span>
+        <div className="space-y-4 rounded-xl border border-border/80 bg-muted/20 p-3 md:p-4 print:border-0 print:bg-transparent">
+          <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between">
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Filtros globais
               </span>
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-muted-foreground">Período rápido</Label>
+                  <Select
+                    value={preset}
+                    onValueChange={(v) => {
+                      const p = v as RelatorioPeriodoPreset
+                      setPreset(p)
+                      if (p === 'personalizado') {
+                        setPersonalizadoInicio((prev) => prev ?? startOfDay(subDays(new Date(), 6)))
+                        setPersonalizadoFim((prev) => prev ?? endOfDay(new Date()))
+                      }
+                    }}
+                    disabled={!barbeariaId}
+                  >
+                    <SelectTrigger className="h-9 w-[min(100%,13.5rem)] sm:w-[220px]">
+                      <SelectValue placeholder="Período" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hoje">Hoje</SelectItem>
+                      <SelectItem value="ontem">Ontem</SelectItem>
+                      <SelectItem value="7d">Últimos 7 dias</SelectItem>
+                      <SelectItem value="30d">Últimos 30 dias</SelectItem>
+                      <SelectItem value="mes">Este mês</SelectItem>
+                      <SelectItem value="mes_anterior">Mês passado</SelectItem>
+                      <SelectItem value="personalizado">Personalizado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {preset === 'personalizado' ? (
+                  <>
+                    <div className="space-y-1">
+                      <Label htmlFor="rel-dt-ini" className="text-[11px] text-muted-foreground">
+                        Início
+                      </Label>
+                      <Input
+                        id="rel-dt-ini"
+                        type="date"
+                        className="h-9 w-[10.5rem]"
+                        value={personalizadoInicio ? format(personalizadoInicio, 'yyyy-MM-dd') : ''}
+                        onChange={(e) => {
+                          const t = e.target.value
+                          if (!t) {
+                            setPersonalizadoInicio(null)
+                            return
+                          }
+                          setPersonalizadoInicio(startOfDay(new Date(`${t}T12:00:00`)))
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="rel-dt-fim" className="text-[11px] text-muted-foreground">
+                        Fim
+                      </Label>
+                      <Input
+                        id="rel-dt-fim"
+                        type="date"
+                        className="h-9 w-[10.5rem]"
+                        value={personalizadoFim ? format(personalizadoFim, 'yyyy-MM-dd') : ''}
+                        onChange={(e) => {
+                          const t = e.target.value
+                          if (!t) {
+                            setPersonalizadoFim(null)
+                            return
+                          }
+                          setPersonalizadoFim(endOfDay(new Date(`${t}T12:00:00`)))
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : null}
+                <span className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border/60 bg-background/80 px-2.5 py-1 text-sm text-muted-foreground">
+                  <CalendarRange className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+                  <span className="font-medium text-foreground">{periodoLabel}</span>
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center lg:justify-end">
+              {unidades.length > 1 ? (
+                <div className="space-y-1 sm:min-w-[12rem]">
+                  <Label className="text-[11px] text-muted-foreground">Unidade</Label>
+                  <Select
+                    value={slug}
+                    onValueChange={(nextSlug) =>
+                      router.push(`${tenantBarbeariaBasePath(nextSlug)}/relatorios`)
+                    }
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {unidades.map((u) => (
+                        <SelectItem key={u.id} value={u.slug}>
+                          {u.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+              <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/80 px-3 py-2">
+                <Switch
+                  id="rel-comparar"
+                  checked={compararComAnterior}
+                  onCheckedChange={(c) => setCompararComAnterior(Boolean(c))}
+                />
+                <Label htmlFor="rel-comparar" className="cursor-pointer text-sm leading-snug">
+                  Comparar com período anterior
+                </Label>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="h-9 shrink-0 gap-1.5"
+                disabled={!barbeariaId || refreshing}
+                onClick={() => void load()}
+              >
+                {refreshing ? <Spinner className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" aria-hidden />}
+                Atualizar
+              </Button>
             </div>
           </div>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="shrink-0 gap-1.5"
-            disabled={!barbeariaId || refreshing}
-            onClick={() => void load()}
-          >
-            {refreshing ? <Spinner className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" aria-hidden />}
-            Atualizar
-          </Button>
         </div>
 
         {!dadosProntos ? (
@@ -478,81 +684,70 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
             <div className="hidden print:block print:space-y-2">
               <p className="text-sm font-semibold">Relatório executivo — {periodoLabel}</p>
               <p className="text-xs text-muted-foreground">
-                Atendimentos: {resAtual.total} · Concluídos: {resAtual.concluidos} · Faturamento (concluídos):{' '}
-                {formatCurrency(resAtual.fatConcluido)}
+                Faturamento: {formatCurrency(resAtual.fatConcluido)} · Atendimentos: {resAtual.total} · Ocupação:{' '}
+                {resAtual.realizacao.toFixed(0)}% · Ticket médio: {formatCurrency(resAtual.ticketMedio)} · Novos
+                clientes: {clientesNovos}
               </p>
             </div>
 
             <TabsContent value="visao" className="mt-0 space-y-4 print:block">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardDescription>Atendimentos no período</CardDescription>
-                    <CardTitle className="text-2xl tabular-nums">{resAtual.total}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-xs text-muted-foreground">
-                    <TrendDelta atual={resAtual.total} anterior={resAnt.total} />
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardDescription>Concluídos</CardDescription>
-                    <CardTitle className="text-2xl tabular-nums">{resAtual.concluidos}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-xs text-muted-foreground">
-                    Taxa de realização: {resAtual.realizacao.toFixed(1)}%
-                    <br />
-                    <TrendDelta atual={resAtual.concluidos} anterior={resAnt.concluidos} />
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardDescription>Faturamento (concluídos)</CardDescription>
-                    <CardTitle className="text-2xl tabular-nums text-primary">
-                      {formatCurrency(resAtual.fatConcluido)}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-xs text-muted-foreground">
-                    <TrendDelta atual={resAtual.fatConcluido} anterior={resAnt.fatConcluido} />
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardDescription>Ticket médio</CardDescription>
-                    <CardTitle className="text-2xl tabular-nums">{formatCurrency(resAtual.ticketMedio)}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-xs text-muted-foreground">
-                    <TrendDelta atual={resAtual.ticketMedio} anterior={resAnt.ticketMedio} />
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardDescription>Base de clientes</CardDescription>
-                    <CardTitle className="text-2xl tabular-nums">{totalClientes}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-xs text-muted-foreground">
-                    Novos no período: <span className="font-medium text-foreground">{clientesNovos}</span>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardDescription>Estoque (alertas)</CardDescription>
-                    <CardTitle className="text-2xl tabular-nums">
-                      {estoqueAlerta.baixo + estoqueAlerta.esgotado}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-xs text-muted-foreground">
-                    {estoqueAlerta.esgotado} esgotado(s) · {estoqueAlerta.baixo} abaixo do mínimo ·{' '}
-                    {estoqueAlerta.total} SKU
-                  </CardContent>
-                </Card>
+              <div>
+                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground print:hidden">
+                  Visão geral
+                </h2>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                  <KpiVisaoCard
+                    titulo="Faturamento"
+                    valorExibido={formatCurrency(resAtual.fatConcluido)}
+                    comparar={compararComAnterior}
+                    atual={resAtual.fatConcluido}
+                    anterior={resAnt.fatConcluido}
+                    textoRodape={textoRodapeKpi}
+                  />
+                  <KpiVisaoCard
+                    titulo="Atendimentos"
+                    valorExibido={String(resAtual.total)}
+                    comparar={compararComAnterior}
+                    atual={resAtual.total}
+                    anterior={resAnt.total}
+                    textoRodape={textoRodapeKpi}
+                  />
+                  <KpiVisaoCard
+                    titulo="Ocupação"
+                    valorExibido={`${resAtual.realizacao.toFixed(0)}%`}
+                    comparar={compararComAnterior}
+                    atual={resAtual.realizacao}
+                    anterior={resAnt.realizacao}
+                    textoRodape={textoRodapeKpi}
+                  />
+                  <KpiVisaoCard
+                    titulo="Ticket médio"
+                    valorExibido={formatCurrency(resAtual.ticketMedio)}
+                    comparar={compararComAnterior}
+                    atual={resAtual.ticketMedio}
+                    anterior={resAnt.ticketMedio}
+                    textoRodape={textoRodapeKpi}
+                  />
+                  <KpiVisaoCard
+                    titulo="Novos clientes"
+                    valorExibido={String(clientesNovos)}
+                    comparar={compararComAnterior}
+                    atual={clientesNovos}
+                    anterior={clientesNovosAnt}
+                    textoRodape={textoRodapeKpi}
+                  />
+                </div>
               </div>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Resumo</CardTitle>
+              <Card className="border-dashed print:hidden">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Contexto</CardTitle>
                   <CardDescription>
-                    Visão 360°: operação (agendamentos), receita realizada em concluídos, base de clientes e risco em
-                    estoque. Use as abas para detalhar.
+                    Base total: <span className="font-medium text-foreground">{totalClientes}</span> clientes ·
+                    Concluídos no período: {resAtual.concluidos} · Alertas de estoque:{' '}
+                    <span className="font-medium text-foreground">
+                      {estoqueAlerta.baixo + estoqueAlerta.esgotado}
+                    </span>{' '}
+                    ({estoqueAlerta.esgotado} esgot., {estoqueAlerta.baixo} abaixo do mín.)
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -745,8 +940,14 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
                 <CardHeader>
                   <CardTitle className="text-base">Comparativo com período anterior</CardTitle>
                   <CardDescription>
-                    Anterior: {format(iniAnt, 'dd/MM/yyyy', { locale: ptBR })} –{' '}
-                    {format(fimAnt, 'dd/MM/yyyy', { locale: ptBR })}
+                    {compararComAnterior ? (
+                      <>
+                        Janela de comparação: {format(iniAnt, 'dd/MM/yyyy', { locale: ptBR })} –{' '}
+                        {format(fimAnt, 'dd/MM/yyyy', { locale: ptBR })}
+                      </>
+                    ) : (
+                      <>Ligue o comparativo nos filtros globais para carregar o período anterior.</>
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -755,7 +956,12 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
                     <p className="mt-1 text-2xl font-semibold tabular-nums">{formatCurrency(resAtual.fatConcluido)}</p>
                     <p className="text-xs text-muted-foreground">antes {formatCurrency(resAnt.fatConcluido)}</p>
                     <div className="mt-2">
-                      <TrendDelta atual={resAtual.fatConcluido} anterior={resAnt.fatConcluido} />
+                      <TrendDelta
+                        comparar={compararComAnterior}
+                        atual={resAtual.fatConcluido}
+                        anterior={resAnt.fatConcluido}
+                        textoRodape={textoRodapeKpi}
+                      />
                     </div>
                   </div>
                   <div className="rounded-lg border border-border/70 p-4">
@@ -763,7 +969,12 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
                     <p className="mt-1 text-2xl font-semibold tabular-nums">{resAtual.total}</p>
                     <p className="text-xs text-muted-foreground">antes {resAnt.total}</p>
                     <div className="mt-2">
-                      <TrendDelta atual={resAtual.total} anterior={resAnt.total} />
+                      <TrendDelta
+                        comparar={compararComAnterior}
+                        atual={resAtual.total}
+                        anterior={resAnt.total}
+                        textoRodape={textoRodapeKpi}
+                      />
                     </div>
                   </div>
                   <div className="rounded-lg border border-border/70 p-4">
@@ -771,7 +982,12 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
                     <p className="mt-1 text-2xl font-semibold tabular-nums">{resAtual.realizacao.toFixed(1)}%</p>
                     <p className="text-xs text-muted-foreground">antes {resAnt.realizacao.toFixed(1)}%</p>
                     <div className="mt-2">
-                      <TrendDelta atual={resAtual.realizacao} anterior={resAnt.realizacao} />
+                      <TrendDelta
+                        comparar={compararComAnterior}
+                        atual={resAtual.realizacao}
+                        anterior={resAnt.realizacao}
+                        textoRodape={textoRodapeKpi}
+                      />
                     </div>
                   </div>
                   <div className="rounded-lg border border-border/70 p-4">
@@ -782,8 +998,10 @@ export function RelatoriosDashboard({ slug, base }: RelatoriosDashboardProps) {
                     <p className="text-xs text-muted-foreground">antes {resAnt.cancelados + resAnt.faltas}</p>
                     <div className="mt-2">
                       <TrendDelta
+                        comparar={compararComAnterior}
                         atual={resAtual.cancelados + resAtual.faltas}
                         anterior={resAnt.cancelados + resAnt.faltas}
+                        textoRodape={textoRodapeKpi}
                       />
                     </div>
                   </div>
