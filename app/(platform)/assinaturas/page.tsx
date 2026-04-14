@@ -75,6 +75,7 @@ import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import {
   labelPeriodicidade,
+  mesesPorPeriodicidade,
   parsePlanoPeriodicidade,
   type PlanoPeriodicidade,
 } from '@/lib/plano-periodicidade'
@@ -136,6 +137,26 @@ function startOfTodayLocal(): Date {
   const d = new Date()
   d.setHours(0, 0, 0, 0)
   return d
+}
+
+function formatDateKeyLocal(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function calcularFimPorPeriodicidade(
+  inicioEm: string,
+  periodicidade: PlanoPeriodicidade,
+): string {
+  const inicio = parseLocalDateKey(inicioEm)
+  if (!inicio) return ''
+  const meses = mesesPorPeriodicidade(periodicidade)
+  const fim = new Date(inicio)
+  fim.setMonth(fim.getMonth() + meses)
+  fim.setDate(fim.getDate() - 1)
+  return formatDateKeyLocal(fim)
 }
 
 /** Filtro “Vencidos”: inadimplente ou pendente com expiração já passada (renovação / cobrança). */
@@ -236,7 +257,7 @@ export default function SuperAssinaturasPage() {
     status: 'ativa',
     periodicidade: 'mensal',
     inicio_em: new Date().toISOString().split('T')[0],
-    fim_em: '',
+    fim_em: calcularFimPorPeriodicidade(new Date().toISOString().split('T')[0], 'mensal'),
   })
   const [editTarget, setEditTarget] = useState<Assinatura | null>(null)
   const [editForm, setEditForm] = useState<{
@@ -351,7 +372,7 @@ export default function SuperAssinaturasPage() {
       status: 'ativa',
       periodicidade: 'mensal',
       inicio_em: new Date().toISOString().split('T')[0],
-      fim_em: '',
+      fim_em: calcularFimPorPeriodicidade(new Date().toISOString().split('T')[0], 'mensal'),
     })
     loadData()
   }
@@ -1197,7 +1218,7 @@ export default function SuperAssinaturasPage() {
               status: 'ativa',
               periodicidade: 'mensal',
               inicio_em: new Date().toISOString().split('T')[0],
-              fim_em: '',
+              fim_em: calcularFimPorPeriodicidade(new Date().toISOString().split('T')[0], 'mensal'),
             })
             setBarbeariaComboOpen(false)
           }
@@ -1346,12 +1367,18 @@ export default function SuperAssinaturasPage() {
             <div className="space-y-2">
               <Label>Periodicidade de cobrança</Label>
               <p className="text-xs text-muted-foreground">
-                Registro do ciclo contratado; as datas de início e expiração continuam livres abaixo.
+                Registro do ciclo contratado; a validade e calculada automaticamente a partir do inicio.
               </p>
               <PlanoPeriodicidadeToggle
                 idPrefix="nova-assinatura-periodicidade"
                 value={form.periodicidade}
-                onChange={(periodicidade) => setForm((p) => ({ ...p, periodicidade }))}
+                onChange={(periodicidade) =>
+                  setForm((p) => ({
+                    ...p,
+                    periodicidade,
+                    fim_em: calcularFimPorPeriodicidade(p.inicio_em, periodicidade),
+                  }))
+                }
                 disabled={isSaving}
                 size="compact"
               />
@@ -1367,7 +1394,16 @@ export default function SuperAssinaturasPage() {
                   type="date"
                   required
                   value={form.inicio_em}
-                  onChange={(e) => setForm((p) => ({ ...p, inicio_em: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => {
+                      const inicio_em = e.target.value
+                      return {
+                        ...p,
+                        inicio_em,
+                        fim_em: calcularFimPorPeriodicidade(inicio_em, p.periodicidade),
+                      }
+                    })
+                  }
                   className="h-10"
                 />
               </div>
@@ -1380,7 +1416,8 @@ export default function SuperAssinaturasPage() {
                   type="date"
                   required
                   value={form.fim_em}
-                  onChange={(e) => setForm((p) => ({ ...p, fim_em: e.target.value }))}
+                  readOnly
+                  aria-readonly
                   className="h-10"
                 />
               </div>
@@ -1492,7 +1529,13 @@ export default function SuperAssinaturasPage() {
               <PlanoPeriodicidadeToggle
                 idPrefix="edit-assinatura-periodicidade"
                 value={editForm.periodicidade}
-                onChange={(periodicidade) => setEditForm((p) => ({ ...p, periodicidade }))}
+                onChange={(periodicidade) =>
+                  setEditForm((p) => ({
+                    ...p,
+                    periodicidade,
+                    fim_em: calcularFimPorPeriodicidade(p.inicio_em, periodicidade),
+                  }))
+                }
                 disabled={editSaving}
                 size="compact"
               />
@@ -1508,7 +1551,16 @@ export default function SuperAssinaturasPage() {
                   type="date"
                   required
                   value={editForm.inicio_em}
-                  onChange={(e) => setEditForm((p) => ({ ...p, inicio_em: e.target.value }))}
+                  onChange={(e) =>
+                    setEditForm((p) => {
+                      const inicio_em = e.target.value
+                      return {
+                        ...p,
+                        inicio_em,
+                        fim_em: calcularFimPorPeriodicidade(inicio_em, p.periodicidade),
+                      }
+                    })
+                  }
                   className="h-10"
                 />
               </div>
@@ -1521,7 +1573,8 @@ export default function SuperAssinaturasPage() {
                   type="date"
                   required
                   value={editForm.fim_em}
-                  onChange={(e) => setEditForm((p) => ({ ...p, fim_em: e.target.value }))}
+                  readOnly
+                  aria-readonly
                   className="h-10"
                 />
               </div>

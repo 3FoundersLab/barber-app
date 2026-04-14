@@ -33,7 +33,7 @@ BEGIN
     v_plano,
     'ativa',
     CURRENT_DATE,
-    CURRENT_DATE + INTERVAL '365 days',
+    (CURRENT_DATE + INTERVAL '1 month')::date - 1,
     'mensal'
   );
 END $$;
