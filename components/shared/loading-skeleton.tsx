@@ -187,25 +187,49 @@ export function ServiceCardListSkeleton({ count = 4, className }: ListSkeletonPr
   )
 }
 
-/** Card de cliente (mobile lista; tablet altura auto; lg+ quadrado na grade) */
+/** Card de cliente (alinhado ao `ClienteCard`: xl quadrado na grade + barra de ações inferior) */
 export function ClientCardSkeleton({ className }: { className?: string }) {
   return (
     <Card
       className={cn(
-        'relative flex min-w-0 gap-0 overflow-hidden py-0',
-        'max-md:aspect-auto max-md:min-h-[4.75rem] max-md:flex-row max-md:items-center',
-        'md:max-lg:flex-col md:max-lg:aspect-auto',
-        'lg:aspect-square lg:flex-col',
+        'relative flex min-w-0 flex-col gap-0 overflow-hidden py-0 shadow-sm',
+        'xl:aspect-square',
         className,
       )}
     >
-      <Skeleton className="absolute right-2 top-2 h-9 w-9 shrink-0 rounded-md max-md:top-1/2 max-md:-translate-y-1/2 md:h-11 md:w-11 lg:h-8 lg:w-8" />
-      <CardContent className="flex w-full min-w-0 flex-1 flex-col max-md:flex-row max-md:items-center max-md:gap-3 max-md:p-3 max-md:pr-12 max-md:pt-3 md:max-lg:items-center md:max-lg:gap-3 md:max-lg:p-4 md:max-lg:px-4 md:max-lg:pb-5 md:max-lg:pt-12 lg:h-full lg:min-h-0 lg:items-center lg:gap-2 lg:p-4 lg:pt-10 xl:p-4 xl:pt-10">
-        <Skeleton className="h-11 w-11 shrink-0 rounded-full md:max-lg:h-16 md:max-lg:w-16 lg:h-14 lg:w-14 xl:h-[4.5rem] xl:w-[4.5rem]" />
-        <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 px-1 max-md:items-start md:max-lg:items-center lg:items-center">
-          <Skeleton className="h-3.5 w-4/5 max-w-[9rem] max-md:w-full max-md:max-w-none" />
-          <Skeleton className="h-3 w-3/5 max-w-[6rem] max-md:w-3/4 md:max-lg:max-w-[10rem]" />
-          <Skeleton className="h-3 w-full max-w-[8rem] max-md:w-full max-md:max-w-none" />
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-0 p-0">
+        <div
+          className={cn(
+            'flex min-h-0 flex-1 flex-col',
+            'max-md:flex-row max-md:items-center max-md:gap-3 max-md:p-3 max-md:pb-3',
+            'md:max-lg:flex-col md:max-lg:items-center md:max-lg:gap-3 md:max-lg:p-4 md:max-lg:pb-4',
+            'lg:flex lg:flex-1 lg:flex-col lg:items-center lg:justify-center lg:gap-2 lg:p-4 lg:pt-5 lg:pb-4',
+          )}
+        >
+          <Skeleton className="h-11 w-11 shrink-0 rounded-full border-2 border-border/30 md:max-lg:h-16 md:max-lg:w-16 lg:h-14 lg:w-14 xl:h-[4.5rem] xl:w-[4.5rem]" />
+          <div
+            className={cn(
+              'flex min-h-0 w-full min-w-0 flex-1 flex-col justify-center gap-2 px-1',
+              'max-md:items-start max-md:gap-1.5',
+              'md:max-lg:items-center',
+              'lg:items-center',
+            )}
+          >
+            <Skeleton className="h-3.5 w-4/5 max-w-[10rem] max-md:w-full max-md:max-w-[14rem]" />
+            <Skeleton className="h-3 w-full max-w-[11rem] max-md:max-w-[13rem]" />
+            <Skeleton className="h-3 w-3/5 max-w-[9rem] max-md:w-4/5" />
+          </div>
+        </div>
+        <div
+          className={cn(
+            'flex shrink-0 items-center justify-center gap-0.5 border-t border-border/70 bg-gradient-to-b from-muted/35 to-muted/20 px-2 py-2.5',
+            'dark:from-muted/25 dark:to-muted/10',
+          )}
+        >
+          <Skeleton className="size-10 shrink-0 rounded-xl" />
+          <Skeleton className="size-10 shrink-0 rounded-xl" />
+          <div className="mx-1 h-6 w-px shrink-0 bg-border/80" aria-hidden />
+          <Skeleton className="size-10 shrink-0 rounded-xl" />
         </div>
       </CardContent>
     </Card>
@@ -222,30 +246,54 @@ export function ClientCardListSkeleton({ count = 5, className }: ListSkeletonPro
   )
 }
 
-/** Card da equipe: corpo + barra de ações (alinhado ao TeamMemberCard) */
+/** Card da equipe: corpo + barra de ações (alinhado ao `TeamMemberCard` com menu) */
 export function TeamMemberCardSkeleton({ className }: { className?: string }) {
   return (
     <Card
       className={cn(
         'relative flex min-w-0 flex-col gap-0 overflow-hidden py-0 shadow-sm',
-        'max-md:aspect-auto max-md:min-h-[4.75rem]',
-        'md:max-lg:aspect-auto',
         'lg:aspect-auto',
         className,
       )}
     >
-      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 p-0 md:gap-5">
-        <div className="flex min-h-0 flex-1 flex-col max-md:flex-row max-md:items-center max-md:gap-3 max-md:p-3 md:max-lg:flex-col md:max-lg:items-center md:max-lg:gap-3 md:max-lg:p-4 lg:flex lg:flex-1 lg:flex-col lg:items-center lg:justify-center lg:gap-2 lg:p-4 lg:pt-5 lg:pb-4">
-          <Skeleton className="h-11 w-11 shrink-0 rounded-full md:max-lg:h-16 md:max-lg:w-16 lg:h-14 lg:w-14 xl:h-[4.5rem] xl:w-[4.5rem]" />
-          <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 px-1 max-md:items-start md:max-lg:items-center lg:items-center">
-            <Skeleton className="h-3.5 w-4/5 max-w-[9rem] max-md:w-full max-md:max-w-none" />
-            <Skeleton className="h-3 w-3/5 max-w-[6rem] max-md:w-2/3 md:max-lg:max-w-[10rem]" />
-            <Skeleton className="h-3 w-full max-w-[8rem] max-md:w-full max-md:max-w-none" />
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-5 p-0 max-md:gap-4">
+        <div
+          className={cn(
+            'flex min-h-0 flex-1 flex-col',
+            'max-md:flex-row max-md:items-center max-md:gap-3 max-md:p-3 max-md:pb-3',
+            'md:max-lg:flex-col md:max-lg:items-center md:max-lg:gap-3 md:max-lg:p-4 md:max-lg:pb-4',
+            'lg:flex lg:flex-1 lg:flex-col lg:items-center lg:justify-center lg:gap-2 lg:p-4 lg:pt-5 lg:pb-4',
+          )}
+        >
+          <Skeleton className="h-11 w-11 shrink-0 rounded-full border-2 border-border/30 md:max-lg:h-16 md:max-lg:w-16 lg:h-14 lg:w-14 xl:h-[4.5rem] xl:w-[4.5rem]" />
+          <div
+            className={cn(
+              'flex min-h-0 w-full min-w-0 flex-1 flex-col gap-2 px-1',
+              'max-md:items-start max-md:justify-center max-md:gap-1.5',
+              'md:max-lg:items-center',
+              'lg:min-h-0 lg:justify-start lg:items-center',
+            )}
+          >
+            <div className="flex w-full min-w-0 flex-col gap-1 max-md:items-start md:max-lg:items-center lg:items-center">
+              <Skeleton className="h-3.5 w-4/5 max-w-[10rem] max-md:w-full max-md:max-w-[14rem]" />
+              <div className="flex flex-wrap justify-start gap-1 md:max-lg:justify-center lg:justify-center">
+                <Skeleton className="h-5 w-[4.5rem] shrink-0 rounded-full" />
+              </div>
+            </div>
+            <div className="flex w-full flex-col gap-1 max-md:items-start md:max-lg:items-center lg:items-center lg:pt-0.5">
+              <Skeleton className="h-3 w-full max-w-[11rem] max-md:max-w-[13rem]" />
+              <Skeleton className="h-3 w-3/5 max-w-[9rem] max-md:w-4/5" />
+            </div>
           </div>
         </div>
-        <div className="flex shrink-0 items-center justify-center gap-1 border-t border-border/70 bg-muted/20 px-2 py-2.5">
+        <div
+          className={cn(
+            'flex shrink-0 items-center justify-center gap-0.5 rounded-b-xl border-t border-border/70 bg-gradient-to-b from-muted/35 to-muted/20 px-2 py-3',
+            'dark:from-muted/25 dark:to-muted/10',
+          )}
+        >
           <Skeleton className="size-10 shrink-0 rounded-xl" />
-          <Skeleton className="mx-0.5 h-6 w-px shrink-0 bg-border/60" />
+          <div className="mx-1 h-6 w-px shrink-0 bg-border/80" aria-hidden />
           <Skeleton className="size-10 shrink-0 rounded-xl" />
         </div>
       </CardContent>

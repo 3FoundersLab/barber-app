@@ -164,7 +164,7 @@ export default function TenantPlanosPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null)
-  const [activeTab, setActiveTab] = useState<'basicas' | 'servicos' | 'config'>('basicas')
+  const [activeTab, setActiveTab] = useState<'basicas' | 'servicos'>('basicas')
   const [draggedServiceId, setDraggedServiceId] = useState<string | null>(null)
 
   const [form, setForm] = useState({
@@ -520,15 +520,14 @@ export default function TenantPlanosPage() {
           <DialogHeader>
             <DialogTitle>{editingPlan ? 'Editar plano' : 'Novo plano de assinatura'}</DialogTitle>
             <DialogDescription>
-              Configure informações básicas, serviços incluídos e regras do plano.
+              Configure informações básicas e serviços incluídos no plano.
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'basicas' | 'servicos' | 'config')}>
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'basicas' | 'servicos')}>
             <TabsList>
               <TabsTrigger value="basicas">Informações Básicas</TabsTrigger>
               <TabsTrigger value="servicos">Serviços Incluídos</TabsTrigger>
-              <TabsTrigger value="config">Configurações</TabsTrigger>
             </TabsList>
 
             <TabsContent value="basicas" className="space-y-4 pt-3">
@@ -584,6 +583,16 @@ export default function TenantPlanosPage() {
                     placeholder="120,00"
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duração do plano (meses)</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  min={1}
+                  value={form.durationMonths}
+                  onChange={(event) => setForm((prev) => ({ ...prev, durationMonths: event.target.value }))}
+                />
               </div>
             </TabsContent>
 
@@ -649,19 +658,6 @@ export default function TenantPlanosPage() {
                 <Plus className="size-4" />
                 Adicionar servico
               </Button>
-            </TabsContent>
-
-            <TabsContent value="config" className="space-y-4 pt-3">
-              <div className="space-y-2">
-                <Label htmlFor="duration">Duração do plano (meses)</Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  min={1}
-                  value={form.durationMonths}
-                  onChange={(event) => setForm((prev) => ({ ...prev, durationMonths: event.target.value }))}
-                />
-              </div>
             </TabsContent>
           </Tabs>
 

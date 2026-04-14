@@ -81,7 +81,7 @@ export default function TenantEquipePage() {
   const [barbeiros, setBarbeiros] = useState<Barbeiro[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState<EquipePageSize>(24)
+  const [pageSize, setPageSize] = useState<EquipePageSize>(12)
   const [barbeariaId, setBarbeariaId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
