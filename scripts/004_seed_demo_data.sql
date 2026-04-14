@@ -17,14 +17,8 @@ VALUES (
 -- ===========================================
 -- SERVIÇOS DEMO
 -- ===========================================
-INSERT INTO public.servicos (barbearia_id, nome, descricao, preco, duracao) VALUES
-('11111111-1111-1111-1111-111111111111', 'Corte Tradicional', 'Corte clássico com máquina e tesoura', 45.00, 30),
-('11111111-1111-1111-1111-111111111111', 'Corte + Barba', 'Corte completo com barba na navalha', 70.00, 45),
-('11111111-1111-1111-1111-111111111111', 'Barba', 'Barba completa com toalha quente', 35.00, 20),
-('11111111-1111-1111-1111-111111111111', 'Corte Degradê', 'Corte degradê moderno', 55.00, 40),
-('11111111-1111-1111-1111-111111111111', 'Hidratação', 'Tratamento de hidratação capilar', 40.00, 25),
-('11111111-1111-1111-1111-111111111111', 'Pigmentação', 'Pigmentação de barba ou cabelo', 80.00, 60)
-ON CONFLICT DO NOTHING;
+-- Intencionalmente sem cadastro automático de serviços.
+-- Cada barbearia deve criar os próprios serviços no painel.
 
 -- ===========================================
 -- BARBEIROS DEMO
@@ -75,26 +69,4 @@ ON CONFLICT DO NOTHING;
 -- ===========================================
 -- AGENDAMENTOS DEMO (próximos dias)
 -- ===========================================
-INSERT INTO public.agendamentos (barbearia_id, cliente_id, barbeiro_id, servico_id, data, horario, status, status_pagamento, valor) 
-SELECT 
-  '11111111-1111-1111-1111-111111111111',
-  c.id,
-  b.id,
-  s.id,
-  CURRENT_DATE + (random() * 7)::int,
-  (TIME '09:00' + (random() * 10)::int * INTERVAL '1 hour'),
-  CASE (random() * 3)::int 
-    WHEN 0 THEN 'agendado'
-    WHEN 1 THEN 'concluido'
-    ELSE 'agendado'
-  END,
-  CASE (random() * 2)::int
-    WHEN 0 THEN 'pendente'
-    ELSE 'pago'
-  END,
-  s.preco
-FROM 
-  (SELECT id FROM public.clientes WHERE barbearia_id = '11111111-1111-1111-1111-111111111111' LIMIT 5) c,
-  (SELECT id FROM public.barbeiros WHERE barbearia_id = '11111111-1111-1111-1111-111111111111' ORDER BY random() LIMIT 1) b,
-  (SELECT id, preco FROM public.servicos WHERE barbearia_id = '11111111-1111-1111-1111-111111111111' ORDER BY random() LIMIT 1) s
-ON CONFLICT DO NOTHING;
+-- Sem agendamentos automáticos por dependerem de serviços pré-cadastrados.
