@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion'
-import { ArrowLeft, Banknote, CalendarPlus, Eye, EyeOff, UserCheck } from 'lucide-react'
+import { Banknote, CalendarPlus, Eye, EyeOff, UserCheck } from 'lucide-react'
 import { LoginLandingShell } from '@/components/auth/login-landing-shell'
 import { LandingHeroFloatingCard } from '@/components/landing/landing-hero-floating-card'
 import { LANDING_LINKS } from '@/components/landing/constants'
@@ -236,13 +236,6 @@ function LoginPageContent() {
             transition={{ duration: 0.45, ease: LANDING_EASE, delay: 0.05 }}
           >
             <ThemeToggle inline variant="landing" />
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors duration-300 hover:text-foreground"
-            >
-              <ArrowLeft className="size-4 shrink-0" aria-hidden />
-              Voltar ao site
-            </Link>
           </motion.div>
         </div>
       </header>
