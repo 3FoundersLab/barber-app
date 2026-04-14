@@ -38,7 +38,7 @@ export function ClienteCard({
     <Card
       className={cn(
         'relative flex min-w-0 flex-col gap-0 overflow-hidden py-0 shadow-sm transition-[box-shadow,background-color]',
-        'lg:aspect-square',
+        'xl:aspect-square',
         onClick && 'cursor-pointer hover:bg-muted/25 hover:shadow-md',
         className,
       )}

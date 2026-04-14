@@ -360,7 +360,7 @@ export default function AdminClientesPage() {
         <div
           className={
             isLoading || clientes.length > 0
-              ? 'grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-5 lg:grid-cols-4 lg:gap-4 xl:grid-cols-6'
+              ? 'grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-5 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4 xl:gap-4 2xl:grid-cols-6'
               : undefined
           }
         >
