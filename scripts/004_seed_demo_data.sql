@@ -56,15 +56,29 @@ INSERT INTO public.horarios_trabalho (barbeiro_id, dia_semana, hora_inicio, hora
 ON CONFLICT DO NOTHING;
 
 -- ===========================================
--- CLIENTES DEMO
+-- CLIENTES DEMO (somente fictícios — sem nomes de pessoas reais)
 -- ===========================================
-INSERT INTO public.clientes (id, barbearia_id, nome, telefone, email) VALUES
-('33333333-3333-3333-3333-333333333331', '11111111-1111-1111-1111-111111111111', 'Ricardo Almeida', '(11) 97777-1111', 'ricardo@email.com'),
-('33333333-3333-3333-3333-333333333332', '11111111-1111-1111-1111-111111111111', 'Fernando Costa', '(11) 97777-2222', 'fernando@email.com'),
-('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', 'Marcos Lima', '(11) 97777-3333', 'marcos@email.com'),
-('33333333-3333-3333-3333-333333333334', '11111111-1111-1111-1111-111111111111', 'Lucas Pereira', '(11) 97777-4444', 'lucas@email.com'),
-('33333333-3333-3333-3333-333333333335', '11111111-1111-1111-1111-111111111111', 'Bruno Souza', '(11) 97777-5555', 'bruno@email.com')
-ON CONFLICT DO NOTHING;
+INSERT INTO public.clientes (id, barbearia_id, nome, telefone, email, notas) VALUES
+('33333333-3333-3333-3333-333333333331', '11111111-1111-1111-1111-111111111111', 'Cliente fictício 01', '(11) 90000-1001', 'cliente-ficticio-01@example.com', 'Dado de demonstração; não representa pessoa real.'),
+('33333333-3333-3333-3333-333333333332', '11111111-1111-1111-1111-111111111111', 'Cliente fictício 02', '(11) 90000-1002', 'cliente-ficticio-02@example.com', 'Dado de demonstração; não representa pessoa real.'),
+('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', 'Cliente fictício 03', '(11) 90000-1003', 'cliente-ficticio-03@example.com', 'Dado de demonstração; não representa pessoa real.'),
+('33333333-3333-3333-3333-333333333334', '11111111-1111-1111-1111-111111111111', 'Cliente fictício 04', '(11) 90000-1004', 'cliente-ficticio-04@example.com', 'Dado de demonstração; não representa pessoa real.'),
+('33333333-3333-3333-3333-333333333335', '11111111-1111-1111-1111-111111111111', 'Cliente fictício 05', '(11) 90000-1005', 'cliente-ficticio-05@example.com', 'Dado de demonstração; não representa pessoa real.'),
+('33333333-3333-3333-3333-333333333336', '11111111-1111-1111-1111-111111111111', 'Cliente fictício 06', '(11) 90000-1006', 'cliente-ficticio-06@example.com', 'Dado de demonstração; não representa pessoa real.'),
+('33333333-3333-3333-3333-333333333337', '11111111-1111-1111-1111-111111111111', 'Cliente fictício 07', '(11) 90000-1007', 'cliente-ficticio-07@example.com', 'Dado de demonstração; não representa pessoa real.'),
+('33333333-3333-3333-3333-333333333338', '11111111-1111-1111-1111-111111111111', 'Cliente fictício 08', '(11) 90000-1008', 'cliente-ficticio-08@example.com', 'Dado de demonstração; não representa pessoa real.'),
+('33333333-3333-3333-3333-333333333339', '11111111-1111-1111-1111-111111111111', 'Cliente fictício 09', '(11) 90000-1009', 'cliente-ficticio-09@example.com', 'Dado de demonstração; não representa pessoa real.'),
+('33333333-3333-3333-3333-333333333340', '11111111-1111-1111-1111-111111111111', 'Cliente fictício 10', '(11) 90000-1010', 'cliente-ficticio-10@example.com', 'Dado de demonstração; não representa pessoa real.'),
+('33333333-3333-3333-3333-333333333341', '11111111-1111-1111-1111-111111111111', 'Cliente fictício 11', '(11) 90000-1011', 'cliente-ficticio-11@example.com', 'Dado de demonstração; não representa pessoa real.'),
+('33333333-3333-3333-3333-333333333342', '11111111-1111-1111-1111-111111111111', 'Cliente fictício 12', '(11) 90000-1012', 'cliente-ficticio-12@example.com', 'Dado de demonstração; não representa pessoa real.'),
+('33333333-3333-3333-3333-333333333343', '11111111-1111-1111-1111-111111111111', 'Cliente fictício 13', '(11) 90000-1013', 'cliente-ficticio-13@example.com', 'Dado de demonstração; não representa pessoa real.'),
+('33333333-3333-3333-3333-333333333344', '11111111-1111-1111-1111-111111111111', 'Cliente fictício 14', '(11) 90000-1014', 'cliente-ficticio-14@example.com', 'Dado de demonstração; não representa pessoa real.'),
+('33333333-3333-3333-3333-333333333345', '11111111-1111-1111-1111-111111111111', 'Cliente fictício 15', '(11) 90000-1015', 'cliente-ficticio-15@example.com', 'Dado de demonstração; não representa pessoa real.')
+ON CONFLICT (id) DO UPDATE SET
+  nome = EXCLUDED.nome,
+  telefone = EXCLUDED.telefone,
+  email = EXCLUDED.email,
+  notas = EXCLUDED.notas;
 
 -- ===========================================
 -- AGENDAMENTOS DEMO (próximos dias)

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Search, Users } from 'lucide-react'
 import { PageContent, PageTitle } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { ClienteCard } from '@/components/domain/cliente-card'
@@ -16,8 +16,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Alert, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import {
   Dialog,
   DialogContent,
@@ -35,6 +37,7 @@ import {
 } from '@/components/ui/sheet'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
@@ -52,6 +55,7 @@ import {
   PaginationEllipsis,
   PaginationItem,
 } from '@/components/ui/pagination'
+import { getClientesDemoForBarbearia } from '@/lib/clientes-demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
@@ -107,7 +111,8 @@ export default function AdminClientesPage() {
   const { slug, base } = useTenantAdminBase()
   const searchParams = useSearchParams()
 
-  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [clientesReais, setClientesReais] = useState<Cliente[]>([])
+  const [useDemoData, setUseDemoData] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<ClientesPageSize>(24)
@@ -142,18 +147,23 @@ export default function AdminClientesPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [searchTerm, pageSize])
+  }, [searchTerm, pageSize, useDemoData])
+
+  const clientesExibidos = useMemo(() => {
+    if (useDemoData && barbeariaId) return getClientesDemoForBarbearia(barbeariaId)
+    return clientesReais
+  }, [useDemoData, barbeariaId, clientesReais])
 
   const filteredClientes = useMemo(() => {
     const q = searchTerm.trim().toLowerCase()
-    if (!q) return clientes
-    return clientes.filter(
+    if (!q) return clientesExibidos
+    return clientesExibidos.filter(
       (c) =>
         c.nome.toLowerCase().includes(q) ||
         (c.telefone?.includes(searchTerm.trim()) ?? false) ||
         (c.email?.toLowerCase().includes(q) ?? false),
     )
-  }, [searchTerm, clientes])
+  }, [searchTerm, clientesExibidos])
 
   const totalFiltered = filteredClientes.length
   const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize))
@@ -191,13 +201,15 @@ export default function AdminClientesPage() {
           .order('nome')
 
         if (data) {
-          setClientes(data)
+          setClientesReais(data)
         }
       }
     }
 
     setIsLoading(false)
   }
+
+  const showClientesSkeleton = isLoading && !(useDemoData && barbeariaId)
 
   const loadHistoricoCliente = useCallback(
     async (clienteId: string) => {
@@ -270,7 +282,7 @@ export default function AdminClientesPage() {
   }
 
   const solicitarExclusaoCliente = (id: string) => {
-    const c = clientes.find((x) => x.id === id)
+    const c = clientesReais.find((x) => x.id === id)
     if (c) setClienteParaExcluir(c)
   }
 
@@ -283,7 +295,7 @@ export default function AdminClientesPage() {
   }
 
   const handleSave = async () => {
-    if (!barbeariaId) return
+    if (!barbeariaId || useDemoData) return
 
     setIsSaving(true)
     const supabase = createClient()
@@ -316,11 +328,40 @@ export default function AdminClientesPage() {
       <PageContent className="space-y-4 md:space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
           <PageTitle className="min-w-0 truncate">Clientes</PageTitle>
-          <Button type="button" className="w-full shrink-0 sm:w-auto" size="sm" onClick={handleOpenNew}>
-            <Plus className="mr-1 h-4 w-4" />
-            Novo
-          </Button>
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-1.5">
+              <Switch
+                id="clientes-demo-data"
+                checked={useDemoData}
+                onCheckedChange={setUseDemoData}
+                aria-label="Usar dados fictícios de demonstração"
+              />
+              <Label htmlFor="clientes-demo-data" className="cursor-pointer text-xs font-medium">
+                Dados fictícios
+              </Label>
+            </div>
+            <Button
+              type="button"
+              className="w-full shrink-0 sm:w-auto"
+              size="sm"
+              onClick={handleOpenNew}
+              disabled={useDemoData}
+              title={useDemoData ? 'Desative dados fictícios para cadastrar clientes reais' : undefined}
+            >
+              <Plus className="mr-1 h-4 w-4" aria-hidden />
+              Novo cliente
+            </Button>
+          </div>
         </div>
+
+        {useDemoData ? (
+          <Alert variant="info">
+            <AlertTitle>
+              Modo demonstração: lista com 15 clientes fictícios (somente visualização). Desligue o interruptor para
+              ver e editar os clientes reais desta barbearia.
+            </AlertTitle>
+          </Alert>
+        ) : null}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <div className="relative min-w-0 flex-1">
@@ -359,12 +400,12 @@ export default function AdminClientesPage() {
 
         <div
           className={
-            isLoading || clientes.length > 0
+            showClientesSkeleton || clientesExibidos.length > 0
               ? 'grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-5 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4 xl:gap-4 2xl:grid-cols-6'
               : undefined
           }
         >
-          {isLoading ? (
+          {showClientesSkeleton ? (
             Array.from({ length: Math.min(pageSize, 48) }).map((_, i) => (
               <ClientCardSkeleton key={i} />
             ))
@@ -373,29 +414,70 @@ export default function AdminClientesPage() {
               <ClienteCard
                 key={cliente.id}
                 cliente={cliente}
-                onHistorico={handleOpenHistorico}
-                onEdit={handleEdit}
-                onDelete={solicitarExclusaoCliente}
+                {...(useDemoData
+                  ? {}
+                  : {
+                      onHistorico: handleOpenHistorico,
+                      onEdit: handleEdit,
+                      onDelete: solicitarExclusaoCliente,
+                    })}
               />
             ))
           ) : (
-            <Card className="col-span-full border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <p className="text-muted-foreground">
-                  {searchTerm.trim() ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
-                </p>
-                {!searchTerm.trim() && (
-                  <Button size="sm" className="mt-3" onClick={handleOpenNew}>
-                    <Plus className="mr-1 h-4 w-4" />
-                    Adicionar cliente
-                  </Button>
-                )}
+            <Card className="col-span-full overflow-hidden border-dashed bg-gradient-to-b from-muted/50 via-background to-muted/30 shadow-none">
+              <CardContent className="px-4 py-12 sm:px-8 sm:py-16">
+                <Empty className="min-h-[14rem] border-0 p-0 md:min-h-[16rem] md:p-0">
+                  <EmptyHeader className="max-w-md gap-3">
+                    <EmptyMedia variant="icon" className="mb-0 size-12 rounded-xl bg-primary/10 text-primary">
+                      {searchTerm.trim() ? (
+                        <Search className="size-6" strokeWidth={1.75} aria-hidden />
+                      ) : (
+                        <Users className="size-6" strokeWidth={1.75} aria-hidden />
+                      )}
+                    </EmptyMedia>
+                    {searchTerm.trim() ? (
+                      <>
+                        <EmptyTitle>Nenhum cliente encontrado</EmptyTitle>
+                        <EmptyDescription>
+                          Não há resultados para &ldquo;{searchTerm.trim()}&rdquo;. Confira a grafia ou use parte do
+                          nome, telefone ou e-mail.
+                        </EmptyDescription>
+                      </>
+                    ) : (
+                      <>
+                        <EmptyTitle>Sua base de clientes está vazia</EmptyTitle>
+                        <EmptyDescription>
+                          Cadastre quem costuma agendar com vocês para agilizar o atendimento, manter histórico e
+                          oferecer um serviço mais personalizado.
+                        </EmptyDescription>
+                      </>
+                    )}
+                  </EmptyHeader>
+                  <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+                    {searchTerm.trim() ? (
+                      <Button type="button" variant="outline" size="sm" onClick={() => setSearchTerm('')}>
+                        Limpar busca
+                      </Button>
+                    ) : null}
+                    {!searchTerm.trim() && !useDemoData ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-[#E05A2A] text-white hover:bg-[#C44D22]"
+                        onClick={handleOpenNew}
+                      >
+                        <Plus className="mr-1 size-4" aria-hidden />
+                        Cadastrar primeiro cliente
+                      </Button>
+                    ) : null}
+                  </div>
+                </Empty>
               </CardContent>
             </Card>
           )}
         </div>
 
-        {!isLoading && totalFiltered > 0 ? (
+        {!showClientesSkeleton && totalFiltered > 0 ? (
           <div className="border-t border-border/60 pt-4">
             <Pagination className="mx-0 flex w-full max-w-full flex-col items-center gap-2">
               <PaginationContent className="flex h-9 flex-row flex-wrap items-center justify-center gap-1">
@@ -557,7 +639,10 @@ export default function AdminClientesPage() {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={isSaving || !formData.nome || !formData.telefone}>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving || !formData.nome || !formData.telefone || useDemoData}
+            >
               {isSaving ? <Spinner className="mr-2" /> : null}
               {isSaving ? 'Salvando...' : 'Salvar'}
             </Button>

@@ -91,7 +91,7 @@ export function getAgendaDemoForDate(data: string): {
       valor: 0,
       created_at: '',
       updated_at: '',
-      cliente: cliente({ id: 'demo-c1', nome: 'Ricardo Almeida' }),
+      cliente: cliente({ id: 'demo-c1', nome: 'Cliente fictício 01 (agenda demo)' }),
       servico: servico({ id: 'demo-s1', nome: 'Corte masculino', duracao: 40 }),
     },
     {
@@ -107,7 +107,7 @@ export function getAgendaDemoForDate(data: string): {
       valor: 0,
       created_at: '',
       updated_at: '',
-      cliente: cliente({ id: 'demo-c2', nome: 'Felipe Nunes' }),
+      cliente: cliente({ id: 'demo-c2', nome: 'Cliente fictício 02 (agenda demo)' }),
       servico: servico({ id: 'demo-s2', nome: 'Barba + máquina', duracao: 35 }),
     },
     {
@@ -123,7 +123,7 @@ export function getAgendaDemoForDate(data: string): {
       valor: 0,
       created_at: '',
       updated_at: '',
-      cliente: cliente({ id: 'demo-c3', nome: 'Marcos Vieira' }),
+      cliente: cliente({ id: 'demo-c3', nome: 'Cliente fictício 03 (agenda demo)' }),
       servico: servico({ id: 'demo-s3', nome: 'Combo completo', duracao: 50 }),
     },
     {
@@ -139,7 +139,7 @@ export function getAgendaDemoForDate(data: string): {
       valor: 0,
       created_at: '',
       updated_at: '',
-      cliente: cliente({ id: 'demo-c4', nome: 'André Costa' }),
+      cliente: cliente({ id: 'demo-c4', nome: 'Cliente fictício 04 (agenda demo)' }),
       servico: servico({ id: 'demo-s4', nome: 'Degradê na máquina', duracao: 45 }),
     },
     {
@@ -155,7 +155,7 @@ export function getAgendaDemoForDate(data: string): {
       valor: 0,
       created_at: '',
       updated_at: '',
-      cliente: cliente({ id: 'demo-c5', nome: 'Bruno Silva' }),
+      cliente: cliente({ id: 'demo-c5', nome: 'Cliente fictício 05 (agenda demo)' }),
       servico: servico({ id: 'demo-s5', nome: 'Corte + sobrancelha', duracao: 30 }),
     },
     {
@@ -171,7 +171,7 @@ export function getAgendaDemoForDate(data: string): {
       valor: 0,
       created_at: '',
       updated_at: '',
-      cliente: cliente({ id: 'demo-c6', nome: 'Caio Rocha' }),
+      cliente: cliente({ id: 'demo-c6', nome: 'Cliente fictício 06 (agenda demo)' }),
       servico: servico({ id: 'demo-s6', nome: 'Barba desenhada', duracao: 35 }),
     },
     {
@@ -187,7 +187,7 @@ export function getAgendaDemoForDate(data: string): {
       valor: 0,
       created_at: '',
       updated_at: '',
-      cliente: cliente({ id: 'demo-c7', nome: 'Diego Martins' }),
+      cliente: cliente({ id: 'demo-c7', nome: 'Cliente fictício 07 (agenda demo)' }),
       servico: servico({ id: 'demo-s7', nome: 'Corte infantil', duracao: 30 }),
     },
     {
@@ -203,7 +203,7 @@ export function getAgendaDemoForDate(data: string): {
       valor: 0,
       created_at: '',
       updated_at: '',
-      cliente: cliente({ id: 'demo-c8', nome: 'Eduardo Lima' }),
+      cliente: cliente({ id: 'demo-c8', nome: 'Cliente fictício 08 (agenda demo)' }),
       servico: servico({ id: 'demo-s8', nome: 'Luzes / mechas', duracao: 50 }),
     },
     {
@@ -219,7 +219,7 @@ export function getAgendaDemoForDate(data: string): {
       valor: 0,
       created_at: '',
       updated_at: '',
-      cliente: cliente({ id: 'demo-c9', nome: 'Gustavo Reis' }),
+      cliente: cliente({ id: 'demo-c9', nome: 'Cliente fictício 09 (agenda demo)' }),
       servico: servico({ id: 'demo-s1', nome: 'Corte masculino', duracao: 40 }),
     },
     {
@@ -235,7 +235,7 @@ export function getAgendaDemoForDate(data: string): {
       valor: 0,
       created_at: '',
       updated_at: '',
-      cliente: cliente({ id: 'demo-c10', nome: 'Henrique Dias' }),
+      cliente: cliente({ id: 'demo-c10', nome: 'Cliente fictício 10 (agenda demo)' }),
       servico: servico({ id: 'demo-s9', nome: 'Pezinho na máquina', duracao: 30 }),
     },
     {
@@ -251,7 +251,7 @@ export function getAgendaDemoForDate(data: string): {
       valor: 0,
       created_at: '',
       updated_at: '',
-      cliente: cliente({ id: 'demo-c11', nome: 'Igor Pires' }),
+      cliente: cliente({ id: 'demo-c11', nome: 'Cliente fictício 11 (agenda demo)' }),
       servico: servico({ id: 'demo-s2', nome: 'Barba + máquina', duracao: 40 }),
     },
     {
@@ -267,7 +267,7 @@ export function getAgendaDemoForDate(data: string): {
       valor: 0,
       created_at: '',
       updated_at: '',
-      cliente: cliente({ id: 'demo-c12', nome: 'João Pedro' }),
+      cliente: cliente({ id: 'demo-c12', nome: 'Cliente fictício 12 (agenda demo)' }),
       servico: servico({ id: 'demo-s3', nome: 'Combo completo', duracao: 45 }),
     },
   ]
