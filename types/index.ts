@@ -46,6 +46,11 @@ export interface Barbearia {
   status_cadastro?: BarbeariaStatusCadastro
   /** false = desativada pelo super admin; omitido em bases antigas = ativa */
   ativo?: boolean
+  /**
+   * JSONB: mapa de menus do painel tenant por função (`moderador`, `barbeiro_lider`).
+   * Omitido ou `{}` = presets do app (`mergeEquipeMenuPermissions`).
+   */
+  equipe_menu_permissions?: unknown | null
   created_at: string
   updated_at: string
 }

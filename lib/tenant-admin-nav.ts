@@ -9,11 +9,73 @@ import {
   Package,
   Scissors,
   Settings,
+  Shield,
   Ticket,
   UserRound,
   Users,
 } from 'lucide-react'
 import type { NavEntry } from '@/components/shared/bottom-tabs'
+
+export type TenantAdminMenuKey =
+  | 'dashboard'
+  | 'clientes'
+  | 'agendamentos'
+  | 'comandas'
+  | 'servicos'
+  | 'planos'
+  | 'financeiro'
+  | 'relatorios'
+  | 'estoque'
+  | 'assinatura'
+  | 'equipe'
+  | 'permissoes'
+  | 'configuracoes'
+
+export type TenantAdminMenuItemBlueprint = {
+  key: TenantAdminMenuKey
+  label: string
+  icon: LucideIcon
+}
+
+export type TenantAdminMenuSectionBlueprint = {
+  label: string
+  items: TenantAdminMenuItemBlueprint[]
+}
+
+/** Fonte única para sidebar, drawer e matriz de permissões por menu. */
+export const TENANT_ADMIN_MENU_BLUEPRINT: readonly TenantAdminMenuSectionBlueprint[] = [
+  {
+    label: 'Visão geral',
+    items: [{ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }],
+  },
+  {
+    label: 'Operação',
+    items: [
+      { key: 'clientes', label: 'Clientes', icon: UserRound },
+      { key: 'agendamentos', label: 'Agendamentos', icon: Calendar },
+      { key: 'comandas', label: 'Comandas', icon: ClipboardList },
+    ],
+  },
+  {
+    label: 'Negócio',
+    items: [
+      { key: 'servicos', label: 'Serviços', icon: Scissors },
+      { key: 'planos', label: 'Planos', icon: Ticket },
+      { key: 'financeiro', label: 'Financeiro', icon: DollarSign },
+      { key: 'relatorios', label: 'Relatórios', icon: BarChart3 },
+      { key: 'estoque', label: 'Estoque', icon: Package },
+    ],
+  },
+  {
+    label: 'Administração',
+    items: [
+      { key: 'assinatura', label: 'Assinatura', icon: CreditCard },
+      { key: 'equipe', label: 'Equipe', icon: Users },
+      { key: 'permissoes', label: 'Permissões', icon: Shield },
+      { key: 'configuracoes', label: 'Configurações', icon: Settings },
+    ],
+  },
+] as const
 
 export type TenantAdminNavLink = { label: string; href: string; icon: LucideIcon }
 
@@ -23,40 +85,20 @@ function path(base: string, segment: string) {
   return `${base}/${segment}`
 }
 
+function blueprintToSections(base: string, blueprint: readonly TenantAdminMenuSectionBlueprint[]) {
+  return blueprint.map((section) => ({
+    label: section.label,
+    links: section.items.map((item) => ({
+      label: item.label,
+      href: path(base, item.key),
+      icon: item.icon,
+    })),
+  }))
+}
+
 /** Grupos do painel tenant (barbearia), mesma ordem na sidebar e no drawer. */
 export function tenantAdminNavSectionsFull(base: string): TenantAdminNavSection[] {
-  return [
-    {
-      label: 'Visão geral',
-      links: [{ label: 'Dashboard', href: path(base, 'dashboard'), icon: LayoutDashboard }],
-    },
-    {
-      label: 'Operação',
-      links: [
-        { label: 'Clientes', href: path(base, 'clientes'), icon: UserRound },
-        { label: 'Agendamentos', href: path(base, 'agendamentos'), icon: Calendar },
-        { label: 'Comandas', href: path(base, 'comandas'), icon: ClipboardList },
-      ],
-    },
-    {
-      label: 'Negócio',
-      links: [
-        { label: 'Serviços', href: path(base, 'servicos'), icon: Scissors },
-        { label: 'Planos', href: path(base, 'planos'), icon: Ticket },
-        { label: 'Financeiro', href: path(base, 'financeiro'), icon: DollarSign },
-        { label: 'Relatórios', href: path(base, 'relatorios'), icon: BarChart3 },
-        { label: 'Estoque', href: path(base, 'estoque'), icon: Package },
-      ],
-    },
-    {
-      label: 'Administração',
-      links: [
-        { label: 'Assinatura', href: path(base, 'assinatura'), icon: CreditCard },
-        { label: 'Equipe', href: path(base, 'equipe'), icon: Users },
-        { label: 'Configurações', href: path(base, 'configuracoes'), icon: Settings },
-      ],
-    },
-  ]
+  return blueprintToSections(base, TENANT_ADMIN_MENU_BLUEPRINT)
 }
 
 /** Pagamento pendente: dashboard, assinatura e configurações (alinha com proxy). */

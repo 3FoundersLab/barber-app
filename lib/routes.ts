@@ -23,6 +23,7 @@ const TENANT_BARBEARIA_SEGMENTS = new Set([
   'configuracoes',
   'agendamentos',
   'equipe',
+  'permissoes',
   'usuarios',
   'assinatura',
   'financeiro',
