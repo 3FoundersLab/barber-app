@@ -7,6 +7,16 @@ import { ChevronDown, RotateCcw } from 'lucide-react'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { PageContent } from '@/components/shared/page-container'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -23,12 +33,8 @@ import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { cn } from '@/lib/utils'
+import { type TenantAdminMenuKey } from '@/lib/tenant-admin-nav'
 import {
-  TENANT_ADMIN_MENU_BLUEPRINT,
-  type TenantAdminMenuKey,
-} from '@/lib/tenant-admin-nav'
-import {
-  ADMINISTRADOR_MENU_ACCESS_FULL,
   type EquipeMenuPermissionsJson,
   mergeEquipeMenuPermissions,
   menuSectionsForMatrix,
@@ -56,9 +62,9 @@ export function TenantGestaoPermissoes() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false)
 
   const matrixSections = useMemo(() => menuSectionsForMatrix(), [])
-  const adminMatrixSections = useMemo(() => [...TENANT_ADMIN_MENU_BLUEPRINT], [])
 
   const load = useCallback(async () => {
     setIsLoading(true)
@@ -161,11 +167,14 @@ export function TenantGestaoPermissoes() {
       <TenantPanelPageHeader greetingOnly profileHref={`${base}/configuracoes`} avatarFallback="A" />
 
       <PageContent className="space-y-5 md:space-y-6">
-        <header className="space-y-1.5">
+        <header className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            Gestão de Permissões 🛡️
+            <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span>Gestão de Permissões</span>
+              <span aria-hidden>🛡️</span>
+            </span>
           </h1>
-          <p className="text-sm text-muted-foreground md:text-base">
+          <p className="text-sm leading-relaxed text-muted-foreground md:text-base">
             Configure o que cada cargo pode acessar no sistema
           </p>
         </header>
@@ -214,13 +223,11 @@ export function TenantGestaoPermissoes() {
                     badgeVariant="outline"
                     description="Acesso total ao painel da barbearia (dono ou administrador da conta)."
                   >
-                    <p className="mb-4 text-sm text-muted-foreground">
-                      Este papel não pode ser restringido por menu. Todas as áreas permanecem disponíveis.
-                    </p>
-                    <MenuMatrixReadOnly
-                      access={ADMINISTRADOR_MENU_ACCESS_FULL}
-                      sections={adminMatrixSections}
-                    />
+                    <ul className="list-outside list-disc space-y-2 pl-5 text-sm leading-relaxed text-muted-foreground marker:text-muted-foreground/80">
+                      <li>Este papel não pode ser restringido por menu: todas as áreas do painel permanecem disponíveis.</li>
+                      <li>Inclui gestão de assinatura, equipe, permissões e configurações da barbearia.</li>
+                      <li>Ideal para o proprietário ou quem administra a conta no dia a dia.</li>
+                    </ul>
                   </RoleCardShell>
 
                   <RoleCardShell
@@ -230,7 +237,7 @@ export function TenantGestaoPermissoes() {
                     badgeVariant="outline"
                     description="Agenda própria, horários e clientes atendidos."
                   >
-                    <ul className="list-inside list-disc space-y-1.5 text-sm text-muted-foreground">
+                    <ul className="list-outside list-disc space-y-2 pl-5 text-sm leading-relaxed text-muted-foreground marker:text-muted-foreground/80">
                       <li>Uso principal pelo painel do profissional (agenda e horários).</li>
                       <li>Visível para clientes na escolha de profissional ao agendar.</li>
                       <li>As permissões por menu abaixo referem-se a cargos com acesso ao painel da barbearia.</li>
@@ -283,7 +290,7 @@ export function TenantGestaoPermissoes() {
                     variant="outline"
                     size="sm"
                     className="w-full sm:w-auto"
-                    onClick={restoreFactoryDefaults}
+                    onClick={() => setRestoreConfirmOpen(true)}
                     disabled={isSaving}
                   >
                     <RotateCcw className="mr-2 h-4 w-4" />
@@ -306,9 +313,9 @@ export function TenantGestaoPermissoes() {
           <TabsContent value="membros" className="mt-5 focus-visible:outline-none">
             <Card>
               <CardContent className="space-y-4 py-6">
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <h2 className="text-lg font-semibold">Membros da equipe</h2>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm leading-relaxed text-muted-foreground">
                     Cadastre pessoas, defina a função (Barbeiro, Moderador ou Barbeiro Líder) e mantenha os dados
                     atualizados.
                   </p>
@@ -320,6 +327,30 @@ export function TenantGestaoPermissoes() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <AlertDialog open={restoreConfirmOpen} onOpenChange={setRestoreConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Restaurar padrões de permissões?</AlertDialogTitle>
+              <AlertDialogDescription className="text-pretty leading-relaxed">
+                Os acessos por menu de <span className="font-medium text-foreground">Moderador</span> e{' '}
+                <span className="font-medium text-foreground">Barbeiro Líder</span> voltam aos valores iniciais do
+                sistema. A mudança fica nesta tela até você clicar em &quot;Salvar alterações&quot;.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isSaving}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={isSaving}
+                onClick={() => {
+                  restoreFactoryDefaults()
+                }}
+              >
+                Restaurar padrões
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </PageContent>
     </TenantPanelPageContainer>
   )
@@ -344,36 +375,40 @@ function RoleCardShell({
 }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <Card className="overflow-hidden shadow-sm">
+    <Card className="gap-0 overflow-hidden py-0 shadow-sm">
       <Collapsible open={open} onOpenChange={setOpen}>
         <CollapsibleTrigger asChild>
           <button
             type="button"
             className={cn(
-              'flex w-full items-start gap-3 p-4 text-left transition-colors',
+              'flex w-full min-w-0 items-stretch gap-3 px-6 py-5 text-left transition-colors',
               'hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             )}
           >
-            <span className="text-2xl leading-none" aria-hidden>
+            <span className="flex shrink-0 items-center text-2xl leading-none" aria-hidden>
               {emoji}
             </span>
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-1 flex-col justify-center space-y-2 pr-1">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="font-semibold">{title}</span>
-                <Badge variant={badgeVariant}>{badge}</Badge>
+                <Badge variant={badgeVariant} className="shrink-0">
+                  {badge}
+                </Badge>
               </div>
-              <p className="text-sm text-muted-foreground">{description}</p>
+              <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
             </div>
-            <ChevronDown
-              className={cn(
-                'mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200',
-                open && 'rotate-180',
-              )}
-            />
+            <span className="flex shrink-0 items-center text-muted-foreground">
+              <ChevronDown
+                className={cn(
+                  'h-5 w-5 shrink-0 transition-transform duration-200',
+                  open && 'rotate-180',
+                )}
+              />
+            </span>
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <CardContent className="border-t border-border/60 pb-5 pt-0">{children}</CardContent>
+          <CardContent className="border-t border-border/60 pb-5 pt-4">{children}</CardContent>
         </CollapsibleContent>
       </Collapsible>
     </Card>
@@ -388,51 +423,13 @@ function CustomRoleToolbar({
   onClearAll: () => void
 }) {
   return (
-    <div className="flex flex-wrap gap-2 py-4">
+    <div className="flex flex-wrap gap-2 gap-y-2 border-b border-border/50 py-4">
       <Button type="button" variant="secondary" size="sm" onClick={onSelectAll}>
         Marcar todos os menus
       </Button>
       <Button type="button" variant="ghost" size="sm" onClick={onClearAll}>
         Desmarcar todos
       </Button>
-    </div>
-  )
-}
-
-function MenuMatrixReadOnly({
-  access,
-  sections,
-}: {
-  access: Record<TenantAdminMenuKey, boolean>
-  sections: ReturnType<typeof menuSectionsForMatrix>
-}) {
-  return (
-    <div className="space-y-6">
-      {sections.map((section) => (
-        <div key={section.label} className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {section.label}
-          </p>
-          <div className="space-y-2">
-            {section.items.map((item) => {
-              const Icon = item.icon
-              const on = access[item.key] ?? false
-              return (
-                <div
-                  key={item.key}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5"
-                >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="text-sm font-medium">{item.label}</span>
-                  </div>
-                  <Switch checked={on} disabled />
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      ))}
     </div>
   )
 }
@@ -449,28 +446,32 @@ function MenuMatrixEditable({
   onChange: (role: CustomRoleKey, key: TenantAdminMenuKey, value: boolean) => void
 }) {
   return (
-    <div className="space-y-6 pb-1">
+    <div className="space-y-8 pb-1">
       {sections.map((section) => (
         <div key={section.label} className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {section.label}
           </p>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {section.items.map((item) => {
               const Icon = item.icon
               const id = `menu-${role}-${item.key}`
               return (
                 <div
                   key={item.key}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2.5"
+                  className="flex items-center justify-between gap-4 rounded-lg border border-border/60 px-3 py-3 sm:px-4"
                 >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <Label htmlFor={id} className="cursor-pointer text-sm font-medium">
+                  <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+                    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground sm:mt-0" />
+                    <Label
+                      htmlFor={id}
+                      className="cursor-pointer break-words text-sm font-medium leading-snug sm:leading-normal"
+                    >
                       {item.label}
                     </Label>
                   </div>
                   <Switch
+                    className="shrink-0"
                     id={id}
                     checked={access[item.key] ?? false}
                     onCheckedChange={(v) => onChange(role, item.key, v)}
