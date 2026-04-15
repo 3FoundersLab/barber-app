@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageContent } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { AdminDashboardPremium } from '@/components/domain/admin-dashboard-premium'
+import { AdminDashboardNotificationsTrigger } from '@/components/domain/admin-dashboard-notifications-trigger'
 import { Alert, AlertDescription, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { formatDateShort } from '@/lib/constants'
 import {
@@ -31,6 +32,7 @@ interface DashboardExtra {
   recebimentosPendentesHoje: { horario: string }[]
   estoqueCritico: { nome: string; quantidade: number; minimo: number }[]
   clientesNovosUltimos7Dias: number
+  aniversariantesHoje: { nome: string; telefone?: string | null }[]
   mediaAgendamentosRecente: number
   statusHoje: AdminDashboardStatusHoje
 }
@@ -167,6 +169,7 @@ export default function AdminDashboardPage() {
         { data: pendPagRows },
         { count: count14 },
         { count: novos7 },
+        { data: clientesComNascimentoRows },
         { data: estoqueRows },
         equipePack,
         { data: todayAgRows },
@@ -244,6 +247,11 @@ export default function AdminDashboardPage() {
           .select('*', { count: 'exact', head: true })
           .eq('barbearia_id', barbeariaData.id)
           .gte('created_at', weekAgoIso),
+        supabase
+          .from('clientes')
+          .select('nome, telefone, data_nascimento')
+          .eq('barbearia_id', barbeariaData.id)
+          .not('data_nascimento', 'is', null),
         operacaoLiberada
           ? supabase.from('estoque_produtos').select('nome, quantidade, minimo').eq('barbearia_id', barbeariaData.id)
           : Promise.resolve({ data: null as { nome: string; quantidade: number; minimo: number }[] | null }),
@@ -316,6 +324,22 @@ export default function AdminDashboardPage() {
             .slice(0, 5)
         : []
 
+      const hoje = new Date()
+      const hojeMesDia = `${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
+      const aniversariantesHoje = (clientesComNascimentoRows ?? [])
+        .filter((c) => {
+          const raw = typeof c.data_nascimento === 'string' ? c.data_nascimento : ''
+          const trimmed = raw.trim()
+          if (!trimmed) return false
+          const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed)
+          if (!m) return false
+          return `${m[2]}-${m[3]}` === hojeMesDia
+        })
+        .map((c) => ({
+          nome: c.nome as string,
+          telefone: (c.telefone as string | null | undefined) ?? null,
+        }))
+
       const statusHoje = buildAdminDashboardStatusHoje({
         barbearia: barbeariaData,
         todayYmd: today,
@@ -335,6 +359,7 @@ export default function AdminDashboardPage() {
         recebimentosPendentesHoje: pendPagRows ?? [],
         estoqueCritico,
         clientesNovosUltimos7Dias: novos7 || 0,
+        aniversariantesHoje,
         mediaAgendamentosRecente: (count14 || 0) / 14,
         statusHoje,
       })
@@ -355,6 +380,7 @@ export default function AdminDashboardPage() {
         recebimentosPendentesHoje: extra?.recebimentosPendentesHoje ?? [],
         estoqueCritico: extra?.estoqueCritico ?? [],
         clientesNovosUltimos7Dias: extra?.clientesNovosUltimos7Dias ?? 0,
+        aniversariantesHoje: extra?.aniversariantesHoje ?? [],
         agendamentosHoje: stats?.agendamentosHoje ?? 0,
         mediaAgendamentosRecente: extra?.mediaAgendamentosRecente ?? 0,
       }),
@@ -364,10 +390,43 @@ export default function AdminDashboardPage() {
       extra?.recebimentosPendentesHoje,
       extra?.estoqueCritico,
       extra?.clientesNovosUltimos7Dias,
+      extra?.aniversariantesHoje,
       extra?.mediaAgendamentosRecente,
       stats?.agendamentosHoje,
     ],
   )
+
+  const [alertasDescartadosIds, setAlertasDescartadosIds] = useState<string[]>([])
+  const [alertasLidosIds, setAlertasLidosIds] = useState<string[]>([])
+
+  useEffect(() => {
+    setAlertasDescartadosIds([])
+    setAlertasLidosIds([])
+  }, [slug])
+
+  const alertasVisiveis = useMemo(() => {
+    const descartados = new Set(alertasDescartadosIds)
+    return alertas.filter((a) => !descartados.has(a.id))
+  }, [alertas, alertasDescartadosIds])
+
+  const alertasNaFaixa = useMemo(() => {
+    const lidos = new Set(alertasLidosIds)
+    return alertasVisiveis.filter((a) => !lidos.has(a.id))
+  }, [alertasVisiveis, alertasLidosIds])
+
+  const marcarAlertaLido = useCallback((id: string) => {
+    setAlertasLidosIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
+  }, [])
+
+  const limparTodasNotificacoes = useCallback(() => {
+    setAlertasDescartadosIds((prev) => [...new Set([...prev, ...alertas.map((a) => a.id)])])
+    setAlertasLidosIds([])
+  }, [alertas])
+
+  const [notificacoesAbrirChave, setNotificacoesAbrirChave] = useState(0)
+  const solicitarAbrirNotificacoes = useCallback(() => {
+    setNotificacoesAbrirChave((k) => k + 1)
+  }, [])
 
   const tendenciaInsight = useMemo(() => {
     if (!extra || !stats) return ''
@@ -379,12 +438,27 @@ export default function AdminDashboardPage() {
     return insightLinha
   }, [extra, stats])
 
+  const headerNotificacoes = useMemo(
+    () =>
+      !error ? (
+        <AdminDashboardNotificationsTrigger
+          alertas={alertasVisiveis}
+          lidosIds={alertasLidosIds}
+          isLoading={isLoading}
+          onClearAll={limparTodasNotificacoes}
+          openRequestKey={notificacoesAbrirChave}
+        />
+      ) : null,
+    [error, alertasVisiveis, alertasLidosIds, isLoading, limparTodasNotificacoes, notificacoesAbrirChave],
+  )
+
   return (
     <TenantPanelPageContainer>
       <TenantPanelPageHeader
         greetingOnly
         profileHref={`${base}/configuracoes`}
         avatarFallback="A"
+        actions={headerNotificacoes}
       />
 
       <PageContent className="space-y-6 md:space-y-8">
@@ -414,12 +488,14 @@ export default function AdminDashboardPage() {
           proximosAgendamentos={proximosAgendamentos}
           fatDiario={extra?.fatDiario ?? []}
           tendenciaInsight={tendenciaInsight}
-          alertas={alertas}
+          alertas={alertasNaFaixa}
           isLoading={isLoading}
           error={error}
           pagamentoPendentePlano={barbearia?.status_cadastro === 'pagamento_pendente'}
           operacaoLiberada={operacaoLiberada}
           statusHoje={extra?.statusHoje ?? null}
+          onVerMaisNotificacoes={!error ? solicitarAbrirNotificacoes : undefined}
+          onMarcarAlertaLido={!error ? marcarAlertaLido : undefined}
         />
       </PageContent>
     </TenantPanelPageContainer>

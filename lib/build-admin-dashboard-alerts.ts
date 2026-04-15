@@ -1,5 +1,6 @@
-import { Banknote, CalendarOff, Package, Sparkles, TrendingUp, UserPlus } from 'lucide-react'
+import { Banknote, CalendarOff, Gift, Package, Sparkles, TrendingUp, UserPlus } from 'lucide-react'
 import { formatCurrency, formatTime } from '@/lib/constants'
+import { whatsappChatHref } from '@/lib/format-contato'
 import type { AlertaDashboard } from '@/types/admin-dashboard'
 
 export type BuildAdminDashboardAlertsInput = {
@@ -13,6 +14,7 @@ export type BuildAdminDashboardAlertsInput = {
   agendamentosHoje: number
   /** média simples de agendamentos/dia nos últimos N dias (dias com operação) */
   mediaAgendamentosRecente: number
+  aniversariantesHoje: { nome: string; telefone?: string | null }[]
 }
 
 function joinHorarios(amostra: { horario: string }[], max = 3): string {
@@ -110,6 +112,45 @@ export function buildAdminDashboardAlerts(input: BuildAdminDashboardAlertsInput)
       acao: 'Ver clientes',
       link: `${base}/clientes`,
       icone: UserPlus,
+    })
+  }
+
+  const aniversariantes = input.aniversariantesHoje
+  if (aniversariantes.length > 0) {
+    const primeiro = aniversariantes[0]
+    const primeiroNome = primeiro.nome.trim().split(/\s+/)[0] || primeiro.nome.trim()
+    const msg = `Oi, ${primeiroNome}! 🎉\n\nPassando para te desejar um feliz aniversário em nome da barbearia. Que seu dia seja incrível!`
+    const wa = primeiro.telefone ? whatsappChatHref(primeiro.telefone, msg) : null
+    const nomesExtras = aniversariantes
+      .slice(1, 3)
+      .map((a) => a.nome.trim().split(/\s+/)[0] || a.nome.trim())
+      .join(', ')
+    const extrasCount = Math.max(0, aniversariantes.length - 1)
+
+    out.push({
+      id: 'aniversariantes-hoje',
+      tipo: 'oportunidade',
+      titulo:
+        aniversariantes.length === 1
+          ? `Hoje é aniversário de ${primeiro.nome}`
+          : `Hoje ${aniversariantes.length} clientes fazem aniversário`,
+      descricao:
+        aniversariantes.length === 1
+          ? wa
+            ? 'Envie uma mensagem de parabéns no WhatsApp para fortalecer o relacionamento.'
+            : 'Cliente sem telefone válido para WhatsApp. Atualize o cadastro para facilitar o contato.'
+          : wa
+            ? nomesExtras
+              ? `${primeiro.nome}, ${nomesExtras}${extrasCount > 2 ? ' e outros' : ''}. Envie parabéns pelo WhatsApp.`
+              : `${primeiro.nome} e outros clientes estão de aniversário hoje.`
+            : `${primeiro.nome} e outros clientes estão de aniversário hoje.`,
+      acao: wa ? 'Enviar parabéns' : 'Ver clientes',
+      link: wa ?? `${base}/clientes`,
+      linkTarget: wa ? '_blank' : '_self',
+      className: 'border-l-violet-500 bg-violet-500/[0.08] dark:bg-violet-500/15',
+      acaoButtonClassName:
+        'border-violet-500/50 bg-violet-500/15 text-violet-950 hover:bg-violet-500/25 dark:text-violet-100 dark:hover:bg-violet-500/25',
+      icone: Gift,
     })
   }
 

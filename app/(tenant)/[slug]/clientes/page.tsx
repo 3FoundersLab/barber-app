@@ -117,6 +117,7 @@ export default function AdminClientesPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<ClientesPageSize>(12)
   const [barbeariaId, setBarbeariaId] = useState<string | null>(null)
+  const [barbeariaNome, setBarbeariaNome] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -196,6 +197,13 @@ export default function AdminClientesPage() {
       if (barbeariaIdResolved) {
         setBarbeariaId(barbeariaIdResolved)
 
+        const { data: bbRow } = await supabase
+          .from('barbearias')
+          .select('nome')
+          .eq('id', barbeariaIdResolved)
+          .maybeSingle()
+        setBarbeariaNome(bbRow?.nome?.trim() ? bbRow.nome.trim() : null)
+
         const { data } = await supabase
           .from('clientes')
           .select('*')
@@ -205,7 +213,11 @@ export default function AdminClientesPage() {
         if (data) {
           setClientesReais(data)
         }
+      } else {
+        setBarbeariaNome(null)
       }
+    } else {
+      setBarbeariaNome(null)
     }
 
     setIsLoading(false)
@@ -545,6 +557,7 @@ export default function AdminClientesPage() {
                 <ClienteCard
                   key={cliente.id}
                   cliente={cliente}
+                  nomeBarbearia={barbeariaNome}
                   {...(useDemoData
                     ? {}
                     : {

@@ -9,6 +9,10 @@ export interface AlertaDashboard {
   descricao: string
   acao: string
   link: string
+  linkTarget?: '_self' | '_blank'
+  className?: string
+  /** Sobrescreve a cor do botão de ação (ex.: alerta com card customizado). */
+  acaoButtonClassName?: string
   icone: LucideIcon
   autoDismiss?: boolean
 }

@@ -22,6 +22,7 @@ import { AdminDashboardAppointmentRowSkeleton, ClienteHomeBarbeariaSkeleton } fr
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
+import { DashboardAlertaRow } from '@/components/domain/admin-dashboard-alerta-row'
 import { formatCurrency, formatTime } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { AdminDashboardStatusHoje } from '@/lib/build-admin-dashboard-status-hoje'
@@ -35,31 +36,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-function alertaTipoClasses(tipo: AlertaDashboard['tipo']) {
-  switch (tipo) {
-    case 'urgente':
-      return 'border-l-red-500 bg-red-500/[0.06] dark:bg-red-500/10'
-    case 'atencao':
-      return 'border-l-amber-500 bg-amber-500/[0.07] dark:bg-amber-500/10'
-    case 'oportunidade':
-      return 'border-l-emerald-500 bg-emerald-500/[0.06] dark:bg-emerald-500/10'
-    default:
-      return 'border-l-sky-500 bg-sky-500/[0.06] dark:bg-sky-500/10'
-  }
-}
-
-function IconWrap({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <span
-      className={cn(
-        'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/80 shadow-sm',
-        className,
-      )}
-    >
-      {children}
-    </span>
-  )
-}
+const MAX_ALERTAS_PREVIEW = 3
 
 export function AdminDashboardPremium(props: {
   base: string
@@ -73,6 +50,10 @@ export function AdminDashboardPremium(props: {
   pagamentoPendentePlano: boolean
   operacaoLiberada: boolean
   statusHoje: AdminDashboardStatusHoje | null
+  /** Abre o sheet de notificações (ex.: “Ver mais” quando há mais de 3 alertas). */
+  onVerMaisNotificacoes?: () => void
+  /** Marca alerta como lida (some da faixa; continua opaca no sheet). */
+  onMarcarAlertaLido?: (id: string) => void
 }) {
   const {
     base,
@@ -86,6 +67,8 @@ export function AdminDashboardPremium(props: {
     pagamentoPendentePlano,
     operacaoLiberada,
     statusHoje,
+    onVerMaisNotificacoes,
+    onMarcarAlertaLido,
   } = props
 
   const chartData = useMemo(
@@ -110,20 +93,20 @@ export function AdminDashboardPremium(props: {
     ] as const
   }, [base, operacaoLiberada])
 
+  const usarSheetAlertas = alertas.length > MAX_ALERTAS_PREVIEW
+  const alertasPreview = usarSheetAlertas ? alertas.slice(0, MAX_ALERTAS_PREVIEW) : alertas
+
   return (
     <div className="space-y-6 md:space-y-8">
-      {/* Seção 1 — Alertas (sticky abaixo do header global) */}
+      {/* Seção 1 — Alertas */}
       {!error && (
         <div
-          className={cn(
-            'sticky top-16 z-30 -mx-4 border-b border-border/70 bg-background/90 px-4 py-3 shadow-sm backdrop-blur-md md:-mx-6 md:px-6 lg:-mx-8 lg:px-8',
-            'dark:border-zinc-800/80 dark:bg-zinc-950/90',
-          )}
+          className={cn('-mx-4 px-4 py-3 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8')}
           role="region"
           aria-label="Alertas inteligentes"
         >
           <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wider">
-            Tem problema?
+            Alertas do dia
           </p>
           {isLoading ? (
             <div className="space-y-2">
@@ -131,36 +114,31 @@ export function AdminDashboardPremium(props: {
               <div className="bg-muted h-14 animate-pulse rounded-lg md:hidden" />
             </div>
           ) : (
-            <div className="max-h-[min(40vh,220px)] space-y-2 overflow-y-auto pr-1">
-              {alertas.map((a) => {
-                const Icon = a.icone
-                return (
-                  <div
+            <>
+              <div className="max-h-[min(40vh,220px)] space-y-2 overflow-y-auto pr-1">
+                {alertasPreview.map((a) => (
+                  <DashboardAlertaRow
                     key={a.id}
-                    className={cn(
-                      'flex flex-col gap-2 rounded-lg border border-border/60 border-l-4 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4',
-                      alertaTipoClasses(a.tipo),
-                    )}
+                    alerta={a}
+                    onDismiss={onMarcarAlertaLido ? () => onMarcarAlertaLido(a.id) : undefined}
+                  />
+                ))}
+              </div>
+              {usarSheetAlertas && onVerMaisNotificacoes ? (
+                <div className="mt-2 flex justify-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-foreground h-8 gap-1 text-xs"
+                    onClick={onVerMaisNotificacoes}
                   >
-                    <div className="flex min-w-0 flex-1 gap-3">
-                      <IconWrap>
-                        <Icon className="text-foreground h-4 w-4" aria-hidden />
-                      </IconWrap>
-                      <div className="min-w-0">
-                        <p className="text-foreground text-sm font-semibold leading-snug">{a.titulo}</p>
-                        <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">{a.descricao}</p>
-                      </div>
-                    </div>
-                    <Button variant="secondary" size="sm" className="shrink-0 gap-1 self-start sm:self-center" asChild>
-                      <Link href={a.link}>
-                        {a.acao}
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </Link>
-                    </Button>
-                  </div>
-                )
-              })}
-            </div>
+                    Ver mais
+                    <ArrowRight className="size-3.5" aria-hidden />
+                  </Button>
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       )}

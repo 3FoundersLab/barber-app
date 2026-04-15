@@ -72,6 +72,7 @@ import {
 import { SuperAssinaturasPeriodicidadeChart } from '@/components/super/super-assinaturas-periodicidade-chart'
 import { PlanoPeriodicidadeToggle } from '@/components/shared/plano-periodicidade-toggle'
 import { cn } from '@/lib/utils'
+import { whatsappChatHref } from '@/lib/format-contato'
 import { createClient } from '@/lib/supabase/client'
 import {
   labelPeriodicidade,
@@ -170,11 +171,6 @@ function isAssinaturaVencidosKpi(a: Assinatura): boolean {
 
 type KpiFilter = 'pendente' | 'ativa' | 'vencidos' | null
 
-function whatsappHref(telefone?: string | null) {
-  const digits = telefone?.replace(/\D/g, '') ?? ''
-  if (digits.length < 10) return null
-  return `https://wa.me/${digits}`
-}
 
 const waLinkTableClass =
   'inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-600/30 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200 dark:hover:bg-emerald-950/60'
@@ -188,7 +184,7 @@ function ContatoBarbeariaBlock({
   telefone?: string | null
   layout: 'table' | 'card'
 }) {
-  const wa = whatsappHref(telefone)
+  const wa = whatsappChatHref(telefone)
   if (layout === 'card') {
     return (
       <div className="inline-flex max-w-full min-w-0 items-center gap-1.5">
