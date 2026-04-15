@@ -167,7 +167,7 @@ export function AdminDashboardAppointmentRowSkeleton({ className }: { className?
 
 export function ServiceCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('flex items-center justify-between rounded-lg border bg-card p-4', className)}>
+    <div className={cn('flex w-full self-start items-center justify-between rounded-lg border bg-card p-3 sm:p-4', className)}>
       <div className="space-y-2">
         <Skeleton className="h-4 w-28" />
         <Skeleton className="h-3 w-16" />

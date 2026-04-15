@@ -44,7 +44,7 @@ export function ServiceCard({
   return (
     <Card
       className={cn(
-        'flex h-full flex-col overflow-hidden border transition-all duration-200',
+        'flex w-full flex-col self-start overflow-hidden border transition-all duration-200',
         'hover:scale-[1.02] hover:shadow-lg hover:border-[#E05A2A]/40',
         onClick && 'cursor-pointer',
         selected && 'border-primary bg-primary/5',
@@ -53,12 +53,12 @@ export function ServiceCard({
       )}
       onClick={() => onClick?.(service)}
     >
-      <CardContent className="flex flex-1 items-start gap-3 p-4">
+      <CardContent className="flex items-start gap-3 p-3 sm:p-4">
         <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#E05A2A]/10 text-[#E05A2A]">
           <Icon className="h-5 w-5" aria-hidden />
         </div>
 
-        <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold">{service.nome}</span>
             <Badge
@@ -69,11 +69,11 @@ export function ServiceCard({
             </Badge>
           </div>
           {service.descricao ? (
-            <p className="text-sm leading-snug text-muted-foreground line-clamp-2">
+            <p className="text-sm leading-snug text-muted-foreground line-clamp-1">
               {service.descricao}
             </p>
           ) : null}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
             <span className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5 shrink-0" />
               {formatDuration(service.duracao)}

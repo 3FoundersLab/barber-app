@@ -351,25 +351,60 @@ export default function AdminServicosPage() {
         <div
           className={
             isLoading || sourceServicos.length > 0
-              ? 'grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3 xl:grid-cols-4 xl:gap-5'
+              ? 'grid grid-cols-1 items-start gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3 xl:grid-cols-4 xl:gap-5'
               : undefined
           }
         >
           {isLoading ? (
             Array.from({ length: 6 }).map((_, i) => (
-              <ServiceCardSkeleton key={i} className="h-full min-h-[9rem]" />
+              <ServiceCardSkeleton key={i} className="w-full self-start min-h-[7rem]" />
             ))
           ) : filteredServicos.length > 0 ? (
-            filteredServicos.map((servico) => (
-              <ServiceCard
-                key={servico.id}
-                service={servico}
-                onEdit={isUsingMockData ? undefined : handleEdit}
-                onDelete={isUsingMockData ? undefined : () => handleRequestDelete(servico)}
-                onDuplicate={isUsingMockData ? undefined : handleDuplicate}
-                onToggleStatus={isUsingMockData ? undefined : handleToggleStatus}
-              />
-            ))
+            <>
+              {filteredServicos.map((servico) => (
+                <ServiceCard
+                  key={servico.id}
+                  service={servico}
+                  onEdit={isUsingMockData ? undefined : handleEdit}
+                  onDelete={isUsingMockData ? undefined : () => handleRequestDelete(servico)}
+                  onDuplicate={isUsingMockData ? undefined : handleDuplicate}
+                  onToggleStatus={isUsingMockData ? undefined : handleToggleStatus}
+                />
+              ))}
+              <Card
+                role={isUsingMockData ? undefined : 'button'}
+                tabIndex={isUsingMockData ? undefined : 0}
+                onClick={isUsingMockData ? undefined : handleOpenNew}
+                onKeyDown={
+                  isUsingMockData
+                    ? undefined
+                    : (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleOpenNew()
+                        }
+                      }
+                }
+                className={cn(
+                  'relative w-full self-start border-dashed border-primary/30 bg-gradient-to-br from-background to-primary/5 transition-colors',
+                  isUsingMockData
+                    ? 'cursor-not-allowed opacity-60'
+                    : 'group cursor-pointer hover:border-primary/50 hover:from-primary/5 hover:to-primary/10',
+                )}
+              >
+                <CardContent className="flex min-h-[7rem] flex-col items-center justify-center gap-1.5 p-3 text-center sm:p-4">
+                  <div className="rounded-full border border-primary/25 bg-primary/10 p-2.5 text-primary sm:p-3">
+                    <Sparkles className="size-5" aria-hidden />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">Adicionar novo serviço</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isUsingMockData
+                      ? 'Desative dados fictícios para cadastrar'
+                      : 'Clique para abrir o cadastro'}
+                  </p>
+                </CardContent>
+              </Card>
+            </>
           ) : (
             <Card className="border-dashed md:col-span-2 xl:col-span-3">
               <CardContent className="flex flex-col items-center justify-center py-10 text-center">

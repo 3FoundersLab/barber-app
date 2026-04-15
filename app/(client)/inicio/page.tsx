@@ -221,9 +221,9 @@ export default function ClienteHomePage() {
             </Link>
           </div>
 
-          <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+          <div className="space-y-3 md:grid md:grid-cols-2 md:items-start md:gap-4 md:space-y-0">
             {isLoading ? (
-              <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+              <div className="space-y-3 md:grid md:grid-cols-2 md:items-start md:gap-4 md:space-y-0">
                 <ServiceCardSkeleton />
                 <ServiceCardSkeleton />
               </div>
