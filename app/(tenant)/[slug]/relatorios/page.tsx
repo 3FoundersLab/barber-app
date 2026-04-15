@@ -1,10 +1,10 @@
-'use client'
+import { redirect } from 'next/navigation'
 
-import { RelatoriosDashboard } from '@/components/domain/relatorios-dashboard'
-import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
+type TenantRelatoriosPageProps = {
+  params: Promise<{ slug: string }>
+}
 
-export default function TenantRelatoriosPage() {
-  const { slug, base } = useTenantAdminBase()
-
-  return <RelatoriosDashboard slug={slug} base={base} />
+export default async function TenantRelatoriosPage({ params }: TenantRelatoriosPageProps) {
+  const { slug } = await params
+  redirect(`/${slug}/relatorios/relatorio-geral`)
 }

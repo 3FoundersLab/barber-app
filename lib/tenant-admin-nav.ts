@@ -14,7 +14,7 @@ import {
   UserRound,
   Users,
 } from 'lucide-react'
-import type { NavEntry } from '@/components/shared/bottom-tabs'
+import type { NavEntry, TabItem } from '@/components/shared/bottom-tabs'
 
 export type TenantAdminMenuKey =
   | 'dashboard'
@@ -139,7 +139,29 @@ function sectionsToNavEntries(sections: TenantAdminNavSection[]): NavEntry[] {
 }
 
 export function tenantAdminNavEntriesFull(base: string): NavEntry[] {
-  return sectionsToNavEntries(tenantAdminNavSectionsFull(base))
+  const sections = tenantAdminNavSectionsFull(base)
+  const out: NavEntry[] = []
+  for (const s of sections) {
+    out.push({ kind: 'section', label: s.label })
+    for (const link of s.links) {
+      if (link.href === path(base, 'relatorios')) {
+        const group: TabItem = {
+          label: 'Relatórios',
+          icon: link.icon,
+          children: [
+            { label: 'Relatório Geral', href: path(base, 'relatorios/relatorio-geral') },
+            { label: 'Visão Geral', href: path(base, 'relatorios/visao-geral') },
+            { label: 'Operacional', href: path(base, 'relatorios/operacao') },
+            { label: 'Tendências', href: path(base, 'relatorios/tendencias') },
+          ],
+        }
+        out.push(group)
+        continue
+      }
+      out.push({ label: link.label, href: link.href, icon: link.icon })
+    }
+  }
+  return out
 }
 
 export function tenantAdminNavEntriesLimited(base: string): NavEntry[] {
