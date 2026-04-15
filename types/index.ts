@@ -33,6 +33,7 @@ export interface Barbearia {
   nome: string
   slug: string
   logo?: string
+  cnpj?: string | null
   endereco?: string
   telefone?: string
   email?: string

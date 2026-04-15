@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Plus, Search, Users } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Search, Sparkles, Users } from 'lucide-react'
 import { PageContent, PageTitle } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { ClienteCard } from '@/components/domain/cliente-card'
@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Alert, AlertTitle } from '@/components/ui/alert'
+import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
@@ -126,6 +126,8 @@ export default function AdminClientesPage() {
   const [historicoRows, setHistoricoRows] = useState<ClienteHistoricoRow[]>([])
   const [historicoLoading, setHistoricoLoading] = useState(false)
   const [historicoError, setHistoricoError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [isDeletingCliente, setIsDeletingCliente] = useState(false)
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -256,6 +258,7 @@ export default function AdminClientesPage() {
   }
 
   const handleOpenNew = () => {
+    setError(null)
     setEditingCliente(null)
     setFormData({
       nome: '',
@@ -269,6 +272,7 @@ export default function AdminClientesPage() {
   }
 
   const handleEdit = (cliente: Cliente) => {
+    setError(null)
     setEditingCliente(cliente)
     setFormData({
       nome: cliente.nome,
@@ -288,34 +292,150 @@ export default function AdminClientesPage() {
 
   const confirmarExclusaoCliente = async () => {
     if (!clienteParaExcluir) return
+    if (useDemoData) {
+      setClienteParaExcluir(null)
+      setError('Não é possível excluir clientes no modo demonstração.')
+      return
+    }
+    setIsDeletingCliente(true)
+    setError(null)
+    const id = clienteParaExcluir.id
     const supabase = createClient()
-    await supabase.from('clientes').delete().eq('id', clienteParaExcluir.id)
+    const { error: deleteError } = await supabase.from('clientes').delete().eq('id', id)
+    setIsDeletingCliente(false)
+    if (deleteError) {
+      const msg = (deleteError.message ?? '').toLowerCase()
+      const code = deleteError.code ?? ''
+      if (code === '42501' || msg.includes('row-level security') || msg.includes('permission denied')) {
+        setError('Sem permissão para excluir este cliente. Peça ao administrador para conferir políticas do banco (RLS) ou seu vínculo à unidade.')
+      } else {
+        setError(deleteError.message?.trim() || 'Não foi possível excluir o cliente.')
+      }
+      return
+    }
     setClienteParaExcluir(null)
     loadClientes()
   }
 
   const handleSave = async () => {
-    if (!barbeariaId || useDemoData) return
+    if (useDemoData) {
+      setError('Desative "Dados fictícios" para cadastrar clientes reais nesta lista.')
+      return
+    }
+    if (!barbeariaId) {
+      setError('Não foi possível identificar a barbearia. Recarregue a página ou confirme o vínculo da sua conta à unidade.')
+      return
+    }
+
+    const nome = formData.nome.trim()
+    const telefone = formData.telefone.trim()
+    const emailNormalized = formData.email?.trim() ? normalizeEmailInput(formData.email) : null
+    if (!nome || !telefone) {
+      setError('Preencha nome e telefone.')
+      return
+    }
+
+    const telefoneDigits = telefone.replace(/\D/g, '')
+    const telefoneDuplicado = clientesReais.some((c) => {
+      if (editingCliente && c.id === editingCliente.id) return false
+      return (c.telefone ?? '').replace(/\D/g, '') === telefoneDigits
+    })
+    if (telefoneDuplicado) {
+      setError('Já existe cliente com este telefone nesta unidade.')
+      return
+    }
+
+    if (emailNormalized) {
+      const emailDuplicado = clientesReais.some((c) => {
+        if (editingCliente && c.id === editingCliente.id) return false
+        return (c.email ?? '').trim().toLowerCase() === emailNormalized
+      })
+      if (emailDuplicado) {
+        setError('Já existe cliente com este e-mail nesta unidade.')
+        return
+      }
+    }
 
     setIsSaving(true)
+    setError(null)
     const supabase = createClient()
 
-    const clienteData = {
+    const clienteBase = {
       barbearia_id: barbeariaId,
-      nome: formData.nome,
-      telefone: formData.telefone,
-      email: formData.email || null,
-      notas: formData.notas || null,
+      nome,
+      telefone,
+      email: emailNormalized,
+      notas: formData.notas?.trim() ? formData.notas.trim() : null,
+    }
+    const clienteExtras = {
       origem_canal: formData.origem_canal?.trim() ? formData.origem_canal.trim().toLowerCase() : null,
       data_nascimento: formData.data_nascimento?.trim() ? formData.data_nascimento.trim() : null,
     }
+    const clienteFull = { ...clienteBase, ...clienteExtras }
 
-    if (editingCliente) {
-      await supabase.from('clientes').update(clienteData).eq('id', editingCliente.id)
-    } else {
-      await supabase.from('clientes').insert(clienteData)
+    const isSchemaMissingOptionalColumns = (err: { message?: string } | null) => {
+      const m = (err?.message ?? '').toLowerCase()
+      return (
+        m.includes('schema cache') ||
+        (m.includes('could not find') && m.includes('column')) ||
+        (m.includes('column') && m.includes('does not exist'))
+      )
     }
 
+    const mapSaveError = (err: { message?: string; code?: string } | null) => {
+      const msg = (err?.message ?? '').toLowerCase()
+      const code = err?.code ?? ''
+      if (code === '42501' || msg.includes('row-level security') || msg.includes('permission denied')) {
+        return 'Sem permissão para salvar nesta unidade. Peça ao administrador para conferir seu vínculo (equipe ou barbearia).'
+      }
+      if (msg.includes('unique') || code === '23505') {
+        if (msg.includes('telefone')) return 'Já existe cliente com este telefone nesta unidade.'
+        if (msg.includes('email')) return 'Já existe cliente com este e-mail nesta unidade.'
+        return 'Já existe um cadastro com estes dados (duplicado). Ajuste telefone ou e-mail e tente de novo.'
+      }
+      if (isSchemaMissingOptionalColumns(err)) {
+        return 'O banco ainda não tem colunas opcionais em `clientes` (como data de nascimento). No Supabase, em SQL Editor, execute o ALTER TABLE que adiciona `origem_canal` e `data_nascimento`, ou aplique as migrations do repositório até incluir esse passo.'
+      }
+      return err?.message?.trim() || 'Não foi possível salvar o cliente.'
+    }
+
+    if (editingCliente) {
+      let { error: updateError } = await supabase
+        .from('clientes')
+        .update(clienteFull)
+        .eq('id', editingCliente.id)
+      if (updateError && isSchemaMissingOptionalColumns(updateError)) {
+        ;({ error: updateError } = await supabase
+          .from('clientes')
+          .update(clienteBase)
+          .eq('id', editingCliente.id))
+      }
+      if (updateError) {
+        setError(mapSaveError(updateError))
+        setIsSaving(false)
+        return
+      }
+    } else {
+      let { data: inserted, error: insertError } = await supabase
+        .from('clientes')
+        .insert(clienteFull)
+        .select('id')
+        .maybeSingle()
+      if (insertError && isSchemaMissingOptionalColumns(insertError)) {
+        ;({ data: inserted, error: insertError } = await supabase
+          .from('clientes')
+          .insert(clienteBase)
+          .select('id')
+          .maybeSingle())
+      }
+      if (insertError || !inserted?.id) {
+        setError(mapSaveError(insertError ?? { message: 'Resposta vazia ao criar cliente.' }))
+        setIsSaving(false)
+        return
+      }
+    }
+
+    setError(null)
     setIsSaving(false)
     setIsDialogOpen(false)
     loadClientes()
@@ -360,6 +480,16 @@ export default function AdminClientesPage() {
               Modo demonstração: lista com 15 clientes fictícios (somente visualização). Desligue o interruptor para
               ver e editar os clientes reais desta barbearia.
             </AlertTitle>
+          </Alert>
+        ) : null}
+
+        {error && !isDialogOpen ? (
+          <Alert
+            variant="danger"
+            onClose={() => setError(null)}
+            autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+          >
+            <AlertTitle>{error}</AlertTitle>
           </Alert>
         ) : null}
 
@@ -410,19 +540,52 @@ export default function AdminClientesPage() {
               <ClientCardSkeleton key={i} />
             ))
           ) : filteredClientes.length > 0 ? (
-            paginatedClientes.map((cliente) => (
-              <ClienteCard
-                key={cliente.id}
-                cliente={cliente}
-                {...(useDemoData
-                  ? {}
-                  : {
-                      onHistorico: handleOpenHistorico,
-                      onEdit: handleEdit,
-                      onDelete: solicitarExclusaoCliente,
-                    })}
-              />
-            ))
+            <>
+              {paginatedClientes.map((cliente) => (
+                <ClienteCard
+                  key={cliente.id}
+                  cliente={cliente}
+                  {...(useDemoData
+                    ? {}
+                    : {
+                        onHistorico: handleOpenHistorico,
+                        onEdit: handleEdit,
+                        onDelete: solicitarExclusaoCliente,
+                      })}
+                />
+              ))}
+              <Card
+                role={useDemoData ? undefined : 'button'}
+                tabIndex={useDemoData ? undefined : 0}
+                onClick={useDemoData ? undefined : handleOpenNew}
+                onKeyDown={
+                  useDemoData
+                    ? undefined
+                    : (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleOpenNew()
+                        }
+                      }
+                }
+                className={cn(
+                  'relative border-dashed border-primary/30 bg-gradient-to-br from-background to-primary/5 transition-colors',
+                  useDemoData
+                    ? 'cursor-not-allowed opacity-60'
+                    : 'group cursor-pointer hover:border-primary/50 hover:from-primary/5 hover:to-primary/10',
+                )}
+              >
+                <CardContent className="flex min-h-[200px] flex-col items-center justify-center gap-2 px-4 py-6 text-center">
+                  <div className="rounded-full border border-primary/25 bg-primary/10 p-3 text-primary">
+                    <Sparkles className="size-5" aria-hidden />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">Adicionar novo cliente</p>
+                  <p className="text-xs text-muted-foreground">
+                    {useDemoData ? 'Desative dados fictícios para cadastrar' : 'Clique para abrir o cadastro'}
+                  </p>
+                </CardContent>
+              </Card>
+            </>
           ) : (
             <Card className="col-span-full overflow-hidden border-dashed bg-gradient-to-b from-muted/50 via-background to-muted/30 shadow-none">
               <CardContent className="px-4 py-12 sm:px-8 sm:py-16">
@@ -543,25 +706,46 @@ export default function AdminClientesPage() {
         ) : null}
       </PageContent>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog
+        open={isDialogOpen}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open)
+          if (!open) setError(null)
+        }}
+      >
         <DialogContent className="sm:max-w-lg lg:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingCliente ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
           </DialogHeader>
 
+          {error ? (
+            <Alert
+              variant="danger"
+              onClose={() => setError(null)}
+              autoCloseMs={ALERT_DEFAULT_AUTO_CLOSE_MS}
+            >
+              <AlertTitle>{error}</AlertTitle>
+            </Alert>
+          ) : null}
+
           <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-x-4 lg:gap-y-4 lg:space-y-0">
             <div className="space-y-2 lg:col-span-2">
-              <Label htmlFor="nome">Nome</Label>
+              <Label htmlFor="nome">
+                Nome <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="nome"
                 value={formData.nome}
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 placeholder="Nome do cliente"
+                required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="telefone">Telefone</Label>
+              <Label htmlFor="telefone">
+                Telefone <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="telefone"
                 value={formData.telefone}
@@ -569,11 +753,12 @@ export default function AdminClientesPage() {
                 placeholder="(00) 00000-0000"
                 inputMode="tel"
                 autoComplete="tel"
+                required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email (opcional)</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -588,7 +773,7 @@ export default function AdminClientesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="origem">Canal de origem (opcional)</Label>
+              <Label htmlFor="origem">Canal de origem</Label>
               <Select
                 value={formData.origem_canal || '__nao__'}
                 onValueChange={(v) =>
@@ -614,7 +799,7 @@ export default function AdminClientesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="nascimento">Data de nascimento (opcional)</Label>
+              <Label htmlFor="nascimento">Data de nascimento</Label>
               <Input
                 id="nascimento"
                 type="date"
@@ -624,7 +809,7 @@ export default function AdminClientesPage() {
             </div>
 
             <div className="space-y-2 lg:col-span-2">
-              <Label htmlFor="notas">Notas (opcional)</Label>
+              <Label htmlFor="notas">Notas</Label>
               <Textarea
                 id="notas"
                 value={formData.notas}
@@ -741,7 +926,9 @@ export default function AdminClientesPage() {
       <AlertDialog
         open={clienteParaExcluir != null}
         onOpenChange={(open) => {
-          if (!open) setClienteParaExcluir(null)
+          if (!open && !isDeletingCliente) {
+            setClienteParaExcluir(null)
+          }
         }}
       >
         <AlertDialogContent>
@@ -754,12 +941,17 @@ export default function AdminClientesPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeletingCliente}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => void confirmarExclusaoCliente()}
+              disabled={isDeletingCliente}
+              onClick={(e) => {
+                e.preventDefault()
+                void confirmarExclusaoCliente()
+              }}
             >
-              Excluir
+              {isDeletingCliente ? <Spinner className="mr-2" /> : null}
+              {isDeletingCliente ? 'Excluindo...' : 'Excluir'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

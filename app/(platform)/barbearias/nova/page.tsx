@@ -13,6 +13,7 @@ import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/
 import { Spinner } from '@/components/ui/spinner'
 import { createClient } from '@/lib/supabase/client'
 import { serializeBarbeariaEndereco } from '@/lib/barbearia-endereco'
+import { cnpjDigits } from '@/lib/format-contato'
 import { emptySuperBarbeariaForm } from '@/lib/super-barbearia-form'
 import { SuperBarbeariaFormFields } from '@/components/super/super-barbearia-form-fields'
 
@@ -31,6 +32,7 @@ export default function SuperBarbeariaNovaPage() {
     const { error: insertError } = await supabase.from('barbearias').insert({
       nome: form.nome.trim(),
       slug: form.slug.trim(),
+      cnpj: cnpjDigits(form.cnpj) || null,
       telefone: form.telefone || null,
       email: form.email || null,
       endereco: serializeBarbeariaEndereco(form.enderecoParts),

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Search, Sparkles } from 'lucide-react'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { PageContent, PageTitle } from '@/components/shared/page-container'
 import { TeamMemberCard } from '@/components/domain/team-member-card'
@@ -382,14 +382,36 @@ export default function TenantEquipePage() {
               <TeamMemberCardSkeleton key={i} />
             ))
           ) : filteredBarbeiros.length > 0 ? (
-            paginatedBarbeiros.map((barbeiro) => (
-              <TeamMemberCard
-                key={barbeiro.id}
-                barbeiro={barbeiro}
-                onEdit={handleEdit}
-                onDelete={solicitarExclusaoBarbeiro}
-              />
-            ))
+            <>
+              {paginatedBarbeiros.map((barbeiro) => (
+                <TeamMemberCard
+                  key={barbeiro.id}
+                  barbeiro={barbeiro}
+                  onEdit={handleEdit}
+                  onDelete={solicitarExclusaoBarbeiro}
+                />
+              ))}
+              <Card
+                role="button"
+                tabIndex={0}
+                onClick={handleOpenNew}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    handleOpenNew()
+                  }
+                }}
+                className="group relative cursor-pointer border-dashed border-primary/30 bg-gradient-to-br from-background to-primary/5 transition-colors hover:border-primary/50 hover:from-primary/5 hover:to-primary/10"
+              >
+                <CardContent className="flex min-h-[200px] flex-col items-center justify-center gap-2 px-4 py-6 text-center">
+                  <div className="rounded-full border border-primary/25 bg-primary/10 p-3 text-primary">
+                    <Sparkles className="size-5" aria-hidden />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">Adicionar novo membro</p>
+                  <p className="text-xs text-muted-foreground">Clique para cadastrar na equipe</p>
+                </CardContent>
+              </Card>
+            </>
           ) : (
             <Card className="col-span-full border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">

@@ -15,7 +15,7 @@ import { SuperBarbeariaFormCardSkeleton } from '@/components/shared/loading-skel
 import { createClient } from '@/lib/supabase/client'
 import { userFriendlyMessageFromApiJson } from '@/lib/to-user-friendly-error'
 import { deserializeBarbeariaEndereco, serializeBarbeariaEndereco } from '@/lib/barbearia-endereco'
-import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
+import { cnpjDigits, maskCnpj, maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
 import {
   emptySuperBarbeariaForm,
   slugifyBarbeariaSlug,
@@ -57,6 +57,7 @@ export default function SuperBarbeariaEditarPage() {
       setForm({
         nome: data.nome,
         slug: data.slug,
+        cnpj: maskCnpj(data.cnpj ?? ''),
         telefone: maskTelefoneBr(data.telefone ?? ''),
         email: normalizeEmailInput(data.email ?? ''),
         enderecoParts: deserializeBarbeariaEndereco(data.endereco ?? null),
@@ -82,6 +83,7 @@ export default function SuperBarbeariaEditarPage() {
           id: barbearia.id,
           nome: form.nome.trim(),
           slug: form.slug,
+          cnpj: cnpjDigits(form.cnpj) || null,
           telefone: form.telefone || null,
           email: form.email || null,
           endereco: serializeBarbeariaEndereco(form.enderecoParts),

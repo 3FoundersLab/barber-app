@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
+import { cnpjDigits } from '@/lib/format-contato'
 
 async function requireSuperAdmin() {
   try {
@@ -82,6 +83,8 @@ export async function PATCH(request: NextRequest) {
   let slug = String(body.slug ?? '').trim()
   const telefone = body.telefone != null && String(body.telefone).trim() !== '' ? String(body.telefone).trim() : null
   const email = body.email != null && String(body.email).trim() !== '' ? String(body.email).trim().toLowerCase() : null
+  const cnpjRaw = body.cnpj != null ? String(body.cnpj) : ''
+  const cnpj = cnpjDigits(cnpjRaw) || null
   const endereco = body.endereco != null && String(body.endereco).trim() !== '' ? String(body.endereco).trim() : null
   const ativo = body.ativo === false ? false : true
 
@@ -105,6 +108,7 @@ export async function PATCH(request: NextRequest) {
     .update({
       nome,
       slug,
+      cnpj,
       telefone,
       email,
       endereco,

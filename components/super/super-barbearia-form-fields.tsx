@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { BarbeariaEnderecoFields } from '@/components/shared/barbearia-endereco-fields'
-import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
+import { maskCnpj, maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
 import { slugifyBarbeariaSlug, type SuperBarbeariaFormState } from '@/lib/super-barbearia-form'
 
 type Props = {
@@ -63,6 +63,18 @@ export function SuperBarbeariaFormFields({
             }}
           />
         </div>
+      </div>
+      <div className="min-w-0 space-y-1.5">
+        <Label htmlFor={`${idPrefix}-cnpj`}>CNPJ</Label>
+        <Input
+          id={`${idPrefix}-cnpj`}
+          value={value.cnpj}
+          disabled={disabled}
+          autoComplete="off"
+          inputMode="numeric"
+          placeholder="00.000.000/0000-00"
+          onChange={(e) => onChange({ ...value, cnpj: maskCnpj(e.target.value) })}
+        />
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
         <div className="min-w-0 space-y-1.5">

@@ -7,6 +7,16 @@ import { ChevronDown, RotateCcw } from 'lucide-react'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { PageContent } from '@/components/shared/page-container'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -33,6 +43,10 @@ import {
 } from '@/lib/tenant-menu-permissions'
 
 type CustomRoleKey = 'moderador' | 'barbeiro_lider'
+const ROLE_LABEL: Record<CustomRoleKey, string> = {
+  moderador: 'Moderador',
+  barbeiro_lider: 'Barbeiro Líder',
+}
 
 const MENU_PERMISSION_HELP_TEXT: Partial<Record<TenantAdminMenuKey, string>> = {
   dashboard: 'Visualizar indicadores e status geral da barbearia.',
@@ -67,6 +81,7 @@ export function TenantGestaoPermissoes() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [confirmRestoreRole, setConfirmRestoreRole] = useState<CustomRoleKey | null>(null)
 
   const matrixSections = useMemo(() => menuSectionsForMatrix(), [])
 
@@ -253,7 +268,7 @@ export function TenantGestaoPermissoes() {
                     description="Acesso intermediário ao painel da barbearia, configurável por menu."
                     defaultOpen
                   >
-                    <CustomRoleToolbar onRestoreDefaults={() => restoreRoleDefaults('moderador')} />
+                    <CustomRoleToolbar onRestoreDefaults={() => setConfirmRestoreRole('moderador')} />
                     <MenuMatrixEditable
                       role="moderador"
                       access={customAccess.moderador}
@@ -269,7 +284,7 @@ export function TenantGestaoPermissoes() {
                     badgeVariant="secondary"
                     description="Barbeiro com permissões extras no painel da barbearia."
                   >
-                    <CustomRoleToolbar onRestoreDefaults={() => restoreRoleDefaults('barbeiro_lider')} />
+                    <CustomRoleToolbar onRestoreDefaults={() => setConfirmRestoreRole('barbeiro_lider')} />
                     <MenuMatrixEditable
                       role="barbeiro_lider"
                       access={customAccess.barbeiro_lider}
@@ -311,6 +326,40 @@ export function TenantGestaoPermissoes() {
             </Card>
           </TabsContent>
         </Tabs>
+        <AlertDialog
+          open={confirmRestoreRole != null}
+          onOpenChange={(open) => {
+            if (!open) setConfirmRestoreRole(null)
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Restaurar padrão deste cargo?</AlertDialogTitle>
+              <AlertDialogDescription className="leading-relaxed">
+                {confirmRestoreRole ? (
+                  <>
+                    As permissões de <span className="font-medium text-foreground">{ROLE_LABEL[confirmRestoreRole]}</span>{' '}
+                    voltarão para o padrão inicial. Depois, clique em <strong>Salvar alterações</strong> para aplicar no
+                    banco.
+                  </>
+                ) : null}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isSaving}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={isSaving || !confirmRestoreRole}
+                onClick={() => {
+                  if (!confirmRestoreRole) return
+                  restoreRoleDefaults(confirmRestoreRole)
+                  setConfirmRestoreRole(null)
+                }}
+              >
+                Restaurar padrão
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
       </PageContent>
     </TenantPanelPageContainer>

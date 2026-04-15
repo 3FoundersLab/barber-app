@@ -62,7 +62,7 @@ import {
   serializeBarbeariaEndereco,
 } from '@/lib/barbearia-endereco'
 import { BarbeariaEnderecoFields } from '@/components/shared/barbearia-endereco-fields'
-import { maskTelefoneBr } from '@/lib/format-contato'
+import { cnpjDigits, maskCnpj, maskTelefoneBr } from '@/lib/format-contato'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import { tenantBarbeariaBasePath } from '@/lib/routes'
 import { slugifyBarbeariaSlug } from '@/lib/super-barbearia-form'
@@ -113,6 +113,11 @@ function isBarbeariaDiasColumnError(err: { message?: string } | null): boolean {
     /dias_funcionamento/i.test(m) &&
     /column|schema cache|does not exist|PGRST204/i.test(m)
   )
+}
+
+function isBarbeariaCnpjColumnError(err: { message?: string } | null): boolean {
+  const m = err?.message ?? ''
+  return /cnpj/i.test(m) && /column|schema cache|does not exist|PGRST204/i.test(m)
 }
 
 const MSGS = {
@@ -249,6 +254,7 @@ export default function AdminConfiguracoesPage() {
 
   const [formBarbearia, setFormBarbearia] = useState({
     nome: '',
+    cnpj: '',
     enderecoParts: emptyBarbeariaEnderecoParts(),
     horario_abertura: '',
     horario_fechamento: '',
@@ -336,6 +342,7 @@ export default function AdminConfiguracoesPage() {
         setBarbearia(b)
         setFormBarbearia({
           nome: b.nome,
+          cnpj: maskCnpj(b.cnpj ?? ''),
           enderecoParts: deserializeBarbeariaEndereco(b.endereco ?? null),
           horario_abertura: timeFromDb(b.horario_abertura),
           horario_fechamento: timeFromDb(b.horario_fechamento),
@@ -413,19 +420,30 @@ export default function AdminConfiguracoesPage() {
 
     const basePayload = {
       nome: nomeBarbearia,
+      cnpj: cnpjDigits(formBarbearia.cnpj) || null,
       endereco: serializeBarbeariaEndereco(formBarbearia.enderecoParts),
       telefone: barbearia.telefone?.trim() || null,
       email: barbearia.email?.trim() ? barbearia.email.trim().toLowerCase() : null,
     }
+    const { cnpj: _cnpjIgnored, ...basePayloadSemCnpj } = basePayload
 
     const withHorarios = {
       ...basePayload,
       horario_abertura: timeToDb(formBarbearia.horario_abertura),
       horario_fechamento: timeToDb(formBarbearia.horario_fechamento),
     }
+    const withHorariosSemCnpj = {
+      ...basePayloadSemCnpj,
+      horario_abertura: timeToDb(formBarbearia.horario_abertura),
+      horario_fechamento: timeToDb(formBarbearia.horario_fechamento),
+    }
 
     const withPayload = {
       ...withHorarios,
+      dias_funcionamento: diasDb,
+    }
+    const withPayloadSemCnpj = {
+      ...withHorariosSemCnpj,
       dias_funcionamento: diasDb,
     }
 
@@ -441,8 +459,32 @@ export default function AdminConfiguracoesPage() {
     })
 
     if (rpc.row) {
-      setBarbearia(rpc.row)
-      setSuccessMessage('Dados da barbearia salvos com sucesso.')
+      const { data: cnpjRows, error: cnpjError } = await supabase
+        .from('barbearias')
+        .update({ cnpj: basePayload.cnpj })
+        .eq('id', barbearia.id)
+        .select('*')
+        .maybeSingle()
+
+      if (cnpjError) {
+        if (isBarbeariaCnpjColumnError(cnpjError)) {
+          setBarbearia(rpc.row)
+          setSuccessMessage('Dados da barbearia salvos com sucesso.')
+          setWarning(
+            'O CNPJ não foi gravado: o banco ainda não possui a coluna. Execute uma migração que adicione `barbearias.cnpj` no Supabase.',
+          )
+        } else {
+          clearFieldErrors()
+          setError(
+            toUserFriendlyErrorMessage(cnpjError, {
+              fallback: 'Dados principais salvos, mas não foi possível gravar o CNPJ.',
+            }),
+          )
+        }
+      } else {
+        setBarbearia(cnpjRows ?? rpc.row)
+        setSuccessMessage('Dados da barbearia salvos com sucesso.')
+      }
       scheduleScrollToSaveFeedback()
       setIsSavingBarbearia(false)
       return
@@ -465,6 +507,37 @@ export default function AdminConfiguracoesPage() {
       .select('*')
 
     let updatedB = updatedRows?.[0] ?? null
+
+    if (updateError && isBarbeariaCnpjColumnError(updateError)) {
+      const retryCnpj = await supabase
+        .from('barbearias')
+        .update(withPayloadSemCnpj)
+        .eq('id', barbearia.id)
+        .select('*')
+
+      if (retryCnpj.error) {
+        clearFieldErrors()
+        setError(
+          toUserFriendlyErrorMessage(retryCnpj.error, {
+            fallback: 'Não foi possível salvar os dados da barbearia.',
+          }),
+        )
+        scheduleScrollToSaveFeedback()
+      } else if (!retryCnpj.data?.length) {
+        clearFieldErrors()
+        setError(MSGS.barbeariaUpdateBloqueado)
+        scheduleScrollToSaveFeedback()
+      } else {
+        setBarbearia(retryCnpj.data[0])
+        setSuccessMessage('Dados da barbearia salvos com sucesso.')
+        setWarning(
+          'O CNPJ não foi gravado: o banco ainda não possui a coluna. Execute uma migração que adicione `barbearias.cnpj` no Supabase.',
+        )
+        scheduleScrollToSaveFeedback()
+      }
+      setIsSavingBarbearia(false)
+      return
+    }
 
     if (updateError && isBarbeariaDiasColumnError(updateError) && !isBarbeariaHorarioColumnError(updateError)) {
       const retryDias = await supabase
@@ -1105,6 +1178,25 @@ export default function AdminConfiguracoesPage() {
                                         {tenantBarbeariaBasePath(barbearia.slug)}
                                       </span>
                                     </p>
+                                  </div>
+                                  <div className="min-w-0 space-y-2">
+                                    <Label htmlFor="cnpj" className={superProfileLabelClass}>
+                                      CNPJ
+                                    </Label>
+                                    <Input
+                                      id="cnpj"
+                                      value={formBarbearia.cnpj}
+                                      onChange={(e) =>
+                                        setFormBarbearia((prev) => ({
+                                          ...prev,
+                                          cnpj: maskCnpj(e.target.value),
+                                        }))
+                                      }
+                                      placeholder="00.000.000/0000-00"
+                                      inputMode="numeric"
+                                      autoComplete="off"
+                                      className={superProfileInputClass}
+                                    />
                                   </div>
                                 </div>
                               </div>

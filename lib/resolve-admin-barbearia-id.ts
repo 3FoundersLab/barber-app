@@ -28,6 +28,20 @@ export async function resolveAdminBarbeariaId(
       .eq('slug', slug)
       .maybeSingle()
     if (!barbearia?.id) return null
+
+    const { data: profileSlug } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (profileSlug?.role === 'super_admin') {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(SUPER_ADMIN_BARBEARIA_STORAGE_KEY, barbearia.id)
+      }
+      return barbearia.id
+    }
+
     const isMember = await rpcUserIsMemberOfBarbearia(supabase, barbearia.id)
     if (isMember) {
       if (typeof window !== 'undefined') {
@@ -35,6 +49,22 @@ export async function resolveAdminBarbeariaId(
       }
       return barbearia.id
     }
+
+    const { data: vinculoBarbeiro } = await supabase
+      .from('barbeiros')
+      .select('id')
+      .eq('barbearia_id', barbearia.id)
+      .eq('user_id', userId)
+      .eq('ativo', true)
+      .maybeSingle()
+
+    if (vinculoBarbeiro?.id) {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(SUPER_ADMIN_BARBEARIA_STORAGE_KEY, barbearia.id)
+      }
+      return barbearia.id
+    }
+
     return null
   }
 

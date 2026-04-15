@@ -4,6 +4,7 @@ import { emptyBarbeariaEnderecoParts } from '@/lib/barbearia-endereco'
 export type SuperBarbeariaFormState = {
   nome: string
   slug: string
+  cnpj: string
   telefone: string
   email: string
   enderecoParts: BarbeariaEnderecoParts
@@ -14,6 +15,7 @@ export function emptySuperBarbeariaForm(): SuperBarbeariaFormState {
   return {
     nome: '',
     slug: '',
+    cnpj: '',
     telefone: '',
     email: '',
     enderecoParts: emptyBarbeariaEnderecoParts(),
