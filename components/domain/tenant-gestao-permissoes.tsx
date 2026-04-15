@@ -7,16 +7,6 @@ import { ChevronDown, RotateCcw } from 'lucide-react'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { PageContent } from '@/components/shared/page-container'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -35,14 +25,29 @@ import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { cn } from '@/lib/utils'
 import { type TenantAdminMenuKey } from '@/lib/tenant-admin-nav'
 import {
+  DEFAULT_EQUIPE_MENU_ACCESS,
   type EquipeMenuPermissionsJson,
   mergeEquipeMenuPermissions,
   menuSectionsForMatrix,
   sanitizeEquipeMenuPermissionsForSave,
-  TENANT_MENU_KEYS_FOR_ROLE_MATRIX,
 } from '@/lib/tenant-menu-permissions'
 
 type CustomRoleKey = 'moderador' | 'barbeiro_lider'
+
+const MENU_PERMISSION_HELP_TEXT: Partial<Record<TenantAdminMenuKey, string>> = {
+  dashboard: 'Visualizar indicadores e status geral da barbearia.',
+  clientes: 'Acessar e manter os dados da base de clientes.',
+  agendamentos: 'Gerenciar agenda, horários e reservas.',
+  comandas: 'Criar e acompanhar comandas de atendimento.',
+  servicos: 'Cadastrar e ajustar serviços oferecidos.',
+  planos: 'Configurar planos e benefícios para clientes.',
+  financeiro: 'Consultar movimentações e resultados financeiros.',
+  relatorios: 'Analisar métricas e relatórios operacionais.',
+  estoque: 'Controlar produtos e itens de estoque.',
+  assinatura: 'Visualizar e gerenciar assinatura da unidade.',
+  equipe: 'Gerenciar membros, funções e vínculo da equipe.',
+  configuracoes: 'Ajustar configurações da barbearia e do sistema.',
+}
 
 function snapshotPermissions(
   state: Record<CustomRoleKey, Record<TenantAdminMenuKey, boolean>>,
@@ -62,7 +67,6 @@ export function TenantGestaoPermissoes() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false)
 
   const matrixSections = useMemo(() => menuSectionsForMatrix(), [])
 
@@ -125,20 +129,17 @@ export function TenantGestaoPermissoes() {
     })
   }
 
-  const setAllForRole = (role: CustomRoleKey, value: boolean) => {
+  const restoreRoleDefaults = (role: CustomRoleKey) => {
     setCustomAccess((prev) => {
       if (!prev) return prev
-      const next = { ...prev[role] }
-      for (const k of TENANT_MENU_KEYS_FOR_ROLE_MATRIX) {
-        next[k] = value
+      return {
+        ...prev,
+        [role]: {
+          ...prev[role],
+          ...DEFAULT_EQUIPE_MENU_ACCESS[role],
+        },
       }
-      return { ...prev, [role]: next }
     })
-  }
-
-  const restoreFactoryDefaults = () => {
-    const merged = mergeEquipeMenuPermissions(null)
-    setCustomAccess(merged)
   }
 
   const handleSave = async () => {
@@ -252,10 +253,7 @@ export function TenantGestaoPermissoes() {
                     description="Acesso intermediário ao painel da barbearia, configurável por menu."
                     defaultOpen
                   >
-                    <CustomRoleToolbar
-                      onSelectAll={() => setAllForRole('moderador', true)}
-                      onClearAll={() => setAllForRole('moderador', false)}
-                    />
+                    <CustomRoleToolbar onRestoreDefaults={() => restoreRoleDefaults('moderador')} />
                     <MenuMatrixEditable
                       role="moderador"
                       access={customAccess.moderador}
@@ -271,10 +269,7 @@ export function TenantGestaoPermissoes() {
                     badgeVariant="secondary"
                     description="Barbeiro com permissões extras no painel da barbearia."
                   >
-                    <CustomRoleToolbar
-                      onSelectAll={() => setAllForRole('barbeiro_lider', true)}
-                      onClearAll={() => setAllForRole('barbeiro_lider', false)}
-                    />
+                    <CustomRoleToolbar onRestoreDefaults={() => restoreRoleDefaults('barbeiro_lider')} />
                     <MenuMatrixEditable
                       role="barbeiro_lider"
                       access={customAccess.barbeiro_lider}
@@ -285,17 +280,6 @@ export function TenantGestaoPermissoes() {
                 </div>
 
                 <div className="flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    onClick={() => setRestoreConfirmOpen(true)}
-                    disabled={isSaving}
-                  >
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Restaurar padrões (Moderador e Líder)
-                  </Button>
                   <Button
                     type="button"
                     className="w-full sm:ml-auto sm:w-auto"
@@ -328,29 +312,6 @@ export function TenantGestaoPermissoes() {
           </TabsContent>
         </Tabs>
 
-        <AlertDialog open={restoreConfirmOpen} onOpenChange={setRestoreConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Restaurar padrões de permissões?</AlertDialogTitle>
-              <AlertDialogDescription className="text-pretty leading-relaxed">
-                Os acessos por menu de <span className="font-medium text-foreground">Moderador</span> e{' '}
-                <span className="font-medium text-foreground">Barbeiro Líder</span> voltam aos valores iniciais do
-                sistema. A mudança fica nesta tela até você clicar em &quot;Salvar alterações&quot;.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isSaving}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                disabled={isSaving}
-                onClick={() => {
-                  restoreFactoryDefaults()
-                }}
-              >
-                Restaurar padrões
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </PageContent>
     </TenantPanelPageContainer>
   )
@@ -416,19 +377,15 @@ function RoleCardShell({
 }
 
 function CustomRoleToolbar({
-  onSelectAll,
-  onClearAll,
+  onRestoreDefaults,
 }: {
-  onSelectAll: () => void
-  onClearAll: () => void
+  onRestoreDefaults: () => void
 }) {
   return (
-    <div className="flex flex-wrap gap-2 gap-y-2 border-b border-border/50 py-4">
-      <Button type="button" variant="secondary" size="sm" onClick={onSelectAll}>
-        Marcar todos os menus
-      </Button>
-      <Button type="button" variant="ghost" size="sm" onClick={onClearAll}>
-        Desmarcar todos
+    <div className="flex justify-end border-b border-border/50 py-4">
+      <Button type="button" variant="outline" size="sm" onClick={onRestoreDefaults}>
+        <RotateCcw className="mr-2 h-4 w-4" />
+        Restaurar padrão deste cargo
       </Button>
     </div>
   )
@@ -445,43 +402,39 @@ function MenuMatrixEditable({
   sections: ReturnType<typeof menuSectionsForMatrix>
   onChange: (role: CustomRoleKey, key: TenantAdminMenuKey, value: boolean) => void
 }) {
+  const flatItems = sections.flatMap((section) => section.items)
+
   return (
-    <div className="space-y-8 pb-1">
-      {sections.map((section) => (
-        <div key={section.label} className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {section.label}
-          </p>
-          <div className="space-y-2.5">
-            {section.items.map((item) => {
-              const Icon = item.icon
-              const id = `menu-${role}-${item.key}`
-              return (
-                <div
-                  key={item.key}
-                  className="flex items-center justify-between gap-4 rounded-lg border border-border/60 px-3 py-3 sm:px-4"
-                >
-                  <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
-                    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground sm:mt-0" />
-                    <Label
-                      htmlFor={id}
-                      className="cursor-pointer break-words text-sm font-medium leading-snug sm:leading-normal"
-                    >
-                      {item.label}
-                    </Label>
-                  </div>
-                  <Switch
-                    className="shrink-0"
-                    id={id}
-                    checked={access[item.key] ?? false}
-                    onCheckedChange={(v) => onChange(role, item.key, v)}
-                  />
-                </div>
-              )
-            })}
+    <div className="grid grid-cols-1 gap-2.5 pb-1 md:grid-cols-2">
+      {flatItems.map((item) => {
+        const Icon = item.icon
+        const id = `menu-${role}-${item.key}`
+        const helpText = MENU_PERMISSION_HELP_TEXT[item.key] ?? 'Permitir acesso a este menu no painel.'
+        return (
+          <div
+            key={item.key}
+            className="flex items-center justify-between gap-4 rounded-lg border border-border/60 px-3 py-3 sm:px-4"
+          >
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-muted/30">
+                <Icon className="h-4 w-4 text-muted-foreground" />
+              </span>
+              <div className="min-w-0 space-y-1">
+                <Label htmlFor={id} className="cursor-pointer break-words text-sm font-semibold leading-tight">
+                  {item.label}
+                </Label>
+                <p className="text-xs leading-relaxed text-muted-foreground">{helpText}</p>
+              </div>
+            </div>
+            <Switch
+              className="shrink-0"
+              id={id}
+              checked={access[item.key] ?? false}
+              onCheckedChange={(v) => onChange(role, item.key, v)}
+            />
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
