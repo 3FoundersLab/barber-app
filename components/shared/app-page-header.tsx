@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/shared/page-container'
 import { useOptionalAppPageHeading } from '@/components/shared/app-page-heading-context'
 import { UserHeaderMenu } from '@/components/shared/user-header-menu'
 import { createClient } from '@/lib/supabase/client'
+import { getAuthUserSafe } from '@/lib/supabase/get-auth-user-safe'
 import {
   clearProfileCache,
   getStoredProfileCache,
@@ -98,9 +99,7 @@ export function AppPageHeader(props: AppPageHeaderProps) {
     let cancelled = false
     async function load() {
       const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const user = await getAuthUserSafe(supabase)
       if (!user) {
         if (!cancelled) {
           clearProfileCache()

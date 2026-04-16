@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 
-export type AlertaDashboardTipo = 'urgente' | 'atencao' | 'oportunidade' | 'info'
+export type AlertaDashboardTipo = 'urgente' | 'atencao' | 'especial' | 'info' | 'sucesso'
 
 export interface AlertaDashboard {
   id: string

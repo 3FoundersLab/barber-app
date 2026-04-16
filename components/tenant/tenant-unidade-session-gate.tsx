@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import { getAuthUserSafe } from '@/lib/supabase/get-auth-user-safe'
 import { tenantBarbeariaDashboardPath } from '@/lib/routes'
 import {
   hasTenantUnidadeGateCompleted,
@@ -74,9 +75,7 @@ export function TenantUnidadeSessionGate({ slug }: TenantUnidadeSessionGateProps
     setLoadError(null)
 
     const supabase = createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getAuthUserSafe(supabase)
 
     if (!user) {
       setPhase('idle')

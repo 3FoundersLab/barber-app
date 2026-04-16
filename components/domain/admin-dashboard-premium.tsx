@@ -54,6 +54,12 @@ export function AdminDashboardPremium(props: {
   onVerMaisNotificacoes?: () => void
   /** Marca alerta como lida (some da faixa; continua opaca no sheet). */
   onMarcarAlertaLido?: (id: string) => void
+  /** Arquivar alerta (faixa + sheet; mesma origem de estado do painel). */
+  onArquivarAlerta?: (id: string) => void
+  /** Ocultar categoria de alerta (menu ⋮). */
+  onOcultarTipoAlerta?: (tipo: AlertaDashboard['tipo']) => void
+  /** Desmarcar como lida (menu ⋮ na faixa). */
+  onDesmarcarAlertaLido?: (id: string) => void
 }) {
   const {
     base,
@@ -69,6 +75,9 @@ export function AdminDashboardPremium(props: {
     statusHoje,
     onVerMaisNotificacoes,
     onMarcarAlertaLido,
+    onArquivarAlerta,
+    onOcultarTipoAlerta,
+    onDesmarcarAlertaLido,
   } = props
 
   const chartData = useMemo(
@@ -120,7 +129,11 @@ export function AdminDashboardPremium(props: {
                   <DashboardAlertaRow
                     key={a.id}
                     alerta={a}
-                    onDismiss={onMarcarAlertaLido ? () => onMarcarAlertaLido(a.id) : undefined}
+                    onMarkAsRead={onMarcarAlertaLido ? () => onMarcarAlertaLido(a.id) : undefined}
+                    onMarkAsUnread={onDesmarcarAlertaLido ? () => onDesmarcarAlertaLido(a.id) : undefined}
+                    onAction={onMarcarAlertaLido ? () => onMarcarAlertaLido(a.id) : undefined}
+                    onArchive={onArquivarAlerta ? () => onArquivarAlerta(a.id) : undefined}
+                    onMuteType={onOcultarTipoAlerta ? () => onOcultarTipoAlerta(a.tipo) : undefined}
                   />
                 ))}
               </div>

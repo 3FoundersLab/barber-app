@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Building2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { getAuthUserSafe } from '@/lib/supabase/get-auth-user-safe'
 import { cn } from '@/lib/utils'
 
 type Unidade = { nome: string; slug: string }
@@ -55,51 +56,53 @@ export function TenantUnidadeVinculoHint({
 
     let cancel = false
     async function run() {
-      setState({ status: 'loading' })
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) {
-        if (!cancel) setState({ status: 'ready', semUnidade: true })
-        return
-      }
-
-      const { data: buRows, error: buErr } = await supabase
-        .from('barbearia_users')
-        .select('barbearias ( id, nome, slug )')
-        .eq('user_id', user.id)
-
-      if (cancel) return
-
-      if (buErr) {
-        setState({ status: 'ready', semUnidade: true })
-        return
-      }
-
-      if (!buRows?.length) {
-        setState({ status: 'ready', semUnidade: true })
-        return
-      }
-
-      const list = parseUnidadesFromRows(buRows)
-      if (list.length === 0) {
-        setState({ status: 'ready', semUnidade: true })
-        return
-      }
-
-      const match = list.find((u) => u.slug === slug) ?? null
-      let ativa: Unidade | null = match
-
-      if (!ativa) {
-        const { data: b } = await supabase.from('barbearias').select('nome, slug').eq('slug', slug).maybeSingle()
-        if (!cancel && b?.slug) {
-          ativa = { nome: b.nome?.trim() || b.slug, slug: b.slug }
+      try {
+        setState({ status: 'loading' })
+        const supabase = createClient()
+        const user = await getAuthUserSafe(supabase)
+        if (!user) {
+          if (!cancel) setState({ status: 'ready', semUnidade: true })
+          return
         }
-      }
 
-      if (!cancel) {
-        setState({ status: 'ready', semUnidade: false, unidadeAtiva: ativa })
+        const { data: buRows, error: buErr } = await supabase
+          .from('barbearia_users')
+          .select('barbearias ( id, nome, slug )')
+          .eq('user_id', user.id)
+
+        if (cancel) return
+
+        if (buErr) {
+          setState({ status: 'ready', semUnidade: true })
+          return
+        }
+
+        if (!buRows?.length) {
+          setState({ status: 'ready', semUnidade: true })
+          return
+        }
+
+        const list = parseUnidadesFromRows(buRows)
+        if (list.length === 0) {
+          setState({ status: 'ready', semUnidade: true })
+          return
+        }
+
+        const match = list.find((u) => u.slug === slug) ?? null
+        let ativa: Unidade | null = match
+
+        if (!ativa) {
+          const { data: b } = await supabase.from('barbearias').select('nome, slug').eq('slug', slug).maybeSingle()
+          if (!cancel && b?.slug) {
+            ativa = { nome: b.nome?.trim() || b.slug, slug: b.slug }
+          }
+        }
+
+        if (!cancel) {
+          setState({ status: 'ready', semUnidade: false, unidadeAtiva: ativa })
+        }
+      } catch {
+        if (!cancel) setState({ status: 'ready', semUnidade: true })
       }
     }
     void run()

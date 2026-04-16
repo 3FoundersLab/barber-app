@@ -77,7 +77,7 @@ export function buildAdminDashboardAlerts(input: BuildAdminDashboardAlertsInput)
           ? p.quantidade <= 0
             ? 'Produto esgotado — repor antes de vender.'
             : `Apenas ${p.quantidade} unidade(s); mínimo sugerido ${p.minimo}.`
-          : `${p.nome} (${p.quantidade} un.) e mais ${rest} — evite ruptura na venda.`,
+          : `${p.nome} (${p.quantidade} un.) e +${rest} itens — evite ruptura.`,
       acao: 'Ver estoque',
       link: `${base}/estoque`,
       icone: Package,
@@ -91,7 +91,7 @@ export function buildAdminDashboardAlerts(input: BuildAdminDashboardAlertsInput)
   ) {
     out.push({
       id: 'movimento-abaixo-media',
-      tipo: 'oportunidade',
+      tipo: 'atencao',
       titulo: 'Movimento abaixo do seu ritmo recente',
       descricao: `Hoje há ${agendamentosHoje} agendamento(s); sua média recente gira em torno de ${mediaAgendamentosRecente.toFixed(1)} por dia. Divulgue horários ou ofertas.`,
       acao: 'Abrir agenda',
@@ -103,7 +103,7 @@ export function buildAdminDashboardAlerts(input: BuildAdminDashboardAlertsInput)
   if (input.clientesNovosUltimos7Dias > 0) {
     out.push({
       id: 'clientes-novos',
-      tipo: 'oportunidade',
+      tipo: 'info',
       titulo:
         input.clientesNovosUltimos7Dias === 1
           ? '1 novo cliente nos últimos 7 dias'
@@ -129,7 +129,7 @@ export function buildAdminDashboardAlerts(input: BuildAdminDashboardAlertsInput)
 
     out.push({
       id: 'aniversariantes-hoje',
-      tipo: 'oportunidade',
+      tipo: 'especial',
       titulo:
         aniversariantes.length === 1
           ? `Hoje é aniversário de ${primeiro.nome}`
@@ -137,7 +137,7 @@ export function buildAdminDashboardAlerts(input: BuildAdminDashboardAlertsInput)
       descricao:
         aniversariantes.length === 1
           ? wa
-            ? 'Envie uma mensagem de parabéns no WhatsApp para fortalecer o relacionamento.'
+            ? 'Enviar parabéns no WhatsApp para fortalecer o relacionamento.'
             : 'Cliente sem telefone válido para WhatsApp. Atualize o cadastro para facilitar o contato.'
           : wa
             ? nomesExtras
@@ -147,9 +147,6 @@ export function buildAdminDashboardAlerts(input: BuildAdminDashboardAlertsInput)
       acao: wa ? 'Enviar parabéns' : 'Ver clientes',
       link: wa ?? `${base}/clientes`,
       linkTarget: wa ? '_blank' : '_self',
-      className: 'border-l-violet-500 bg-violet-500/[0.08] dark:bg-violet-500/15',
-      acaoButtonClassName:
-        'border-violet-500/50 bg-violet-500/15 text-violet-950 hover:bg-violet-500/25 dark:text-violet-100 dark:hover:bg-violet-500/25',
       icone: Gift,
     })
   }
@@ -157,7 +154,7 @@ export function buildAdminDashboardAlerts(input: BuildAdminDashboardAlertsInput)
   if (out.length === 0) {
     out.push({
       id: 'tudo-certo',
-      tipo: 'info',
+      tipo: 'sucesso',
       titulo: 'Nenhum alerta crítico agora',
       descricao: 'Recebimentos e estoque estão sob controle no que monitoramos neste painel.',
       acao: 'Ver relatórios',

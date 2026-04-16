@@ -11,12 +11,16 @@ import {
   buildAdminDashboardAlerts,
   buildDashboardResumoTendencia,
 } from '@/lib/build-admin-dashboard-alerts'
+import {
+  normalizeDashboardNotificationState,
+} from '@/lib/dashboard-notification-state'
 import { buildAdminDashboardStatusHoje, type AdminDashboardStatusHoje } from '@/lib/build-admin-dashboard-status-hoje'
 import { createClient } from '@/lib/supabase/client'
+import { getAuthUserSafe } from '@/lib/supabase/get-auth-user-safe'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import type { Agendamento, Barbearia } from '@/types'
-import type { DashboardFatDiarioPonto } from '@/types/admin-dashboard'
+import type { AlertaDashboard, DashboardFatDiarioPonto } from '@/types/admin-dashboard'
 
 interface AdminDashboardStats {
   agendamentosHoje: number
@@ -109,9 +113,7 @@ export default function AdminDashboardPage() {
       const supabase = createClient()
       setError(null)
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const user = await getAuthUserSafe(supabase)
       if (!user) {
         setError('Usuário não autenticado')
         setIsLoading(false)
@@ -138,7 +140,21 @@ export default function AdminDashboardPage() {
         return
       }
 
+      const { data: notifStateRow } = await supabase
+        .from('dashboard_notification_states')
+        .select('read_ids, archived_ids, muted_types, read_at')
+        .eq('barbearia_id', barbeariaData.id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      const notifState = normalizeDashboardNotificationState(notifStateRow)
+
       setBarbearia(barbeariaData)
+      setAlertasLidosIds(notifState.lidosIds)
+      setAlertasDescartadosIds(notifState.arquivadosIds)
+      setTiposOcultos(notifState.tiposOcultos)
+      setAlertasLidosAt(notifState.lidosAt)
+      setPersistContext({ userId: user.id, barbeariaId: barbeariaData.id })
+      setPrefsHydrated(true)
 
       const today = new Date().toISOString().split('T')[0]
       const firstDayMonth = new Date()
@@ -398,30 +414,148 @@ export default function AdminDashboardPage() {
 
   const [alertasDescartadosIds, setAlertasDescartadosIds] = useState<string[]>([])
   const [alertasLidosIds, setAlertasLidosIds] = useState<string[]>([])
+  const [alertasLidosAt, setAlertasLidosAt] = useState<Record<string, string>>({})
+  const [tiposOcultos, setTiposOcultos] = useState<AlertaDashboard['tipo'][]>([])
+  const [persistContext, setPersistContext] = useState<{ userId: string; barbeariaId: string } | null>(null)
+  const [prefsHydrated, setPrefsHydrated] = useState(false)
 
   useEffect(() => {
     setAlertasDescartadosIds([])
     setAlertasLidosIds([])
+    setAlertasLidosAt({})
+    setTiposOcultos([])
+    setPersistContext(null)
+    setPrefsHydrated(false)
   }, [slug])
 
   const alertasVisiveis = useMemo(() => {
     const descartados = new Set(alertasDescartadosIds)
-    return alertas.filter((a) => !descartados.has(a.id))
-  }, [alertas, alertasDescartadosIds])
+    const ocultos = new Set(tiposOcultos)
+    return alertas.filter((a) => !descartados.has(a.id) && !ocultos.has(a.tipo))
+  }, [alertas, alertasDescartadosIds, tiposOcultos])
+  const alertasArquivados = useMemo(() => {
+    const descartados = new Set(alertasDescartadosIds)
+    const ocultos = new Set(tiposOcultos)
+    return alertas.filter((a) => descartados.has(a.id) && !ocultos.has(a.tipo))
+  }, [alertas, alertasDescartadosIds, tiposOcultos])
 
   const alertasNaFaixa = useMemo(() => {
     const lidos = new Set(alertasLidosIds)
     return alertasVisiveis.filter((a) => !lidos.has(a.id))
   }, [alertasVisiveis, alertasLidosIds])
 
+  const persistNotificationState = useCallback(
+    (overrides?: {
+      lidosIds?: string[]
+      arquivadosIds?: string[]
+      tipos?: AlertaDashboard['tipo'][]
+      lidosAt?: Record<string, string>
+    }) => {
+      if (!persistContext || !prefsHydrated) return
+      const supabase = createClient()
+      void supabase
+        .from('dashboard_notification_states')
+        .upsert(
+          {
+            barbearia_id: persistContext.barbeariaId,
+            user_id: persistContext.userId,
+            read_ids: overrides?.lidosIds ?? alertasLidosIds,
+            archived_ids: overrides?.arquivadosIds ?? alertasDescartadosIds,
+            muted_types: overrides?.tipos ?? tiposOcultos,
+            read_at: overrides?.lidosAt ?? alertasLidosAt,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'barbearia_id,user_id' },
+        )
+        .then(({ error }) => {
+          if (error) console.error('[dashboard_notification_states] persist error:', error.message)
+        })
+    },
+    [alertasDescartadosIds, alertasLidosAt, alertasLidosIds, persistContext, prefsHydrated, tiposOcultos],
+  )
+
   const marcarAlertaLido = useCallback((id: string) => {
-    setAlertasLidosIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
-  }, [])
+    const nextLidos = alertasLidosIds.includes(id) ? alertasLidosIds : [...alertasLidosIds, id]
+    const nextLidosAt = alertasLidosAt[id] ? alertasLidosAt : { ...alertasLidosAt, [id]: new Date().toISOString() }
+    setAlertasLidosIds(nextLidos)
+    setAlertasLidosAt(nextLidosAt)
+    persistNotificationState({ lidosIds: nextLidos, lidosAt: nextLidosAt })
+  }, [alertasLidosAt, alertasLidosIds, persistNotificationState])
 
   const limparTodasNotificacoes = useCallback(() => {
-    setAlertasDescartadosIds((prev) => [...new Set([...prev, ...alertas.map((a) => a.id)])])
-    setAlertasLidosIds([])
-  }, [alertas])
+    const now = new Date().toISOString()
+    const nextLidos = [...new Set([...alertasLidosIds, ...alertasVisiveis.map((a) => a.id)])]
+    const nextLidosAt = { ...alertasLidosAt }
+    for (const alerta of alertasVisiveis) nextLidosAt[alerta.id] ||= now
+    setAlertasLidosIds(nextLidos)
+    setAlertasLidosAt(nextLidosAt)
+    persistNotificationState({ lidosIds: nextLidos, lidosAt: nextLidosAt })
+  }, [alertasLidosAt, alertasLidosIds, alertasVisiveis, persistNotificationState])
+
+  const desmarcarAlertaLidoHandler = useCallback(
+    (id: string) => {
+      const nextLidos = alertasLidosIds.filter((x) => x !== id)
+      const nextLidosAt = { ...alertasLidosAt }
+      delete nextLidosAt[id]
+      setAlertasLidosIds(nextLidos)
+      setAlertasLidosAt(nextLidosAt)
+      persistNotificationState({ lidosIds: nextLidos, lidosAt: nextLidosAt })
+    },
+    [alertasLidosAt, alertasLidosIds, persistNotificationState],
+  )
+
+  const arquivarAlertaHandler = useCallback(
+    (id: string) => {
+      const nextArquivados = alertasDescartadosIds.includes(id) ? alertasDescartadosIds : [...alertasDescartadosIds, id]
+      setAlertasDescartadosIds(nextArquivados)
+      persistNotificationState({ arquivadosIds: nextArquivados })
+    },
+    [alertasDescartadosIds, persistNotificationState],
+  )
+
+  const desarquivarAlertaHandler = useCallback(
+    (id: string) => {
+      const nextArquivados = alertasDescartadosIds.filter((x) => x !== id)
+      setAlertasDescartadosIds(nextArquivados)
+      persistNotificationState({ arquivadosIds: nextArquivados })
+    },
+    [alertasDescartadosIds, persistNotificationState],
+  )
+
+  const ocultarTipoAlertaHandler = useCallback(
+    (tipo: AlertaDashboard['tipo']) => {
+      const nextTipos = tiposOcultos.includes(tipo) ? tiposOcultos : [...tiposOcultos, tipo]
+      setTiposOcultos(nextTipos)
+      persistNotificationState({ tipos: nextTipos })
+    },
+    [tiposOcultos, persistNotificationState],
+  )
+
+  const mostrarTipoAlertaHandler = useCallback(
+    (tipo: AlertaDashboard['tipo']) => {
+      const nextTipos = tiposOcultos.filter((x) => x !== tipo)
+      setTiposOcultos(nextTipos)
+      persistNotificationState({ tipos: nextTipos })
+    },
+    [tiposOcultos, persistNotificationState],
+  )
+
+  useEffect(() => {
+    if (!persistContext || !prefsHydrated) return
+    const supabase = createClient()
+    void supabase.from('dashboard_notification_states').upsert(
+      {
+        barbearia_id: persistContext.barbeariaId,
+        user_id: persistContext.userId,
+        read_ids: alertasLidosIds,
+        archived_ids: alertasDescartadosIds,
+        muted_types: tiposOcultos,
+        read_at: alertasLidosAt,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'barbearia_id,user_id' },
+    )
+  }, [alertasDescartadosIds, alertasLidosAt, alertasLidosIds, persistContext, prefsHydrated, tiposOcultos])
 
   const [notificacoesAbrirChave, setNotificacoesAbrirChave] = useState(0)
   const solicitarAbrirNotificacoes = useCallback(() => {
@@ -443,13 +577,38 @@ export default function AdminDashboardPage() {
       !error ? (
         <AdminDashboardNotificationsTrigger
           alertas={alertasVisiveis}
+          alertasArquivados={alertasArquivados}
+          tiposOcultos={tiposOcultos}
           lidosIds={alertasLidosIds}
+          lidosAt={alertasLidosAt}
           isLoading={isLoading}
-          onClearAll={limparTodasNotificacoes}
+          onMarkAsRead={marcarAlertaLido}
+          onMarkAsUnread={desmarcarAlertaLidoHandler}
+          onArchive={arquivarAlertaHandler}
+          onUnarchive={desarquivarAlertaHandler}
+          onMuteType={ocultarTipoAlertaHandler}
+          onUnmuteType={mostrarTipoAlertaHandler}
+          onMarkAllAsRead={limparTodasNotificacoes}
           openRequestKey={notificacoesAbrirChave}
         />
       ) : null,
-    [error, alertasVisiveis, alertasLidosIds, isLoading, limparTodasNotificacoes, notificacoesAbrirChave],
+    [
+      error,
+      alertasVisiveis,
+      alertasArquivados,
+      alertasLidosIds,
+      alertasLidosAt,
+      isLoading,
+      limparTodasNotificacoes,
+      persistNotificationState,
+      marcarAlertaLido,
+      notificacoesAbrirChave,
+      desmarcarAlertaLidoHandler,
+      arquivarAlertaHandler,
+      desarquivarAlertaHandler,
+      ocultarTipoAlertaHandler,
+      mostrarTipoAlertaHandler,
+    ],
   )
 
   return (
@@ -496,6 +655,9 @@ export default function AdminDashboardPage() {
           statusHoje={extra?.statusHoje ?? null}
           onVerMaisNotificacoes={!error ? solicitarAbrirNotificacoes : undefined}
           onMarcarAlertaLido={!error ? marcarAlertaLido : undefined}
+          onArquivarAlerta={!error ? arquivarAlertaHandler : undefined}
+          onOcultarTipoAlerta={!error ? ocultarTipoAlertaHandler : undefined}
+          onDesmarcarAlertaLido={!error ? desmarcarAlertaLidoHandler : undefined}
         />
       </PageContent>
     </TenantPanelPageContainer>
