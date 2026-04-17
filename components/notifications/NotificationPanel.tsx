@@ -1,14 +1,32 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { Bell, ChevronDown, ChevronUp } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { DashboardAlertaRow } from '@/components/domain/admin-dashboard-alerta-row'
 import { cn } from '@/lib/utils'
+import { NOTIFICATION_TIPO_LABELS, NOTIFICATION_TIPO_PRIORITY, type NotificationPanelProps } from '@/types/notification'
 import type { AlertaDashboard } from '@/types/admin-dashboard'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
+import { NotificationCard } from '@/components/notifications/NotificationCard'
 
-export function AdminDashboardNotificationsTrigger({
+function formatReadAgo(iso?: string): string {
+  if (!iso) return 'Lida'
+  const diffMs = Date.now() - new Date(iso).getTime()
+  if (!Number.isFinite(diffMs) || diffMs < 0) return 'Lida'
+  const min = Math.floor(diffMs / 60000)
+  if (min < 1) return 'Lida • agora'
+  if (min < 60) return `Lida • há ${min} min`
+  const hours = Math.floor(min / 60)
+  if (hours < 24) return `Lida • há ${hours} h`
+  const days = Math.floor(hours / 24)
+  return `Lida • há ${days} d`
+}
+
+/**
+ * Painel lateral de notificações (sino + sheet). Listas usam `NotificationCard` memoizado.
+ */
+export function NotificationPanel({
   alertas,
   alertasArquivados = [],
   tiposOcultos = [],
@@ -23,31 +41,7 @@ export function AdminDashboardNotificationsTrigger({
   onUnarchive,
   onMuteType,
   onUnmuteType,
-}: {
-  alertas: AlertaDashboard[]
-  alertasArquivados?: AlertaDashboard[]
-  tiposOcultos?: AlertaDashboard['tipo'][]
-  isLoading: boolean
-  onMarkAllAsRead?: () => void
-  /** Incrementa para abrir o sheet a partir de outros controles (ex.: “Ver mais” na lista). */
-  openRequestKey?: number
-  /** IDs marcados como lidos (aparecem opacos no sheet). */
-  lidosIds?: string[]
-  /** Timestamp ISO de quando cada alerta foi lido. */
-  lidosAt?: Record<string, string>
-  /** Marca um alerta como lido (card e ação). */
-  onMarkAsRead?: (id: string) => void
-  /** Desmarca um alerta lido. */
-  onMarkAsUnread?: (id: string) => void
-  /** Remove da lista principal. */
-  onArchive?: (id: string) => void
-  /** Restaura da lista de arquivadas para principais. */
-  onUnarchive?: (id: string) => void
-  /** Não mostra mais a categoria/tipo. */
-  onMuteType?: (tipo: AlertaDashboard['tipo']) => void
-  /** Reativa categoria/tipo ocultado. */
-  onUnmuteType?: (tipo: AlertaDashboard['tipo']) => void
-}) {
+}: NotificationPanelProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [marcandoIds, setMarcandoIds] = useState<string[]>([])
   const [arquivadasOpen, setArquivadasOpen] = useState(false)
@@ -62,18 +56,9 @@ export function AdminDashboardNotificationsTrigger({
   const count = alertas.length
   const countArquivadas = alertasArquivados.length
   const countTiposOcultos = tiposOcultos.length
-  const badgeLabel = naoLidas > 9 ? '9+' : String(naoLidas)
-  const prioridadeTipo = useMemo(
-    () =>
-      ({
-        urgente: 0,
-        atencao: 1,
-        especial: 2,
-        info: 3,
-        sucesso: 4,
-      }) satisfies Record<AlertaDashboard['tipo'], number>,
-    [],
-  )
+
+  const prioridadeTipo = NOTIFICATION_TIPO_PRIORITY
+
   const alertasOrdenados = useMemo(() => {
     return [...alertas].sort((a, b) => {
       const aLido = lidosSet.has(a.id)
@@ -85,71 +70,62 @@ export function AdminDashboardNotificationsTrigger({
       return bAt - aAt
     })
   }, [alertas, lidosAt, lidosSet, prioridadeTipo])
-  const labelTipo = useMemo(
-    () =>
-      ({
-        urgente: 'Urgentes',
-        atencao: 'Atenção',
-        especial: 'Aniversários',
-        info: 'Informativas',
-        sucesso: 'Sucesso',
-      }) satisfies Record<AlertaDashboard['tipo'], string>,
-    [],
-  )
 
-  function formatReadAgo(iso?: string): string {
-    if (!iso) return 'Lida'
-    const diffMs = Date.now() - new Date(iso).getTime()
-    if (!Number.isFinite(diffMs) || diffMs < 0) return 'Lida'
-    const min = Math.floor(diffMs / 60000)
-    if (min < 1) return 'Lida • agora'
-    if (min < 60) return `Lida • há ${min} min`
-    const hours = Math.floor(min / 60)
-    if (hours < 24) return `Lida • há ${hours} h`
-    const days = Math.floor(hours / 24)
-    return `Lida • há ${days} d`
-  }
+  const labelTipo = NOTIFICATION_TIPO_LABELS
 
-  function handleLimpar() {
+  const handleLimpar = useCallback(() => {
     if (!onMarkAllAsRead) return
     if (alertas.length > 3) {
       const ok = window.confirm(`Marcar ${alertas.length} notificações como lidas?`)
       if (!ok) return
     }
     onMarkAllAsRead()
-  }
+  }, [alertas.length, onMarkAllAsRead])
 
-  function handleMarcarComAnimacao(id: string) {
-    if (lidosSet.has(id) || marcandoIds.includes(id)) return
-    setMarcandoIds((prev) => [...prev, id])
-    window.setTimeout(() => {
-      onMarkAsRead?.(id)
-      setMarcandoIds((prev) => prev.filter((x) => x !== id))
-    }, 190)
-  }
+  const handleMarcarComAnimacao = useCallback(
+    (id: string) => {
+      if (lidosSet.has(id) || marcandoIds.includes(id)) return
+      setMarcandoIds((prev) => [...prev, id])
+      window.setTimeout(() => {
+        onMarkAsRead?.(id)
+        setMarcandoIds((prev) => prev.filter((x) => x !== id))
+      }, 190)
+    },
+    [lidosSet, marcandoIds, onMarkAsRead],
+  )
+
+  const handleMarkAsUnread = useCallback(
+    (id: string) => {
+      onMarkAsUnread?.(id)
+    },
+    [onMarkAsUnread],
+  )
+
+  const handleArchive = useCallback(
+    (id: string) => {
+      onArchive?.(id)
+    },
+    [onArchive],
+  )
+
+  const handleUnarchive = useCallback(
+    (id: string) => {
+      onUnarchive?.(id)
+    },
+    [onUnarchive],
+  )
+
+  const handleMuteType = useCallback(
+    (tipo: AlertaDashboard['tipo']) => {
+      onMuteType?.(tipo)
+    },
+    [onMuteType],
+  )
 
   return (
     <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
       <SheetTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="relative h-9 w-9 shrink-0 rounded-full"
-          aria-label={`Notificações${naoLidas > 0 ? `, ${naoLidas} não lida(s)` : count > 0 ? ', todas lidas' : ''}`}
-        >
-          <Bell className="size-5 text-muted-foreground" aria-hidden />
-          {!isLoading && naoLidas > 0 ? (
-            <span
-              className={cn(
-                'absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full',
-                'bg-primary px-1 text-[10px] font-semibold text-primary-foreground',
-              )}
-            >
-              {badgeLabel}
-            </span>
-          ) : null}
-        </Button>
+        <NotificationBell isLoading={isLoading} unreadCount={naoLidas} totalCount={count} />
       </SheetTrigger>
       <SheetContent
         side="right"
@@ -185,17 +161,17 @@ export function AdminDashboardNotificationsTrigger({
           ) : (
             <>
               {alertasOrdenados.map((a) => (
-                <DashboardAlertaRow
+                <NotificationCard
                   key={a.id}
                   alerta={a}
                   lido={lidosSet.has(a.id)}
                   lidoInfo={formatReadAgo(lidosAt[a.id])}
                   isMarkingAsRead={marcandoIds.includes(a.id)}
-                  onMarkAsRead={() => handleMarcarComAnimacao(a.id)}
-                  onMarkAsUnread={() => onMarkAsUnread?.(a.id)}
-                  onAction={() => handleMarcarComAnimacao(a.id)}
-                  onArchive={() => onArchive?.(a.id)}
-                  onMuteType={() => onMuteType?.(a.tipo)}
+                  onMarkAsRead={handleMarcarComAnimacao}
+                  onMarkAsUnread={onMarkAsUnread ? handleMarkAsUnread : undefined}
+                  onAction={handleMarcarComAnimacao}
+                  onArchive={onArchive ? handleArchive : undefined}
+                  onMuteType={onMuteType ? handleMuteType : undefined}
                 />
               ))}
               {countArquivadas > 0 ? (
@@ -213,13 +189,13 @@ export function AdminDashboardNotificationsTrigger({
                   {arquivadasOpen ? (
                     <div className="space-y-3">
                       {alertasArquivados.map((a) => (
-                        <DashboardAlertaRow
+                        <NotificationCard
                           key={`arq-${a.id}`}
                           alerta={a}
                           lido
                           lidoInfo={formatReadAgo(lidosAt[a.id])}
                           arquivada
-                          onUnarchive={() => onUnarchive?.(a.id)}
+                          onUnarchive={onUnarchive ? handleUnarchive : undefined}
                         />
                       ))}
                     </div>

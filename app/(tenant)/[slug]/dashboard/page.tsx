@@ -4,21 +4,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageContent } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { AdminDashboardPremium } from '@/components/domain/admin-dashboard-premium'
-import { AdminDashboardNotificationsTrigger } from '@/components/domain/admin-dashboard-notifications-trigger'
+import { NotificationPanel } from '@/components/notifications/NotificationPanel'
 import { Alert, AlertDescription, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { formatDateShort } from '@/lib/constants'
 import {
   buildAdminDashboardAlerts,
   buildDashboardResumoTendencia,
 } from '@/lib/build-admin-dashboard-alerts'
-import {
-  normalizeDashboardNotificationState,
-} from '@/lib/dashboard-notification-state'
+import { listAniversariosEquipeNaJanela } from '@/lib/birthday-countdown'
 import { buildAdminDashboardStatusHoje, type AdminDashboardStatusHoje } from '@/lib/build-admin-dashboard-status-hoje'
 import { createClient } from '@/lib/supabase/client'
 import { getAuthUserSafe } from '@/lib/supabase/get-auth-user-safe'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
+import { useNotifications } from '@/hooks/useNotifications'
 import type { Agendamento, Barbearia } from '@/types'
 import type { AlertaDashboard, DashboardFatDiarioPonto } from '@/types/admin-dashboard'
 
@@ -37,6 +36,7 @@ interface DashboardExtra {
   estoqueCritico: { nome: string; quantidade: number; minimo: number }[]
   clientesNovosUltimos7Dias: number
   aniversariantesHoje: { nome: string; telefone?: string | null }[]
+  aniversariosEquipeProximos: { nome: string; telefone: string | null; diasRestantes: number }[]
   mediaAgendamentosRecente: number
   statusHoje: AdminDashboardStatusHoje
 }
@@ -108,6 +108,36 @@ export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const operacaoLiberada = barbearia ? barbearia.status_cadastro !== 'pagamento_pendente' : false
+
+  const alertas = useMemo(
+    () =>
+      buildAdminDashboardAlerts({
+        base,
+        operacaoLiberada,
+        recebimentosPendentesHoje: extra?.recebimentosPendentesHoje ?? [],
+        estoqueCritico: extra?.estoqueCritico ?? [],
+        clientesNovosUltimos7Dias: extra?.clientesNovosUltimos7Dias ?? 0,
+        aniversariantesHoje: extra?.aniversariantesHoje ?? [],
+        aniversariosEquipeProximos: extra?.aniversariosEquipeProximos ?? [],
+        agendamentosHoje: stats?.agendamentosHoje ?? 0,
+        mediaAgendamentosRecente: extra?.mediaAgendamentosRecente ?? 0,
+      }),
+    [
+      base,
+      operacaoLiberada,
+      extra?.recebimentosPendentesHoje,
+      extra?.estoqueCritico,
+      extra?.clientesNovosUltimos7Dias,
+      extra?.aniversariantesHoje,
+      extra?.aniversariosEquipeProximos,
+      extra?.mediaAgendamentosRecente,
+      stats?.agendamentosHoje,
+    ],
+  )
+
+  const notif = useNotifications(slug, alertas)
+
   useEffect(() => {
     async function loadData() {
       const supabase = createClient()
@@ -146,15 +176,9 @@ export default function AdminDashboardPage() {
         .eq('barbearia_id', barbeariaData.id)
         .eq('user_id', user.id)
         .maybeSingle()
-      const notifState = normalizeDashboardNotificationState(notifStateRow)
 
       setBarbearia(barbeariaData)
-      setAlertasLidosIds(notifState.lidosIds)
-      setAlertasDescartadosIds(notifState.arquivadosIds)
-      setTiposOcultos(notifState.tiposOcultos)
-      setAlertasLidosAt(notifState.lidosAt)
-      setPersistContext({ userId: user.id, barbeariaId: barbeariaData.id })
-      setPrefsHydrated(true)
+      notif.hydratePreferences(notifStateRow, { userId: user.id, barbeariaId: barbeariaData.id })
 
       const today = new Date().toISOString().split('T')[0]
       const firstDayMonth = new Date()
@@ -186,6 +210,7 @@ export default function AdminDashboardPage() {
         { count: count14 },
         { count: novos7 },
         { data: clientesComNascimentoRows },
+        { data: barbeirosComNascimentoRows },
         { data: estoqueRows },
         equipePack,
         { data: todayAgRows },
@@ -267,6 +292,12 @@ export default function AdminDashboardPage() {
           .from('clientes')
           .select('nome, telefone, data_nascimento')
           .eq('barbearia_id', barbeariaData.id)
+          .not('data_nascimento', 'is', null),
+        supabase
+          .from('barbeiros')
+          .select('nome, telefone, data_nascimento')
+          .eq('barbearia_id', barbeariaData.id)
+          .eq('ativo', true)
           .not('data_nascimento', 'is', null),
         operacaoLiberada
           ? supabase.from('estoque_produtos').select('nome, quantidade, minimo').eq('barbearia_id', barbeariaData.id)
@@ -356,6 +387,8 @@ export default function AdminDashboardPage() {
           telefone: (c.telefone as string | null | undefined) ?? null,
         }))
 
+      const aniversariosEquipeProximos = listAniversariosEquipeNaJanela(barbeirosComNascimentoRows ?? [], 3, hoje)
+
       const statusHoje = buildAdminDashboardStatusHoje({
         barbearia: barbeariaData,
         todayYmd: today,
@@ -376,6 +409,7 @@ export default function AdminDashboardPage() {
         estoqueCritico,
         clientesNovosUltimos7Dias: novos7 || 0,
         aniversariantesHoje,
+        aniversariosEquipeProximos,
         mediaAgendamentosRecente: (count14 || 0) / 14,
         statusHoje,
       })
@@ -384,178 +418,12 @@ export default function AdminDashboardPage() {
     }
 
     void loadData()
-  }, [slug])
-
-  const operacaoLiberada = barbearia ? barbearia.status_cadastro !== 'pagamento_pendente' : false
-
-  const alertas = useMemo(
-    () =>
-      buildAdminDashboardAlerts({
-        base,
-        operacaoLiberada,
-        recebimentosPendentesHoje: extra?.recebimentosPendentesHoje ?? [],
-        estoqueCritico: extra?.estoqueCritico ?? [],
-        clientesNovosUltimos7Dias: extra?.clientesNovosUltimos7Dias ?? 0,
-        aniversariantesHoje: extra?.aniversariantesHoje ?? [],
-        agendamentosHoje: stats?.agendamentosHoje ?? 0,
-        mediaAgendamentosRecente: extra?.mediaAgendamentosRecente ?? 0,
-      }),
-    [
-      base,
-      operacaoLiberada,
-      extra?.recebimentosPendentesHoje,
-      extra?.estoqueCritico,
-      extra?.clientesNovosUltimos7Dias,
-      extra?.aniversariantesHoje,
-      extra?.mediaAgendamentosRecente,
-      stats?.agendamentosHoje,
-    ],
-  )
-
-  const [alertasDescartadosIds, setAlertasDescartadosIds] = useState<string[]>([])
-  const [alertasLidosIds, setAlertasLidosIds] = useState<string[]>([])
-  const [alertasLidosAt, setAlertasLidosAt] = useState<Record<string, string>>({})
-  const [tiposOcultos, setTiposOcultos] = useState<AlertaDashboard['tipo'][]>([])
-  const [persistContext, setPersistContext] = useState<{ userId: string; barbeariaId: string } | null>(null)
-  const [prefsHydrated, setPrefsHydrated] = useState(false)
-
-  useEffect(() => {
-    setAlertasDescartadosIds([])
-    setAlertasLidosIds([])
-    setAlertasLidosAt({})
-    setTiposOcultos([])
-    setPersistContext(null)
-    setPrefsHydrated(false)
-  }, [slug])
-
-  const alertasVisiveis = useMemo(() => {
-    const descartados = new Set(alertasDescartadosIds)
-    const ocultos = new Set(tiposOcultos)
-    return alertas.filter((a) => !descartados.has(a.id) && !ocultos.has(a.tipo))
-  }, [alertas, alertasDescartadosIds, tiposOcultos])
-  const alertasArquivados = useMemo(() => {
-    const descartados = new Set(alertasDescartadosIds)
-    const ocultos = new Set(tiposOcultos)
-    return alertas.filter((a) => descartados.has(a.id) && !ocultos.has(a.tipo))
-  }, [alertas, alertasDescartadosIds, tiposOcultos])
+  }, [slug, notif.hydratePreferences])
 
   const alertasNaFaixa = useMemo(() => {
-    const lidos = new Set(alertasLidosIds)
-    return alertasVisiveis.filter((a) => !lidos.has(a.id))
-  }, [alertasVisiveis, alertasLidosIds])
-
-  const persistNotificationState = useCallback(
-    (overrides?: {
-      lidosIds?: string[]
-      arquivadosIds?: string[]
-      tipos?: AlertaDashboard['tipo'][]
-      lidosAt?: Record<string, string>
-    }) => {
-      if (!persistContext || !prefsHydrated) return
-      const supabase = createClient()
-      void supabase
-        .from('dashboard_notification_states')
-        .upsert(
-          {
-            barbearia_id: persistContext.barbeariaId,
-            user_id: persistContext.userId,
-            read_ids: overrides?.lidosIds ?? alertasLidosIds,
-            archived_ids: overrides?.arquivadosIds ?? alertasDescartadosIds,
-            muted_types: overrides?.tipos ?? tiposOcultos,
-            read_at: overrides?.lidosAt ?? alertasLidosAt,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'barbearia_id,user_id' },
-        )
-        .then(({ error }) => {
-          if (error) console.error('[dashboard_notification_states] persist error:', error.message)
-        })
-    },
-    [alertasDescartadosIds, alertasLidosAt, alertasLidosIds, persistContext, prefsHydrated, tiposOcultos],
-  )
-
-  const marcarAlertaLido = useCallback((id: string) => {
-    const nextLidos = alertasLidosIds.includes(id) ? alertasLidosIds : [...alertasLidosIds, id]
-    const nextLidosAt = alertasLidosAt[id] ? alertasLidosAt : { ...alertasLidosAt, [id]: new Date().toISOString() }
-    setAlertasLidosIds(nextLidos)
-    setAlertasLidosAt(nextLidosAt)
-    persistNotificationState({ lidosIds: nextLidos, lidosAt: nextLidosAt })
-  }, [alertasLidosAt, alertasLidosIds, persistNotificationState])
-
-  const limparTodasNotificacoes = useCallback(() => {
-    const now = new Date().toISOString()
-    const nextLidos = [...new Set([...alertasLidosIds, ...alertasVisiveis.map((a) => a.id)])]
-    const nextLidosAt = { ...alertasLidosAt }
-    for (const alerta of alertasVisiveis) nextLidosAt[alerta.id] ||= now
-    setAlertasLidosIds(nextLidos)
-    setAlertasLidosAt(nextLidosAt)
-    persistNotificationState({ lidosIds: nextLidos, lidosAt: nextLidosAt })
-  }, [alertasLidosAt, alertasLidosIds, alertasVisiveis, persistNotificationState])
-
-  const desmarcarAlertaLidoHandler = useCallback(
-    (id: string) => {
-      const nextLidos = alertasLidosIds.filter((x) => x !== id)
-      const nextLidosAt = { ...alertasLidosAt }
-      delete nextLidosAt[id]
-      setAlertasLidosIds(nextLidos)
-      setAlertasLidosAt(nextLidosAt)
-      persistNotificationState({ lidosIds: nextLidos, lidosAt: nextLidosAt })
-    },
-    [alertasLidosAt, alertasLidosIds, persistNotificationState],
-  )
-
-  const arquivarAlertaHandler = useCallback(
-    (id: string) => {
-      const nextArquivados = alertasDescartadosIds.includes(id) ? alertasDescartadosIds : [...alertasDescartadosIds, id]
-      setAlertasDescartadosIds(nextArquivados)
-      persistNotificationState({ arquivadosIds: nextArquivados })
-    },
-    [alertasDescartadosIds, persistNotificationState],
-  )
-
-  const desarquivarAlertaHandler = useCallback(
-    (id: string) => {
-      const nextArquivados = alertasDescartadosIds.filter((x) => x !== id)
-      setAlertasDescartadosIds(nextArquivados)
-      persistNotificationState({ arquivadosIds: nextArquivados })
-    },
-    [alertasDescartadosIds, persistNotificationState],
-  )
-
-  const ocultarTipoAlertaHandler = useCallback(
-    (tipo: AlertaDashboard['tipo']) => {
-      const nextTipos = tiposOcultos.includes(tipo) ? tiposOcultos : [...tiposOcultos, tipo]
-      setTiposOcultos(nextTipos)
-      persistNotificationState({ tipos: nextTipos })
-    },
-    [tiposOcultos, persistNotificationState],
-  )
-
-  const mostrarTipoAlertaHandler = useCallback(
-    (tipo: AlertaDashboard['tipo']) => {
-      const nextTipos = tiposOcultos.filter((x) => x !== tipo)
-      setTiposOcultos(nextTipos)
-      persistNotificationState({ tipos: nextTipos })
-    },
-    [tiposOcultos, persistNotificationState],
-  )
-
-  useEffect(() => {
-    if (!persistContext || !prefsHydrated) return
-    const supabase = createClient()
-    void supabase.from('dashboard_notification_states').upsert(
-      {
-        barbearia_id: persistContext.barbeariaId,
-        user_id: persistContext.userId,
-        read_ids: alertasLidosIds,
-        archived_ids: alertasDescartadosIds,
-        muted_types: tiposOcultos,
-        read_at: alertasLidosAt,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'barbearia_id,user_id' },
-    )
-  }, [alertasDescartadosIds, alertasLidosAt, alertasLidosIds, persistContext, prefsHydrated, tiposOcultos])
+    const lidos = new Set(notif.alertasLidosIds)
+    return notif.alertasVisiveis.filter((a) => !lidos.has(a.id))
+  }, [notif.alertasVisiveis, notif.alertasLidosIds])
 
   const [notificacoesAbrirChave, setNotificacoesAbrirChave] = useState(0)
   const solicitarAbrirNotificacoes = useCallback(() => {
@@ -575,39 +443,39 @@ export default function AdminDashboardPage() {
   const headerNotificacoes = useMemo(
     () =>
       !error ? (
-        <AdminDashboardNotificationsTrigger
-          alertas={alertasVisiveis}
-          alertasArquivados={alertasArquivados}
-          tiposOcultos={tiposOcultos}
-          lidosIds={alertasLidosIds}
-          lidosAt={alertasLidosAt}
+        <NotificationPanel
+          alertas={notif.alertasVisiveis}
+          alertasArquivados={notif.alertasArquivados}
+          tiposOcultos={notif.tiposOcultos}
+          lidosIds={notif.alertasLidosIds}
+          lidosAt={notif.alertasLidosAt}
           isLoading={isLoading}
-          onMarkAsRead={marcarAlertaLido}
-          onMarkAsUnread={desmarcarAlertaLidoHandler}
-          onArchive={arquivarAlertaHandler}
-          onUnarchive={desarquivarAlertaHandler}
-          onMuteType={ocultarTipoAlertaHandler}
-          onUnmuteType={mostrarTipoAlertaHandler}
-          onMarkAllAsRead={limparTodasNotificacoes}
+          onMarkAsRead={notif.marcarAlertaLido}
+          onMarkAsUnread={notif.desmarcarAlertaLido}
+          onArchive={notif.arquivarAlerta}
+          onUnarchive={notif.desarquivarAlerta}
+          onMuteType={notif.ocultarTipoAlerta}
+          onUnmuteType={notif.mostrarTipoAlerta}
+          onMarkAllAsRead={notif.limparTodasNotificacoes}
           openRequestKey={notificacoesAbrirChave}
         />
       ) : null,
     [
       error,
-      alertasVisiveis,
-      alertasArquivados,
-      alertasLidosIds,
-      alertasLidosAt,
+      notif.alertasVisiveis,
+      notif.alertasArquivados,
+      notif.alertasLidosIds,
+      notif.alertasLidosAt,
+      notif.tiposOcultos,
       isLoading,
-      limparTodasNotificacoes,
-      persistNotificationState,
-      marcarAlertaLido,
+      notif.limparTodasNotificacoes,
+      notif.marcarAlertaLido,
       notificacoesAbrirChave,
-      desmarcarAlertaLidoHandler,
-      arquivarAlertaHandler,
-      desarquivarAlertaHandler,
-      ocultarTipoAlertaHandler,
-      mostrarTipoAlertaHandler,
+      notif.desmarcarAlertaLido,
+      notif.arquivarAlerta,
+      notif.desarquivarAlerta,
+      notif.ocultarTipoAlerta,
+      notif.mostrarTipoAlerta,
     ],
   )
 
@@ -654,10 +522,10 @@ export default function AdminDashboardPage() {
           operacaoLiberada={operacaoLiberada}
           statusHoje={extra?.statusHoje ?? null}
           onVerMaisNotificacoes={!error ? solicitarAbrirNotificacoes : undefined}
-          onMarcarAlertaLido={!error ? marcarAlertaLido : undefined}
-          onArquivarAlerta={!error ? arquivarAlertaHandler : undefined}
-          onOcultarTipoAlerta={!error ? ocultarTipoAlertaHandler : undefined}
-          onDesmarcarAlertaLido={!error ? desmarcarAlertaLidoHandler : undefined}
+          onMarcarAlertaLido={!error ? notif.marcarAlertaLido : undefined}
+          onArquivarAlerta={!error ? notif.arquivarAlerta : undefined}
+          onOcultarTipoAlerta={!error ? notif.ocultarTipoAlerta : undefined}
+          onDesmarcarAlertaLido={!error ? notif.desmarcarAlertaLido : undefined}
         />
       </PageContent>
     </TenantPanelPageContainer>

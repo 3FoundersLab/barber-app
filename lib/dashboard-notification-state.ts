@@ -1,6 +1,6 @@
 import type { AlertaDashboard } from '@/types/admin-dashboard'
 
-type DashboardNotificationStateRow = {
+export type DashboardNotificationStateRow = {
   read_ids: string[] | null
   archived_ids: string[] | null
   muted_types: string[] | null

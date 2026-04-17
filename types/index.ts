@@ -90,6 +90,8 @@ export interface Barbeiro {
   avatar?: string
   telefone?: string
   email?: string
+  /** Opcional; usado para lembrar aniversário da equipe no painel. */
+  data_nascimento?: string | null
   ativo: boolean
   /** Bases antigas podem omitir; tratar como `barbeiro`. */
   funcao_equipe?: EquipeFuncao

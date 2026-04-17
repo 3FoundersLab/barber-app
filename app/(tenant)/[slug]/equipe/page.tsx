@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Plus, Search, Sparkles } from 'lucide-react'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { PageContent, PageTitle } from '@/components/shared/page-container'
@@ -19,25 +21,14 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { BarbeiroFotoUpload } from '@/components/shared/barbeiro-foto-upload'
-import { EQUIPE_FUNCAO_OPTIONS, parseEquipeFuncao } from '@/lib/equipe-funcao'
-import { uploadBarbeiroFoto, removeBarbeiroFotoStorage } from '@/lib/supabase/upload-barbeiro-foto'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { TeamMemberCardSkeleton } from '@/components/shared/loading-skeleton'
 import {
   Pagination,
@@ -45,13 +36,11 @@ import {
   PaginationEllipsis,
   PaginationItem,
 } from '@/components/ui/pagination'
-import { Spinner } from '@/components/ui/spinner'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
-import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
 import { cn } from '@/lib/utils'
-import type { Barbeiro, EquipeFuncao } from '@/types'
+import type { Barbeiro } from '@/types'
 
 const EQUIPE_PAGE_SIZE_OPTIONS = [12, 24, 36, 48] as const
 type EquipePageSize = (typeof EQUIPE_PAGE_SIZE_OPTIONS)[number]
@@ -76,29 +65,17 @@ function pageNumberItems(current: number, total: number): (number | 'ellipsis')[
 }
 
 export default function TenantEquipePage() {
+  const router = useRouter()
   const { slug, base } = useTenantAdminBase()
+  const novoMembroHref = `${base}/equipe/novo`
 
   const [barbeiros, setBarbeiros] = useState<Barbeiro[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<EquipePageSize>(12)
-  const [barbeariaId, setBarbeariaId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [editingBarbeiro, setEditingBarbeiro] = useState<Barbeiro | null>(null)
   const [barbeiroParaExcluir, setBarbeiroParaExcluir] = useState<Barbeiro | null>(null)
-
-  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null)
-  const [formData, setFormData] = useState({
-    nome: '',
-    telefone: '',
-    email: '',
-    ativo: true,
-    funcao_equipe: 'barbeiro' as EquipeFuncao,
-    avatar: '',
-  })
 
   useEffect(() => {
     loadBarbeiros()
@@ -157,8 +134,6 @@ export default function TenantEquipePage() {
       return
     }
 
-    setBarbeariaId(barbeariaIdResolved)
-
     const { data, error: queryError } = await supabase
       .from('barbeiros')
       .select('*')
@@ -173,34 +148,6 @@ export default function TenantEquipePage() {
     }
 
     setIsLoading(false)
-  }
-
-  const handleOpenNew = () => {
-    setEditingBarbeiro(null)
-    setPendingAvatarFile(null)
-    setFormData({
-      nome: '',
-      telefone: '',
-      email: '',
-      ativo: true,
-      funcao_equipe: 'barbeiro',
-      avatar: '',
-    })
-    setIsDialogOpen(true)
-  }
-
-  const handleEdit = (barbeiro: Barbeiro) => {
-    setEditingBarbeiro(barbeiro)
-    setPendingAvatarFile(null)
-    setFormData({
-      nome: barbeiro.nome,
-      telefone: maskTelefoneBr(barbeiro.telefone || ''),
-      email: normalizeEmailInput(barbeiro.email || ''),
-      ativo: barbeiro.ativo,
-      funcao_equipe: parseEquipeFuncao(barbeiro.funcao_equipe),
-      avatar: barbeiro.avatar || '',
-    })
-    setIsDialogOpen(true)
   }
 
   const solicitarExclusaoBarbeiro = (id: string) => {
@@ -223,93 +170,8 @@ export default function TenantEquipePage() {
     loadBarbeiros()
   }
 
-  const handleSave = async () => {
-    if (!barbeariaId) return
-
-    setIsSaving(true)
-    setError(null)
-    const supabase = createClient()
-
-    const funcao = formData.funcao_equipe
-    const avatarForRow =
-      funcao === 'moderador' ? null : formData.avatar.trim() || null
-
-    const barbeiroData = {
-      barbearia_id: barbeariaId,
-      nome: formData.nome.trim(),
-      telefone: formData.telefone || null,
-      email: formData.email || null,
-      ativo: formData.ativo,
-      funcao_equipe: funcao,
-      avatar: avatarForRow,
-    }
-
-    const syncFotoStorage = async (barbeiroId: string): Promise<boolean> => {
-      if (funcao === 'moderador') {
-        await removeBarbeiroFotoStorage(supabase, barbeariaId, barbeiroId)
-        return true
-      }
-      if (pendingAvatarFile) {
-        const res = await uploadBarbeiroFoto(supabase, barbeariaId, barbeiroId, pendingAvatarFile)
-        if ('error' in res) {
-          setError(res.error)
-          return false
-        }
-        const { error: avatarErr } = await supabase
-          .from('barbeiros')
-          .update({ avatar: res.publicUrl })
-          .eq('id', barbeiroId)
-        if (avatarErr) {
-          setError('Cadastro salvo, mas não foi possível associar a foto.')
-          return false
-        }
-        return true
-      }
-      if (!formData.avatar.trim() && editingBarbeiro?.avatar) {
-        await removeBarbeiroFotoStorage(supabase, barbeariaId, barbeiroId)
-      }
-      return true
-    }
-
-    if (editingBarbeiro) {
-      const { error: updateError } = await supabase
-        .from('barbeiros')
-        .update(barbeiroData)
-        .eq('id', editingBarbeiro.id)
-      if (updateError) {
-        setError('Não foi possível salvar as alterações')
-        setIsSaving(false)
-        return
-      }
-      const ok = await syncFotoStorage(editingBarbeiro.id)
-      if (!ok) {
-        setIsSaving(false)
-        loadBarbeiros()
-        return
-      }
-    } else {
-      const { data: created, error: insertError } = await supabase
-        .from('barbeiros')
-        .insert(barbeiroData)
-        .select('id')
-        .single()
-      if (insertError || !created) {
-        setError('Não foi possível criar o membro da equipe')
-        setIsSaving(false)
-        return
-      }
-      const ok = await syncFotoStorage(created.id)
-      if (!ok) {
-        setIsSaving(false)
-        loadBarbeiros()
-        return
-      }
-    }
-
-    setPendingAvatarFile(null)
-    setIsSaving(false)
-    setIsDialogOpen(false)
-    loadBarbeiros()
+  const abrirEdicao = (barbeiro: Barbeiro) => {
+    router.push(`${base}/equipe/${barbeiro.id}/editar`)
   }
 
   return (
@@ -319,9 +181,11 @@ export default function TenantEquipePage() {
       <PageContent className="space-y-4 md:space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
           <PageTitle className="min-w-0 truncate">Equipe</PageTitle>
-          <Button type="button" className="w-full shrink-0 sm:w-auto" size="sm" onClick={handleOpenNew}>
-            <Plus className="mr-1 h-4 w-4" />
-            Novo
+          <Button type="button" className="w-full shrink-0 sm:w-auto" size="sm" asChild>
+            <Link href={novoMembroHref}>
+              <Plus className="mr-1 h-4 w-4" />
+              Novo
+            </Link>
           </Button>
         </div>
 
@@ -387,30 +251,22 @@ export default function TenantEquipePage() {
                 <TeamMemberCard
                   key={barbeiro.id}
                   barbeiro={barbeiro}
-                  onEdit={handleEdit}
+                  onEdit={abrirEdicao}
                   onDelete={solicitarExclusaoBarbeiro}
                 />
               ))}
-              <Card
-                role="button"
-                tabIndex={0}
-                onClick={handleOpenNew}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    handleOpenNew()
-                  }
-                }}
-                className="group relative cursor-pointer border-dashed border-primary/30 bg-gradient-to-br from-background to-primary/5 transition-colors hover:border-primary/50 hover:from-primary/5 hover:to-primary/10"
+              <Link
+                href={novoMembroHref}
+                className="group relative block cursor-pointer rounded-xl border border-dashed border-primary/30 bg-card text-card-foreground shadow-sm ring-offset-background transition-colors hover:border-primary/50 hover:bg-gradient-to-br hover:from-primary/5 hover:to-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <CardContent className="flex min-h-[200px] flex-col items-center justify-center gap-2 px-4 py-6 text-center">
+                <div className="flex min-h-[200px] flex-col items-center justify-center gap-2 px-4 py-6 text-center">
                   <div className="rounded-full border border-primary/25 bg-primary/10 p-3 text-primary">
                     <Sparkles className="size-5" aria-hidden />
                   </div>
                   <p className="text-sm font-semibold text-foreground">Adicionar novo membro</p>
                   <p className="text-xs text-muted-foreground">Clique para cadastrar na equipe</p>
-                </CardContent>
-              </Card>
+                </div>
+              </Link>
             </>
           ) : (
             <Card className="col-span-full border-dashed">
@@ -419,9 +275,11 @@ export default function TenantEquipePage() {
                   {searchTerm.trim() ? 'Nenhum membro encontrado' : 'Nenhum membro na equipe'}
                 </p>
                 {!searchTerm.trim() && (
-                  <Button size="sm" className="mt-3" onClick={handleOpenNew}>
-                    <Plus className="mr-1 h-4 w-4" />
-                    Adicionar membro
+                  <Button size="sm" className="mt-3" asChild>
+                    <Link href={novoMembroHref}>
+                      <Plus className="mr-1 h-4 w-4" />
+                      Adicionar membro
+                    </Link>
                   </Button>
                 )}
               </CardContent>
@@ -494,118 +352,6 @@ export default function TenantEquipePage() {
           </div>
         ) : null}
       </PageContent>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-lg lg:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{editingBarbeiro ? 'Editar membro' : 'Novo membro'}</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-x-4 lg:gap-y-4 lg:space-y-0">
-            <div className="space-y-2 lg:col-span-2">
-              <Label htmlFor="nome">Nome</Label>
-              <Input
-                id="nome"
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                placeholder="Nome completo"
-              />
-            </div>
-
-            <div className="space-y-2 lg:col-span-2">
-              <Label htmlFor="funcao_equipe">Função</Label>
-              <Select
-                value={formData.funcao_equipe}
-                onValueChange={(v) => {
-                  const next = v as EquipeFuncao
-                  setPendingAvatarFile(null)
-                  setFormData({
-                    ...formData,
-                    funcao_equipe: next,
-                    ...(next === 'moderador' ? { avatar: '' } : {}),
-                  })
-                }}
-              >
-                <SelectTrigger id="funcao_equipe" className="w-full">
-                  <SelectValue placeholder="Função na equipe" />
-                </SelectTrigger>
-                <SelectContent>
-                  {EQUIPE_FUNCAO_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Moderadores não aparecem na escolha de profissional no agendamento público; barbeiros e barbeiros líder sim.
-              </p>
-            </div>
-
-            {formData.funcao_equipe !== 'moderador' && barbeariaId ? (
-              <div className="lg:col-span-2">
-                <BarbeiroFotoUpload
-                  barbeariaId={barbeariaId}
-                  barbeiroId={editingBarbeiro?.id ?? null}
-                  remoteAvatarUrl={formData.avatar}
-                  pendingWebpFile={pendingAvatarFile}
-                  onRemoteAvatarUrlChange={(url) => setFormData({ ...formData, avatar: url })}
-                  onPendingWebpFileChange={setPendingAvatarFile}
-                  fallbackLetter={(formData.nome.trim().charAt(0) || '?').toUpperCase()}
-                  disabled={isSaving}
-                  onError={(msg) => setError(msg)}
-                />
-              </div>
-            ) : null}
-
-            <div className="space-y-2">
-              <Label htmlFor="telefone">Telefone</Label>
-              <Input
-                id="telefone"
-                value={formData.telefone}
-                onChange={(e) => setFormData({ ...formData, telefone: maskTelefoneBr(e.target.value) })}
-                placeholder="(00) 00000-0000"
-                inputMode="tel"
-                autoComplete="tel"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: normalizeEmailInput(e.target.value) })}
-                placeholder="email@exemplo.com"
-                inputMode="email"
-                autoComplete="email"
-              />
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-3 lg:col-span-2">
-              <Label htmlFor="ativo" className="cursor-pointer">
-                Ativo na equipe
-              </Label>
-              <Switch
-                id="ativo"
-                checked={formData.ativo}
-                onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={isSaving || !formData.nome}>
-              {isSaving ? <Spinner className="mr-2" /> : null}
-              {isSaving ? 'Salvando...' : 'Salvar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <AlertDialog
         open={barbeiroParaExcluir != null}

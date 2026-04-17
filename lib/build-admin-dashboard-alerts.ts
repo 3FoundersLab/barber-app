@@ -1,4 +1,4 @@
-import { Banknote, CalendarOff, Gift, Package, Sparkles, TrendingUp, UserPlus } from 'lucide-react'
+import { Banknote, Cake, CalendarOff, Gift, Package, Sparkles, TrendingUp, UserPlus } from 'lucide-react'
 import { formatCurrency, formatTime } from '@/lib/constants'
 import { whatsappChatHref } from '@/lib/format-contato'
 import type { AlertaDashboard } from '@/types/admin-dashboard'
@@ -15,6 +15,8 @@ export type BuildAdminDashboardAlertsInput = {
   /** média simples de agendamentos/dia nos últimos N dias (dias com operação) */
   mediaAgendamentosRecente: number
   aniversariantesHoje: { nome: string; telefone?: string | null }[]
+  /** Membros da equipe com aniversário entre hoje e os próximos 3 dias (painel). */
+  aniversariosEquipeProximos?: { nome: string; telefone?: string | null; diasRestantes: number }[]
 }
 
 function joinHorarios(amostra: { horario: string }[], max = 3): string {
@@ -77,7 +79,7 @@ export function buildAdminDashboardAlerts(input: BuildAdminDashboardAlertsInput)
           ? p.quantidade <= 0
             ? 'Produto esgotado — repor antes de vender.'
             : `Apenas ${p.quantidade} unidade(s); mínimo sugerido ${p.minimo}.`
-          : `${p.nome} (${p.quantidade} un.) e +${rest} itens — evite ruptura.`,
+          : `${p.nome} (${p.quantidade} un.) e +${rest} itens, evite ruptura.`,
       acao: 'Ver estoque',
       link: `${base}/estoque`,
       icone: Package,
@@ -148,6 +150,42 @@ export function buildAdminDashboardAlerts(input: BuildAdminDashboardAlertsInput)
       link: wa ?? `${base}/clientes`,
       linkTarget: wa ? '_blank' : '_self',
       icone: Gift,
+    })
+  }
+
+  const equipeAniv = input.aniversariosEquipeProximos ?? []
+  if (equipeAniv.length > 0) {
+    const sorted = [...equipeAniv].sort(
+      (a, b) => a.diasRestantes - b.diasRestantes || a.nome.localeCompare(b.nome, 'pt-BR'),
+    )
+    const primeiroWa = sorted.find((x) => x.diasRestantes === 0 && x.telefone)
+    const waNome =
+      primeiroWa?.nome.trim().split(/\s+/)[0] || primeiroWa?.nome.trim() || ''
+    const wa = primeiroWa?.telefone
+      ? whatsappChatHref(
+          primeiroWa.telefone,
+          `Oi, ${waNome}! 🎉\n\nFeliz aniversário em nome do time da barbearia!`,
+        )
+      : null
+    const linhas = sorted.map((x) => {
+      if (x.diasRestantes === 0) return `${x.nome} — hoje`
+      if (x.diasRestantes === 1) return `${x.nome} — amanhã`
+      return `${x.nome} — em ${x.diasRestantes} dias`
+    })
+    const primeiro = sorted[0]
+    const tituloUm =
+      primeiro.diasRestantes === 0
+        ? `Aniversário na equipe: ${primeiro.nome}`
+        : `Em ${primeiro.diasRestantes} dia(s), aniversário de ${primeiro.nome}`
+    out.push({
+      id: 'aniversario-equipe-proximo',
+      tipo: 'especial',
+      titulo: equipeAniv.length === 1 ? tituloUm : `${equipeAniv.length} aniversários na equipe em até 3 dias`,
+      descricao: linhas.join(' · '),
+      acao: wa ? 'Parabéns no WhatsApp' : 'Ver equipe',
+      link: wa ?? `${base}/equipe`,
+      linkTarget: wa ? '_blank' : '_self',
+      icone: Cake,
     })
   }
 
