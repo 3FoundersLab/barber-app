@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import { Geist_Mono, Inter, Playfair_Display } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AppToaster } from '@/components/providers/app-toaster'
+import { CookieConsentBanner } from '@/components/privacy/cookie-consent-banner'
+import { AnalyticsConsentGate } from '@/components/privacy/analytics-consent-gate'
 import './globals.css'
 
 const inter = Inter({
@@ -77,7 +78,8 @@ export default function RootLayout({
         >
           {children}
           <AppToaster />
-          <Analytics />
+          <CookieConsentBanner />
+          <AnalyticsConsentGate />
         </ThemeProvider>
       </body>
     </html>

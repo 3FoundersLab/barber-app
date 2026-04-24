@@ -180,6 +180,12 @@ export function LandingFooter() {
                   <Headphones className="mt-px size-4 shrink-0 text-zinc-500" strokeWidth={1.75} aria-hidden />
                   Resposta por e-mail em horário comercial.
                 </p>
+                <p className="mt-2 text-xs text-zinc-500">
+                  Canal LGPD:{' '}
+                  <a className="underline underline-offset-2 hover:text-zinc-300" href="mailto:privacidade@barbertool.com.br">
+                    privacidade@barbertool.com.br
+                  </a>
+                </p>
               </div>
 
               <div className="mt-4 border-t border-white/[0.06] pt-4 lg:flex lg:flex-col lg:items-end">

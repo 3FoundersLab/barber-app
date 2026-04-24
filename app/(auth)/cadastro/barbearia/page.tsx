@@ -26,6 +26,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
+import { Checkbox } from '@/components/ui/checkbox'
 import { CadastroPlanoGridSkeleton } from '@/components/shared/loading-skeleton'
 import { createClient } from '@/lib/supabase/client'
 import { mapSupabaseAuthErrorToMessage } from '@/lib/map-supabase-auth-error'
@@ -54,6 +55,7 @@ import {
 } from '@/lib/plano-periodicidade'
 import type { Plano } from '@/types'
 import { LANDING_EASE } from '@/lib/landing-motion'
+import { PRIVACY_POLICY_VERSION } from '@/lib/privacy-consent'
 
 const STEPS = [
   { id: 1 as const, label: 'Dados principais', short: 'Dados' },
@@ -162,6 +164,8 @@ export default function CadastroBarbeariaPage() {
   const [showConfirmarSenha, setShowConfirmarSenha] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [acceptedLegal, setAcceptedLegal] = useState(false)
+  const [legalError, setLegalError] = useState<string | null>(null)
   const [slugAutofill, setSlugAutofill] = useState(true)
   const [step1Errors, setStep1Errors] = useState<Record<string, string>>({})
   const [step2Errors, setStep2Errors] = useState<Partial<Record<keyof BarbeariaEnderecoParts, string>>>({})
@@ -259,6 +263,10 @@ export default function CadastroBarbeariaPage() {
       setError('Selecione um plano para continuar')
       return
     }
+    if (!acceptedLegal) {
+      setLegalError('Você precisa aceitar os Termos de Uso e a Política de Privacidade.')
+      return
+    }
 
     const err1 = validateStep1(formData, hasSession)
     const err2 = validateStep2(formData.enderecoParts)
@@ -278,6 +286,16 @@ export default function CadastroBarbeariaPage() {
     const slug = slugify(formData.slug || formData.nomeBarbearia)
 
     try {
+      void fetch('/api/privacy/consent', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          category: 'analytics',
+          granted: true,
+          policyVersion: PRIVACY_POLICY_VERSION,
+        }),
+      })
+
       const { data: existingBarbearia } = await supabase
         .from('barbearias')
         .select('id')
@@ -952,6 +970,35 @@ export default function CadastroBarbeariaPage() {
                         </AlertDescription>
                       </Alert>
                     )}
+                    <div className="space-y-2 rounded-xl border border-border/70 bg-muted/35 p-4">
+                      <div className="flex items-start gap-2.5">
+                        <Checkbox
+                          id="accept-legal"
+                          checked={acceptedLegal}
+                          onCheckedChange={(value) => {
+                            setAcceptedLegal(value === true)
+                            setLegalError(null)
+                          }}
+                          disabled={isSubmitting}
+                          aria-describedby="accept-legal-hint"
+                        />
+                        <Label htmlFor="accept-legal" className="cursor-pointer text-sm leading-relaxed">
+                          Li e aceito os{' '}
+                          <Link href="/termos-de-uso" className="underline underline-offset-2">
+                            Termos de Uso
+                          </Link>{' '}
+                          e a{' '}
+                          <Link href="/politica-de-privacidade" className="underline underline-offset-2">
+                            Política de Privacidade
+                          </Link>
+                          .
+                        </Label>
+                      </div>
+                      <p id="accept-legal-hint" className="text-xs text-muted-foreground">
+                        Este aceite é registrado com data/hora e versão dos documentos legais.
+                      </p>
+                      {legalError ? <p className="text-xs text-red-400">{legalError}</p> : null}
+                    </div>
                   </div>
                 )}
                   </motion.div>
@@ -1022,6 +1069,7 @@ export default function CadastroBarbeariaPage() {
                       disabled={
                         isSubmitting ||
                         isLoadingPlans ||
+                        !acceptedLegal ||
                         !formData.planoId ||
                         planos.length === 0
                       }
