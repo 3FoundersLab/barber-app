@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { NotificationPanel } from '@/components/notifications/NotificationPanel'
 import { buildAdminDashboardAlerts } from '@/lib/build-admin-dashboard-alerts'
 import { listAniversariosEquipeNaJanela } from '@/lib/birthday-countdown'
+import { mapApiNotificationStateToRow, type NotificationApiState } from '@/lib/notification-api-state'
 import { createClient } from '@/lib/supabase/client'
 import { getAuthUserSafe } from '@/lib/supabase/get-auth-user-safe'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
@@ -78,15 +79,23 @@ export function TenantHeaderNotifications() {
           return
         }
 
-        const { data: notifStateRow } = await supabase
-          .from('dashboard_notification_states')
-          .select('read_ids, archived_ids, muted_types, read_at')
-          .eq('barbearia_id', barbearia.id)
-          .eq('user_id', user.id)
-          .maybeSingle()
-
-        if (!cancelled) {
-          notif.hydratePreferences(notifStateRow, { userId: user.id, barbeariaId: barbearia.id })
+        try {
+          const prefRes = await fetch(
+            `/api/notifications?barbeariaId=${encodeURIComponent(barbearia.id)}&slug=${encodeURIComponent(slug)}`,
+          )
+          const pref = prefRes.ok
+            ? ((await prefRes.json()) as NotificationApiState)
+            : null
+          if (!cancelled) {
+            notif.hydratePreferences(
+              mapApiNotificationStateToRow(pref),
+              { userId: user.id, barbeariaId: barbearia.id },
+            )
+          }
+        } catch {
+          if (!cancelled) {
+            notif.hydratePreferences(null, { userId: user.id, barbeariaId: barbearia.id })
+          }
         }
 
         const today = new Date().toISOString().split('T')[0]

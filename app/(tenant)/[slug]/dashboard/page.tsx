@@ -13,6 +13,7 @@ import {
 } from '@/lib/build-admin-dashboard-alerts'
 import { listAniversariosEquipeNaJanela } from '@/lib/birthday-countdown'
 import { buildAdminDashboardStatusHoje, type AdminDashboardStatusHoje } from '@/lib/build-admin-dashboard-status-hoje'
+import { mapApiNotificationStateToRow, type NotificationApiState } from '@/lib/notification-api-state'
 import { createClient } from '@/lib/supabase/client'
 import { getAuthUserSafe } from '@/lib/supabase/get-auth-user-safe'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
@@ -170,15 +171,20 @@ export default function AdminDashboardPage() {
         return
       }
 
-      const { data: notifStateRow } = await supabase
-        .from('dashboard_notification_states')
-        .select('read_ids, archived_ids, muted_types, read_at')
-        .eq('barbearia_id', barbeariaData.id)
-        .eq('user_id', user.id)
-        .maybeSingle()
-
       setBarbearia(barbeariaData)
-      notif.hydratePreferences(notifStateRow, { userId: user.id, barbeariaId: barbeariaData.id })
+      try {
+        const prefRes = await fetch(
+          `/api/notifications?barbeariaId=${encodeURIComponent(barbeariaData.id)}&slug=${encodeURIComponent(slug)}`,
+        )
+        if (prefRes.ok) {
+          const pref = (await prefRes.json()) as NotificationApiState
+          notif.hydratePreferences(mapApiNotificationStateToRow(pref), { userId: user.id, barbeariaId: barbeariaData.id })
+        } else {
+          notif.hydratePreferences(null, { userId: user.id, barbeariaId: barbeariaData.id })
+        }
+      } catch {
+        notif.hydratePreferences(null, { userId: user.id, barbeariaId: barbeariaData.id })
+      }
 
       const today = new Date().toISOString().split('T')[0]
       const firstDayMonth = new Date()

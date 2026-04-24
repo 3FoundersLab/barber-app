@@ -1,3 +1,4 @@
+import type { ComponentPropsWithoutRef } from 'react'
 import type { AlertaDashboard, AlertaDashboardTipo } from '@/types/admin-dashboard'
 
 /** Props do painel lateral de notificações (composição Bell + Sheet). */
@@ -23,7 +24,7 @@ export type NotificationBellProps = {
   isLoading: boolean
   unreadCount: number
   totalCount: number
-}
+} & Omit<ComponentPropsWithoutRef<'button'>, 'children'>
 
 /** Estado persistido de leitura/arquivamento do painel de notificações. */
 export type NotificationPreferencesState = {

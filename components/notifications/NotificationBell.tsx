@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import type { NotificationBellProps } from '@/types/notification'
 
 const NotificationBellInner = forwardRef<HTMLButtonElement, NotificationBellProps>(
-  function NotificationBell({ isLoading, unreadCount, totalCount }, ref) {
+  function NotificationBell({ isLoading, unreadCount, totalCount, className, ...triggerProps }, ref) {
     const badgeLabel = unreadCount > 9 ? '9+' : String(unreadCount)
 
     return (
@@ -16,8 +16,9 @@ const NotificationBellInner = forwardRef<HTMLButtonElement, NotificationBellProp
         type="button"
         variant="ghost"
         size="icon"
-        className="relative h-9 w-9 shrink-0 rounded-full"
+        className={cn('relative h-9 w-9 shrink-0 rounded-full', className)}
         aria-label={`Notificações${unreadCount > 0 ? `, ${unreadCount} não lida(s)` : totalCount > 0 ? ', todas lidas' : ''}`}
+        {...triggerProps}
       >
         <Bell className="size-5 text-muted-foreground" aria-hidden />
         {!isLoading && unreadCount > 0 ? (
