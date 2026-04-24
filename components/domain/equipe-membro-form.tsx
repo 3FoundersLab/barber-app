@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Cake, Camera, Eye, EyeOff, KeyRound, Phone, UserCircle } from 'lucide-react'
+import { Cake, Camera, Eye, EyeOff, Phone, UserCircle } from 'lucide-react'
 import { BarbeiroFotoUpload } from '@/components/shared/barbeiro-foto-upload'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import {
@@ -80,9 +80,6 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
   const [showSenha, setShowSenha] = useState(false)
   const [showConfirmarSenha, setShowConfirmarSenha] = useState(false)
 
-  const loginParcial =
-    formData.senha.trim().length > 0 || formData.confirmarSenha.trim().length > 0
-
   useEffect(() => {
     setError(null)
     setPendingAvatarFile(null)
@@ -109,21 +106,18 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
   const handleSave = async () => {
     const senha = formData.senha.trim()
     const confirmarSenha = formData.confirmarSenha.trim()
-    const wantsNewLogin = senha.length > 0 || confirmarSenha.length > 0
-    if (wantsNewLogin) {
-      if (senha.length < 6) {
-        setError('A senha de acesso deve ter pelo menos 6 caracteres.')
-        return
-      }
-      if (senha !== confirmarSenha) {
-        setError('As senhas não coincidem.')
-        return
-      }
-      const emailTrim = formData.email.trim()
-      if (!emailTrim) {
-        setError('Informe o e-mail do membro para criar ou usar o login.')
-        return
-      }
+    if (senha.length < 6) {
+      setError('A senha de acesso é obrigatória e deve ter pelo menos 6 caracteres.')
+      return
+    }
+    if (senha !== confirmarSenha) {
+      setError('As senhas não coincidem.')
+      return
+    }
+    const emailTrim = formData.email.trim()
+    if (!emailTrim) {
+      setError('Informe o e-mail do membro para criar ou usar o login.')
+      return
     }
 
     setIsSaving(true)
@@ -189,43 +183,41 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
         return
       }
 
-      if (senha.length >= 6) {
-        if (editingBarbeiro.user_id) {
-          const res = await fetch('/api/tenant/equipe-barbeiro-conta', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              barbearia_id: barbeariaId,
-              slug: tenantSlug,
-              barbeiro_id: editingBarbeiro.id,
-              new_password: senha,
-            }),
-          })
-          if (!res.ok) {
-            setError(await parseApiError(res))
-            setIsSaving(false)
-            return
-          }
-        } else {
-          const res = await fetch('/api/tenant/equipe-barbeiro-conta', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              barbearia_id: barbeariaId,
-              slug: tenantSlug,
-              barbeiro_id: editingBarbeiro.id,
-              password: senha,
-              nome: formData.nome.trim(),
-              email: formData.email.trim(),
-            }),
-          })
-          if (!res.ok) {
-            setError(await parseApiError(res))
-            setIsSaving(false)
-            return
-          }
+      if (editingBarbeiro.user_id) {
+        const res = await fetch('/api/tenant/equipe-barbeiro-conta', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            barbearia_id: barbeariaId,
+            slug: tenantSlug,
+            barbeiro_id: editingBarbeiro.id,
+            new_password: senha,
+          }),
+        })
+        if (!res.ok) {
+          setError(await parseApiError(res))
+          setIsSaving(false)
+          return
+        }
+      } else {
+        const res = await fetch('/api/tenant/equipe-barbeiro-conta', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            barbearia_id: barbeariaId,
+            slug: tenantSlug,
+            barbeiro_id: editingBarbeiro.id,
+            password: senha,
+            nome: formData.nome.trim(),
+            email: formData.email.trim(),
+          }),
+        })
+        if (!res.ok) {
+          setError(await parseApiError(res))
+          setIsSaving(false)
+          return
         }
       }
     } else {
@@ -247,27 +239,25 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
         return
       }
 
-      if (senha.length >= 6) {
-        const res = await fetch('/api/tenant/equipe-barbeiro-conta', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            barbearia_id: barbeariaId,
-            slug: tenantSlug,
-            barbeiro_id: created.id,
-            password: senha,
-            nome: formData.nome.trim(),
-            email: formData.email.trim(),
-          }),
-        })
-        if (!res.ok) {
-          setError(
-            `${await parseApiError(res)} O cadastro do membro foi salvo; você pode corrigir os dados e tentar criar o login de novo ao salvar.`,
-          )
-          setIsSaving(false)
-          return
-        }
+      const res = await fetch('/api/tenant/equipe-barbeiro-conta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          barbearia_id: barbeariaId,
+          slug: tenantSlug,
+          barbeiro_id: created.id,
+          password: senha,
+          nome: formData.nome.trim(),
+          email: formData.email.trim(),
+        }),
+      })
+      if (!res.ok) {
+        setError(
+          `${await parseApiError(res)} O cadastro do membro foi salvo; você pode corrigir os dados e tentar criar o login de novo ao salvar.`,
+        )
+        setIsSaving(false)
+        return
       }
     }
 
@@ -280,8 +270,12 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
     router.refresh()
   }
 
-  const senhaObrigatoriaUi = loginParcial
-  const emailObrigatorioUi = loginParcial
+  const senhaObrigatoriaUi = true
+  const canSubmit =
+    formData.nome.trim().length > 0 &&
+    formData.email.trim().length > 0 &&
+    formData.senha.trim().length > 0 &&
+    formData.confirmarSenha.trim().length > 0
 
   return (
     <div className="space-y-4">
@@ -300,7 +294,7 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
           <Accordion
             key={editingBarbeiro?.id ?? 'novo'}
             type="multiple"
-            defaultValue={['ident', 'contato']}
+            defaultValue={['ident']}
             className="px-4 sm:px-6"
           >
             <AccordionItem value="ident">
@@ -308,8 +302,8 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
                 <span className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
                   <UserCircle className="size-4 shrink-0 text-primary" aria-hidden />
                   <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-sm font-semibold text-foreground">Identificação</span>
-                    <span className="text-xs font-normal text-muted-foreground">Nome, função e situação na equipe</span>
+                    <span className="text-sm font-semibold text-foreground">Identificação e acesso</span>
+                    <span className="text-xs font-normal text-muted-foreground">Nome, e-mail, senha, função e situação</span>
                   </span>
                 </span>
               </AccordionTrigger>
@@ -327,6 +321,73 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
                     autoComplete="name"
                     aria-required="true"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="equipe-membro-email">
+                    E-mail <Req />
+                  </Label>
+                  <Input
+                    id="equipe-membro-email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: normalizeEmailInput(e.target.value) })}
+                    placeholder="nome@exemplo.com"
+                    inputMode="email"
+                    autoComplete="email"
+                    aria-required="true"
+                  />
+                  <p className="text-xs text-muted-foreground">Obrigatório para o login do profissional.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="equipe-membro-senha">
+                      {editingBarbeiro?.user_id ? 'Nova senha' : 'Senha'} <Req />
+                      <span className="font-normal text-muted-foreground"> (mín. 6)</span>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="equipe-membro-senha"
+                        type={showSenha ? 'text' : 'password'}
+                        value={formData.senha}
+                        onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                        autoComplete="new-password"
+                        placeholder="••••••"
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSenha((p) => !p)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        aria-label={showSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                      >
+                        {showSenha ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="equipe-membro-confirmar-senha">
+                      {editingBarbeiro?.user_id ? 'Confirmar nova senha' : 'Confirmar senha'} <Req />
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="equipe-membro-confirmar-senha"
+                        type={showConfirmarSenha ? 'text' : 'password'}
+                        value={formData.confirmarSenha}
+                        onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
+                        autoComplete="new-password"
+                        placeholder="••••••"
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmarSenha((p) => !p)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        aria-label={showConfirmarSenha ? 'Ocultar confirmação' : 'Mostrar confirmação'}
+                      >
+                        {showConfirmarSenha ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="equipe-membro-funcao">
@@ -383,121 +444,21 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
                   <Phone className="size-4 shrink-0 text-primary" aria-hidden />
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span className="text-sm font-semibold text-foreground">Contato</span>
-                    <span className="text-xs font-normal text-muted-foreground">Telefone e e-mail</span>
+                    <span className="text-xs font-normal text-muted-foreground">Telefone do profissional (opcional)</span>
                   </span>
                 </span>
               </AccordionTrigger>
               <AccordionContent className="space-y-4 pb-2">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="equipe-membro-telefone">Telefone</Label>
-                    <Input
-                      id="equipe-membro-telefone"
-                      value={formData.telefone}
-                      onChange={(e) => setFormData({ ...formData, telefone: maskTelefoneBr(e.target.value) })}
-                      placeholder="(00) 00000-0000"
-                      inputMode="tel"
-                      autoComplete="tel"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="equipe-membro-email">
-                      E-mail {emailObrigatorioUi ? <Req /> : null}
-                    </Label>
-                    <Input
-                      id="equipe-membro-email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: normalizeEmailInput(e.target.value) })}
-                      placeholder="nome@exemplo.com"
-                      inputMode="email"
-                      autoComplete="email"
-                      aria-required={emailObrigatorioUi}
-                    />
-                    {emailObrigatorioUi ? (
-                      <p className="text-xs text-muted-foreground">Obrigatório ao definir senha de acesso abaixo.</p>
-                    ) : null}
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="login">
-              <AccordionTrigger className="items-center py-4 hover:no-underline">
-                <span className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
-                  <KeyRound className="size-4 shrink-0 text-primary" aria-hidden />
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-sm font-semibold text-foreground">Acesso ao painel (login)</span>
-                    <span className="text-xs font-normal text-muted-foreground">Senha para entrar em /login com o e-mail</span>
-                  </span>
-                </span>
-              </AccordionTrigger>
-              <AccordionContent className="space-y-4 pb-2">
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  O profissional usa o e-mail da seção Contato. Ao salvar, o e-mail do cadastro precisa coincidir com o
-                  usado na API de criação de conta.
-                </p>
-                {editingBarbeiro?.user_id ? (
-                  <p className="text-xs text-muted-foreground">
-                    Conta já vinculada: deixe as senhas em branco para manter a atual ou preencha para trocar.
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Opcional: sem senha, o membro permanece só no cadastro da equipe (sem login no app).
-                  </p>
-                )}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="equipe-membro-senha">
-                      {editingBarbeiro?.user_id ? 'Nova senha' : 'Senha'}{' '}
-                      {senhaObrigatoriaUi ? <Req /> : null}
-                      <span className="font-normal text-muted-foreground"> (mín. 6)</span>
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="equipe-membro-senha"
-                        type={showSenha ? 'text' : 'password'}
-                        value={formData.senha}
-                        onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                        autoComplete="new-password"
-                        placeholder="••••••"
-                        className="pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowSenha((p) => !p)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        aria-label={showSenha ? 'Ocultar senha' : 'Mostrar senha'}
-                      >
-                        {showSenha ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="equipe-membro-confirmar-senha">
-                      {editingBarbeiro?.user_id ? 'Confirmar nova senha' : 'Confirmar senha'}{' '}
-                      {senhaObrigatoriaUi ? <Req /> : null}
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="equipe-membro-confirmar-senha"
-                        type={showConfirmarSenha ? 'text' : 'password'}
-                        value={formData.confirmarSenha}
-                        onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
-                        autoComplete="new-password"
-                        placeholder="••••••"
-                        className="pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmarSenha((p) => !p)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        aria-label={showConfirmarSenha ? 'Ocultar confirmação' : 'Mostrar confirmação'}
-                      >
-                        {showConfirmarSenha ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                      </button>
-                    </div>
-                  </div>
+                <div className="max-w-full space-y-2 sm:max-w-[16rem]">
+                  <Label htmlFor="equipe-membro-telefone">Telefone</Label>
+                  <Input
+                    id="equipe-membro-telefone"
+                    value={formData.telefone}
+                    onChange={(e) => setFormData({ ...formData, telefone: maskTelefoneBr(e.target.value) })}
+                    placeholder="(00) 00000-0000"
+                    inputMode="tel"
+                    autoComplete="tel"
+                  />
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -565,7 +526,7 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
         >
           Cancelar
         </Button>
-        <Button onClick={() => void handleSave()} disabled={isSaving || !formData.nome.trim()}>
+        <Button onClick={() => void handleSave()} disabled={isSaving || !canSubmit}>
           {isSaving ? <Spinner className="mr-2" /> : null}
           {isSaving ? 'Salvando...' : 'Salvar'}
         </Button>
