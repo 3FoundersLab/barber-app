@@ -225,6 +225,24 @@ export async function PATCH(request: NextRequest) {
   const prevMeta =
     (existingUser.user.user_metadata as Record<string, unknown> | null | undefined) ?? {}
 
+  const { data: duplicateProfile, error: duplicateProfileErr } = await admin
+    .from('profiles')
+    .select('id')
+    .eq('email', email)
+    .neq('id', userId)
+    .maybeSingle()
+
+  if (duplicateProfileErr) {
+    return NextResponse.json(
+      { error: duplicateProfileErr.message ?? 'Não foi possível validar o e-mail informado.' },
+      { status: 500 },
+    )
+  }
+
+  if (duplicateProfile?.id) {
+    return NextResponse.json({ error: 'Este e-mail já está em uso por outro usuário.' }, { status: 409 })
+  }
+
   const { error: authUpdateErr } = await admin.auth.admin.updateUserById(userId, {
     email,
     email_confirm: true,

@@ -102,6 +102,9 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  let userId: string | null = null
+  let createdNewUser = false
+
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email,
     password,
@@ -112,21 +115,44 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  if (createError || !created.user) {
+  if (!createError && created.user) {
+    userId = created.user.id
+    createdNewUser = true
+  } else {
     const msg = (createError?.message ?? '').toLowerCase()
     if (msg.includes('already been registered') || msg.includes('already registered')) {
+      const { data: existingProfile, error: existingProfileErr } = await admin
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle()
+
+      if (existingProfileErr) {
+        return NextResponse.json(
+          { error: existingProfileErr.message ?? 'Não foi possível localizar a conta existente por e-mail.' },
+          { status: 500 },
+        )
+      }
+
+      if (!existingProfile?.id) {
+        return NextResponse.json(
+          { error: 'Já existe uma conta com este e-mail, mas não foi possível localizar o perfil para vincular.' },
+          { status: 409 },
+        )
+      }
+
+      userId = existingProfile.id
+    } else {
       return NextResponse.json(
-        { error: 'Já existe uma conta com este e-mail. Use outro e-mail ou redefina a senha pelo fluxo de recuperação.' },
+        { error: createError?.message ?? 'Não foi possível criar o usuário.' },
         { status: 400 },
       )
     }
-    return NextResponse.json(
-      { error: createError?.message ?? 'Não foi possível criar o usuário.' },
-      { status: 400 },
-    )
   }
 
-  const userId = created.user.id
+  if (!userId) {
+    return NextResponse.json({ error: 'Não foi possível resolver a conta do usuário.' }, { status: 500 })
+  }
 
   const { error: profileError } = await admin
     .from('profiles')
@@ -134,7 +160,9 @@ export async function POST(request: NextRequest) {
     .eq('id', userId)
 
   if (profileError) {
-    await admin.auth.admin.deleteUser(userId)
+    if (createdNewUser) {
+      await admin.auth.admin.deleteUser(userId)
+    }
     return NextResponse.json(
       { error: 'Não foi possível sincronizar o perfil do novo usuário.' },
       { status: 500 },
@@ -144,7 +172,9 @@ export async function POST(request: NextRequest) {
   const { error: linkBarbeiroErr } = await admin.from('barbeiros').update({ user_id: userId }).eq('id', barbeiroId)
 
   if (linkBarbeiroErr) {
-    await admin.auth.admin.deleteUser(userId)
+    if (createdNewUser) {
+      await admin.auth.admin.deleteUser(userId)
+    }
     return NextResponse.json(
       { error: linkBarbeiroErr.message ?? 'Não foi possível vincular a conta ao membro.' },
       { status: 500 },
@@ -160,7 +190,9 @@ export async function POST(request: NextRequest) {
 
   if (selBuErr) {
     await admin.from('barbeiros').update({ user_id: null }).eq('id', barbeiroId)
-    await admin.auth.admin.deleteUser(userId)
+    if (createdNewUser) {
+      await admin.auth.admin.deleteUser(userId)
+    }
     return NextResponse.json(
       { error: selBuErr.message ?? 'Não foi possível verificar o vínculo com a barbearia.' },
       { status: 500 },
@@ -177,7 +209,9 @@ export async function POST(request: NextRequest) {
       const msg = buErr.message ?? ''
       if (buErr.code !== '23505' && !msg.toLowerCase().includes('duplicate')) {
         await admin.from('barbeiros').update({ user_id: null }).eq('id', barbeiroId)
-        await admin.auth.admin.deleteUser(userId)
+        if (createdNewUser) {
+          await admin.auth.admin.deleteUser(userId)
+        }
         return NextResponse.json(
           { error: buErr.message ?? 'Não foi possível vincular o profissional à barbearia.' },
           { status: 500 },
