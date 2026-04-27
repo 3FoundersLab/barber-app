@@ -1,9 +1,18 @@
 'use client'
 
 import Link from 'next/link'
-import { Calendar, CheckCircle2, Clock, XCircle } from 'lucide-react'
+import {
+  AlertCircle,
+  Calendar,
+  Check,
+  Circle,
+  Clock,
+  CircleDot,
+  XCircle,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { formatTime } from '@/lib/constants'
 import { parseHorarioToMinutes } from '@/lib/build-admin-dashboard-status-hoje'
 import { cn } from '@/lib/utils'
@@ -15,23 +24,32 @@ function nowMinutes(): number {
   return d.getHours() * 60 + d.getMinutes()
 }
 
+type StatusVisual =
+  | 'concluida'
+  | 'proxima'
+  | 'pendente'
+  | 'atrasada'
+  | 'em_atendimento'
+  | 'cancelada'
+  | 'faltou'
+
 function agendaLinhaStatus(
   a: Agendamento,
   idx: number,
   sorted: Agendamento[],
   nowM: number,
-): { label: string; className: string } {
+): { visual: StatusVisual; label: string } {
   if (a.status === 'concluido') {
-    return { label: 'Concluída', className: 'text-emerald-700 dark:text-emerald-400' }
+    return { visual: 'concluida', label: 'Concluída' }
   }
   if (a.status === 'cancelado') {
-    return { label: 'Cancelada', className: 'text-muted-foreground line-through' }
+    return { visual: 'cancelada', label: 'Cancelada' }
   }
   if (a.status === 'faltou') {
-    return { label: 'Faltou', className: 'text-destructive' }
+    return { visual: 'faltou', label: 'Faltou' }
   }
   if (a.status === 'em_atendimento') {
-    return { label: 'Em atendimento', className: 'text-sky-700 dark:text-sky-400' }
+    return { visual: 'em_atendimento', label: 'Em atendimento' }
   }
   const hm = parseHorarioToMinutes(a.horario) ?? 0
   const firstNextIdx = sorted.findIndex((x) => {
@@ -40,12 +58,61 @@ function agendaLinhaStatus(
     return xm >= nowM
   })
   if (idx === firstNextIdx && firstNextIdx >= 0) {
-    return { label: 'Próxima', className: 'text-amber-700 dark:text-amber-400' }
+    return { visual: 'proxima', label: 'Próxima' }
   }
   if (hm < nowM && a.status === 'agendado') {
-    return { label: 'Atrasada', className: 'text-orange-700 dark:text-orange-400' }
+    return { visual: 'atrasada', label: 'Atrasada' }
   }
-  return { label: 'Pendente', className: 'text-muted-foreground' }
+  return { visual: 'pendente', label: 'Pendente' }
+}
+
+function StatusCell({ visual, label }: { visual: StatusVisual; label: string }) {
+  if (visual === 'concluida') {
+    return (
+      <span className="inline-flex items-center justify-end gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+        <Check className="size-4 shrink-0 stroke-[2.5]" aria-hidden />
+        <span>{label}</span>
+      </span>
+    )
+  }
+  if (visual === 'proxima') {
+    return (
+      <span className="inline-flex items-center justify-end gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+        <Clock className="size-4 shrink-0" aria-hidden />
+        <span>{label}</span>
+      </span>
+    )
+  }
+  if (visual === 'pendente') {
+    return (
+      <span className="inline-flex items-center justify-end gap-1.5 text-xs font-semibold text-gray-400 dark:text-gray-500">
+        <Circle className="size-4 shrink-0 stroke-[2]" aria-hidden />
+        <span>{label}</span>
+      </span>
+    )
+  }
+  if (visual === 'atrasada') {
+    return (
+      <span className="inline-flex items-center justify-end gap-1.5 text-xs font-semibold text-orange-600 dark:text-orange-400">
+        <AlertCircle className="size-4 shrink-0" aria-hidden />
+        <span>{label}</span>
+      </span>
+    )
+  }
+  if (visual === 'em_atendimento') {
+    return (
+      <span className="inline-flex items-center justify-end gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400">
+        <CircleDot className="size-4 shrink-0" aria-hidden />
+        <span>{label}</span>
+      </span>
+    )
+  }
+  return (
+    <span className="text-muted-foreground inline-flex items-center justify-end gap-1.5 text-xs font-medium line-through">
+      <XCircle className="size-4 shrink-0" aria-hidden />
+      <span>{label}</span>
+    </span>
+  )
 }
 
 export function AdminDashboardAgendaDia(props: {
@@ -60,23 +127,25 @@ export function AdminDashboardAgendaDia(props: {
   const nowM = nowMinutes()
 
   return (
-    <Card className="border-border/80">
+    <Card className="border-border/80 rounded-xl shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold">Agenda do dia</CardTitle>
+        <CardTitle className="text-lg font-semibold tracking-tight text-gray-900 dark:text-foreground">
+          Agenda do dia
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 pt-0">
         {stats && !isLoading && !error ? (
           <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium">
             <span className="inline-flex items-center gap-1.5">
-              <Calendar className="text-orange-500 size-4 shrink-0" aria-hidden />
+              <Calendar className="size-4 shrink-0 text-orange-500" aria-hidden />
               <span className="text-foreground font-semibold tabular-nums">{stats.agendados}</span> Agendados
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <CheckCircle2 className="text-emerald-500 size-4 shrink-0" aria-hidden />
+              <Check className="size-4 shrink-0 text-emerald-500" aria-hidden />
               <span className="text-foreground font-semibold tabular-nums">{stats.executados}</span> Executados
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <Clock className="text-amber-500 size-4 shrink-0" aria-hidden />
+              <Clock className="size-4 shrink-0 text-amber-500" aria-hidden />
               <span className="text-foreground font-semibold tabular-nums">{stats.pendentes}</span> Pendentes
             </span>
             <span className="inline-flex items-center gap-1.5">
@@ -89,11 +158,11 @@ export function AdminDashboardAgendaDia(props: {
         {error ? (
           <p className="text-muted-foreground py-4 text-center text-sm">Não foi possível carregar a agenda.</p>
         ) : isLoading ? (
-          <div className="bg-muted h-48 animate-pulse rounded-lg" />
+          <div className="bg-muted h-48 animate-pulse rounded-xl" />
         ) : sorted.length === 0 ? (
           <p className="text-muted-foreground py-8 text-center text-sm">Nenhum agendamento para hoje.</p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border/60">
+          <div className="overflow-x-auto rounded-xl border border-border/60">
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
                 <tr className="border-b border-border/60 bg-muted/40 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -107,6 +176,8 @@ export function AdminDashboardAgendaDia(props: {
               <tbody>
                 {sorted.map((a, idx) => {
                   const st = agendaLinhaStatus(a, idx, sorted, nowM)
+                  const foto = a.barbeiro?.avatar || a.barbeiro?.profile?.avatar
+                  const inicial = (a.barbeiro?.nome ?? '?').charAt(0).toUpperCase()
                   return (
                     <tr key={a.id} className="border-b border-border/40 last:border-0">
                       <td className="text-foreground px-3 py-2.5 font-medium tabular-nums">{formatTime(a.horario)}</td>
@@ -116,10 +187,18 @@ export function AdminDashboardAgendaDia(props: {
                       <td className="text-muted-foreground max-w-[200px] truncate px-3 py-2.5">
                         {a.servico?.nome ?? '—'}
                       </td>
-                      <td className="text-muted-foreground max-w-[120px] truncate px-3 py-2.5">
-                        {a.barbeiro?.nome ?? '—'}
+                      <td className="text-muted-foreground px-3 py-2.5">
+                        <span className="flex min-w-0 max-w-[200px] items-center gap-2">
+                          <Avatar className="size-8 shrink-0 border border-border/60">
+                            {foto ? <AvatarImage src={foto} alt="" className="object-cover" /> : null}
+                            <AvatarFallback className="bg-muted text-[11px] font-semibold">{inicial}</AvatarFallback>
+                          </Avatar>
+                          <span className="truncate font-medium text-foreground">{a.barbeiro?.nome ?? '—'}</span>
+                        </span>
                       </td>
-                      <td className={cn('px-3 py-2.5 text-right text-xs font-semibold', st.className)}>{st.label}</td>
+                      <td className="px-3 py-2.5 text-right">
+                        <StatusCell visual={st.visual} label={st.label} />
+                      </td>
                     </tr>
                   )
                 })}
@@ -129,7 +208,7 @@ export function AdminDashboardAgendaDia(props: {
         )}
 
         <div className="flex justify-center sm:justify-end">
-          <Button variant="outline" size="sm" className="gap-1 text-xs" asChild>
+          <Button variant="outline" size="sm" className="gap-1 rounded-lg text-xs" asChild>
             <Link href={`${base}/agendamentos`}>
               Ver agenda completa
               <span aria-hidden>→</span>

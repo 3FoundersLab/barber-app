@@ -2,25 +2,14 @@
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { useMemo } from 'react'
-import {
-  ArrowRight,
-  BarChart3,
-  Calendar,
-  ClipboardList,
-  DollarSign,
-  LayoutGrid,
-  Package,
-  Scissors,
-  Users,
-  Wallet,
-} from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import {
   AdminDashboardHomeTop,
   type AdminDashboardHomeStats,
 } from '@/components/domain/admin-dashboard-home-top'
 import { AdminDashboardOperacaoKpis } from '@/components/domain/admin-dashboard-operacao-kpis'
 import { AdminDashboardFatAtendimentosChart } from '@/components/domain/admin-dashboard-fat-atendimentos-chart'
+import { AdminDashboardAcoesRapidas } from '@/components/domain/admin-dashboard-acoes-rapidas'
 import { AdminDashboardAgendaDia } from '@/components/domain/admin-dashboard-agenda-dia'
 import { AdminDashboardTripleCol } from '@/components/domain/admin-dashboard-triple-col'
 import { Button } from '@/components/ui/button'
@@ -105,23 +94,6 @@ export function AdminDashboardPremium(props: {
     onDesmarcarAlertaLido,
   } = props
 
-  const acoesRapidas = useMemo(() => {
-    if (!operacaoLiberada) {
-      return [
-        { label: 'Assinatura', href: `${base}/assinatura`, icon: Wallet },
-        { label: 'Configurações', href: `${base}/configuracoes`, icon: LayoutGrid },
-      ] as const
-    }
-    return [
-      { label: 'Agendamentos', href: `${base}/agendamentos`, icon: Calendar },
-      { label: 'Clientes', href: `${base}/clientes`, icon: Users },
-      { label: 'Comandas', href: `${base}/comandas`, icon: ClipboardList },
-      { label: 'Financeiro', href: `${base}/financeiro`, icon: DollarSign },
-      { label: 'Estoque', href: `${base}/estoque`, icon: Package },
-      { label: 'Relatórios', href: `${base}/relatorios`, icon: BarChart3 },
-    ] as const
-  }, [base, operacaoLiberada])
-
   const usarSheetAlertas = alertas.length > MAX_ALERTAS_PREVIEW
   const alertasPreview = usarSheetAlertas ? alertas.slice(0, MAX_ALERTAS_PREVIEW) : alertas
 
@@ -176,8 +148,7 @@ export function AdminDashboardPremium(props: {
         </div>
       )}
 
-      <div className="lg:grid lg:grid-cols-[1fr_min(280px,32%)] lg:items-start lg:gap-8">
-        <div className="min-w-0 space-y-6 md:space-y-8">
+      <div className="min-w-0 space-y-6">
           <section aria-labelledby="dash-home-heading">
             <h2 id="dash-home-heading" className="sr-only">
               Resumo do painel
@@ -256,56 +227,11 @@ export function AdminDashboardPremium(props: {
               error={error}
             />
           </section>
-        </div>
 
-        {/* Seção 4 — Ações rápidas (desktop lateral) */}
-        <aside
-          className="border-border/80 bg-card/40 mt-6 hidden shrink-0 rounded-xl border p-4 lg:sticky lg:top-[calc(4rem+1rem)] lg:mt-0 lg:block lg:self-start"
-          aria-label="Ações rápidas"
-        >
-          <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wider">
-            O que faço agora?
-          </p>
-          <nav className="flex flex-col gap-2">
-            {acoesRapidas.map((item) => {
-              const I = item.icon
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="hover:bg-accent/50 flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 text-sm font-medium transition-colors"
-                >
-                  <I className="text-muted-foreground h-4 w-4 shrink-0" />
-                  <span>{item.label}</span>
-                  <ArrowRight className="text-muted-foreground ml-auto h-3.5 w-3.5" />
-                </Link>
-              )
-            })}
-          </nav>
-        </aside>
+          <section aria-label="Ações rápidas">
+            <AdminDashboardAcoesRapidas base={base} operacaoLiberada={operacaoLiberada} />
+          </section>
       </div>
-
-      {/* Ações rápidas — mobile (acima da bottom nav do shell) */}
-      <section className="lg:hidden" aria-label="Atalhos rápidos">
-        <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wider">
-          O que faço agora?
-        </p>
-        <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {acoesRapidas.map((item) => {
-            const I = item.icon
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="border-border/80 bg-card/80 flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium shadow-sm"
-              >
-                <I className="h-3.5 w-3.5" />
-                {item.label}
-              </Link>
-            )
-          })}
-        </div>
-      </section>
     </div>
   )
 }
