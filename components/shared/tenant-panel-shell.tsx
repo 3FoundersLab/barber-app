@@ -18,12 +18,26 @@ export function TenantPanelPageContainer({ className, hasBottomNav, ...props }: 
   )
 }
 
+type TenantPanelPageHeaderProps = ComponentProps<typeof AppPageHeader> & {
+  /** Sem `actions` explícito, não renderiza o sino padrão (ex.: notificações só no corpo da página). */
+  suppressDefaultNotifications?: boolean
+}
+
 /** Cabeçalho do painel tenant com o mesmo acabamento premium do Super Admin. */
-export function TenantPanelPageHeader(props: ComponentProps<typeof AppPageHeader>) {
+export function TenantPanelPageHeader({
+  suppressDefaultNotifications,
+  ...props
+}: TenantPanelPageHeaderProps) {
+  const actions =
+    props.actions !== undefined
+      ? props.actions
+      : suppressDefaultNotifications
+        ? undefined
+        : <TenantHeaderNotifications />
   return (
     <AppPageHeader
       {...props}
-      actions={props.actions ?? <TenantHeaderNotifications />}
+      actions={actions}
       className={cn(superPremiumAppHeaderClass, props.className)}
     />
   )

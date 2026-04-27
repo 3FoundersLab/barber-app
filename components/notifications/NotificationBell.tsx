@@ -7,7 +7,10 @@ import { cn } from '@/lib/utils'
 import type { NotificationBellProps } from '@/types/notification'
 
 const NotificationBellInner = forwardRef<HTMLButtonElement, NotificationBellProps>(
-  function NotificationBell({ isLoading, unreadCount, totalCount, className, ...triggerProps }, ref) {
+  function NotificationBell(
+    { isLoading, unreadCount, totalCount, unreadBadgeClassName, className, ...triggerProps },
+    ref,
+  ) {
     const badgeLabel = unreadCount > 9 ? '9+' : String(unreadCount)
 
     return (
@@ -26,6 +29,7 @@ const NotificationBellInner = forwardRef<HTMLButtonElement, NotificationBellProp
             className={cn(
               'absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full',
               'bg-primary px-1 text-[10px] font-semibold text-primary-foreground',
+              unreadBadgeClassName,
             )}
           >
             {badgeLabel}

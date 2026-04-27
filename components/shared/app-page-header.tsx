@@ -73,6 +73,8 @@ type LeadingVariant = BaseAppPageHeaderProps & {
 /** Dashboard / home: só a saudação no header (como o texto acima do título nas demais telas), sem h1 extra no conteúdo. */
 type GreetingOnlyVariant = BaseAppPageHeaderProps & {
   greetingOnly: true
+  /** Quando true, omite a linha de saudação (ex.: dashboard com hero próprio no conteúdo). */
+  hideGreeting?: boolean
   title?: never
   subtitle?: never
   leading?: never
@@ -139,7 +141,11 @@ export function AppPageHeader(props: AppPageHeaderProps) {
   let headingSync: React.ReactNode = null
 
   if ('greetingOnly' in props && props.greetingOnly) {
-    left = <div className="min-w-0 flex-1">{greetingMuted}</div>
+    left = props.hideGreeting ? (
+      <div className="min-w-0 flex-1" />
+    ) : (
+      <div className="min-w-0 flex-1">{greetingMuted}</div>
+    )
   } else if ('leading' in props && props.leading != null) {
     headingSync = (
       <RegisterPageHeading

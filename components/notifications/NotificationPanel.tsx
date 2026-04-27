@@ -41,6 +41,7 @@ export function NotificationPanel({
   onUnarchive,
   onMuteType,
   onUnmuteType,
+  unreadBadgeClassName,
 }: NotificationPanelProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [marcandoIds, setMarcandoIds] = useState<string[]>([])
@@ -125,7 +126,12 @@ export function NotificationPanel({
   return (
     <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
       <SheetTrigger asChild>
-        <NotificationBell isLoading={isLoading} unreadCount={naoLidas} totalCount={count} />
+        <NotificationBell
+          isLoading={isLoading}
+          unreadCount={naoLidas}
+          totalCount={count}
+          unreadBadgeClassName={unreadBadgeClassName}
+        />
       </SheetTrigger>
       <SheetContent
         side="right"

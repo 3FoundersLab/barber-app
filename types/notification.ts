@@ -18,12 +18,15 @@ export type NotificationPanelProps = {
   onUnarchive?: (id: string) => void
   onMuteType?: (tipo: AlertaDashboardTipo) => void
   onUnmuteType?: (tipo: AlertaDashboardTipo) => void
+  /** Classes Tailwind do badge de não lidas no sino (ex.: fundo vermelho). */
+  unreadBadgeClassName?: string
 }
 
 export type NotificationBellProps = {
   isLoading: boolean
   unreadCount: number
   totalCount: number
+  unreadBadgeClassName?: string
 } & Omit<ComponentPropsWithoutRef<'button'>, 'children'>
 
 /** Estado persistido de leitura/arquivamento do painel de notificações. */

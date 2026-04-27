@@ -103,6 +103,7 @@ export default function AdminDashboardPage() {
   const { slug, base } = useTenantAdminBase()
 
   const [barbearia, setBarbearia] = useState<Barbearia | null>(null)
+  const [userPrimeiroNome, setUserPrimeiroNome] = useState<string | null>(null)
   const [stats, setStats] = useState<AdminDashboardStats | null>(null)
   const [proximosAgendamentos, setProximosAgendamentos] = useState<Agendamento[]>([])
   const [extra, setExtra] = useState<DashboardExtra | null>(null)
@@ -150,6 +151,10 @@ export default function AdminDashboardPage() {
         setIsLoading(false)
         return
       }
+
+      const { data: profileRow } = await supabase.from('profiles').select('nome').eq('id', user.id).maybeSingle()
+      const nomeBruto = typeof profileRow?.nome === 'string' ? profileRow.nome.trim() : ''
+      setUserPrimeiroNome(nomeBruto ? nomeBruto.split(/\s+/)[0]! : null)
 
       const barbeariaIdResolved = await resolveAdminBarbeariaId(supabase, user.id, { slug })
 
@@ -464,6 +469,7 @@ export default function AdminDashboardPage() {
           onUnmuteType={notif.mostrarTipoAlerta}
           onMarkAllAsRead={notif.limparTodasNotificacoes}
           openRequestKey={notificacoesAbrirChave}
+          unreadBadgeClassName="bg-destructive text-destructive-foreground shadow-sm"
         />
       ) : null,
     [
@@ -489,9 +495,10 @@ export default function AdminDashboardPage() {
     <TenantPanelPageContainer>
       <TenantPanelPageHeader
         greetingOnly
+        hideGreeting
+        suppressDefaultNotifications
         profileHref={`${base}/configuracoes`}
         avatarFallback="A"
-        actions={headerNotificacoes}
       />
 
       <PageContent className="space-y-6 md:space-y-8">
@@ -518,6 +525,10 @@ export default function AdminDashboardPage() {
         <AdminDashboardPremium
           base={base}
           barbearia={barbearia}
+          userPrimeiroNome={userPrimeiroNome}
+          stats={stats}
+          mediaAgendamentosPorDia14d={extra?.mediaAgendamentosRecente ?? 0}
+          clientesNovosUltimos7Dias={extra?.clientesNovosUltimos7Dias ?? 0}
           proximosAgendamentos={proximosAgendamentos}
           fatDiario={extra?.fatDiario ?? []}
           tendenciaInsight={tendenciaInsight}
@@ -527,6 +538,7 @@ export default function AdminDashboardPage() {
           pagamentoPendentePlano={barbearia?.status_cadastro === 'pagamento_pendente'}
           operacaoLiberada={operacaoLiberada}
           statusHoje={extra?.statusHoje ?? null}
+          notificationsSlot={headerNotificacoes}
           onVerMaisNotificacoes={!error ? solicitarAbrirNotificacoes : undefined}
           onMarcarAlertaLido={!error ? notif.marcarAlertaLido : undefined}
           onArquivarAlerta={!error ? notif.arquivarAlerta : undefined}

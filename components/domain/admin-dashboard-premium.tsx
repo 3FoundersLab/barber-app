@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import { useMemo } from 'react'
 import {
   ArrowRight,
@@ -11,14 +12,16 @@ import {
   LayoutGrid,
   Package,
   Scissors,
-  Sparkles,
   Users,
   Wallet,
 } from 'lucide-react'
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { AppointmentStatusBadge } from '@/components/shared/status-badge'
-import { AdminDashboardStatusCards } from '@/components/domain/admin-dashboard-status-cards'
-import { AdminDashboardAppointmentRowSkeleton, ClienteHomeBarbeariaSkeleton } from '@/components/shared/loading-skeleton'
+import {
+  AdminDashboardHomeTop,
+  type AdminDashboardHomeStats,
+} from '@/components/domain/admin-dashboard-home-top'
+import { AdminDashboardAppointmentRowSkeleton } from '@/components/shared/loading-skeleton'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
@@ -41,6 +44,10 @@ const MAX_ALERTAS_PREVIEW = 3
 export function AdminDashboardPremium(props: {
   base: string
   barbearia: Barbearia | null
+  userPrimeiroNome: string | null
+  stats: AdminDashboardHomeStats | null
+  mediaAgendamentosPorDia14d: number
+  clientesNovosUltimos7Dias: number
   proximosAgendamentos: Agendamento[]
   fatDiario: DashboardFatDiarioPonto[]
   tendenciaInsight: string
@@ -50,6 +57,7 @@ export function AdminDashboardPremium(props: {
   pagamentoPendentePlano: boolean
   operacaoLiberada: boolean
   statusHoje: AdminDashboardStatusHoje | null
+  notificationsSlot: ReactNode
   /** Abre o sheet de notificações (ex.: “Ver mais” quando há mais de 3 alertas). */
   onVerMaisNotificacoes?: () => void
   /** Marca alerta como lida (some da faixa; continua opaca no sheet). */
@@ -64,6 +72,10 @@ export function AdminDashboardPremium(props: {
   const {
     base,
     barbearia,
+    userPrimeiroNome,
+    stats,
+    mediaAgendamentosPorDia14d,
+    clientesNovosUltimos7Dias,
     proximosAgendamentos,
     fatDiario,
     tendenciaInsight,
@@ -73,6 +85,7 @@ export function AdminDashboardPremium(props: {
     pagamentoPendentePlano,
     operacaoLiberada,
     statusHoje,
+    notificationsSlot,
     onVerMaisNotificacoes,
     onMarcarAlertaLido,
     onArquivarAlerta,
@@ -158,62 +171,39 @@ export function AdminDashboardPremium(props: {
 
       <div className="lg:grid lg:grid-cols-[1fr_min(280px,32%)] lg:items-start lg:gap-8">
         <div className="min-w-0 space-y-6 md:space-y-8">
-          {/* Hero operação */}
-          {!error &&
-            (isLoading ? (
-              <ClienteHomeBarbeariaSkeleton />
-            ) : barbearia ? (
-              <Card className="overflow-hidden border-border/80 bg-gradient-to-br from-accent/15 via-background to-background dark:from-accent/10">
-                <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-accent flex h-14 w-14 items-center justify-center rounded-xl shadow-inner">
-                      <Scissors className="text-accent-foreground h-7 w-7" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-semibold tracking-tight">{barbearia.nome}</h2>
-                      <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-                        <span className="inline-flex items-center gap-1">
-                          <Sparkles className="h-3 w-3" />
-                          Central de comando
-                        </span>
-                        <span className="text-border hidden sm:inline">·</span>
-                        <span>Visão em tempo real</span>
-                      </p>
-                    </div>
-                  </div>
-                  {pagamentoPendentePlano ? (
-                    <Button size="sm" variant="outline" asChild>
-                      <Link href={`${base}/assinatura`}>Concluir ativação</Link>
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="outline" className="hidden sm:inline-flex" asChild>
-                      <Link href={`${base}/relatorios`}>Relatórios</Link>
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ) : null)}
-
-          {/* Seção 2 — Status hoje */}
-          <section aria-labelledby="dash-status-heading">
-            <div className="mb-3 flex items-end justify-between gap-2">
-              <div>
-                <h2 id="dash-status-heading" className="text-base font-semibold tracking-tight">
-                  Status em tempo real
-                </h2>
-                <p className="text-muted-foreground text-xs">Indicadores do dia, metas dinâmicas e leitura rápida</p>
-              </div>
-            </div>
-            <AdminDashboardStatusCards
-              base={base}
-              barbearia={barbearia}
-              status={statusHoje}
+          <section aria-labelledby="dash-home-heading">
+            <h2 id="dash-home-heading" className="sr-only">
+              Resumo do painel
+            </h2>
+            <AdminDashboardHomeTop
+              userPrimeiroNome={userPrimeiroNome}
+              barbeariaNome={barbearia?.nome ?? null}
+              stats={stats}
+              statusHoje={statusHoje}
+              fatDiario={fatDiario}
+              mediaAgendamentosPorDia14d={mediaAgendamentosPorDia14d}
+              clientesNovosUltimos7Dias={clientesNovosUltimos7Dias}
               isLoading={isLoading}
-              operacaoLiberada={operacaoLiberada}
+              error={error}
+              notificationsSlot={notificationsSlot}
             />
+            {!error && barbearia && pagamentoPendentePlano ? (
+              <div className="mt-4 flex justify-end">
+                <Button size="sm" variant="outline" asChild>
+                  <Link href={`${base}/assinatura`}>Concluir ativação</Link>
+                </Button>
+              </div>
+            ) : null}
+            {!error && barbearia && !pagamentoPendentePlano ? (
+              <div className="mt-4 hidden justify-end sm:flex">
+                <Button size="sm" variant="outline" asChild>
+                  <Link href={`${base}/relatorios`}>Relatórios</Link>
+                </Button>
+              </div>
+            ) : null}
           </section>
 
-          {/* Seção 3 — Tendências */}
+          {/* Seção — Tendências */}
           <section aria-labelledby="dash-tendencias-heading">
             <Card className="border-border/80">
               <CardHeader className="pb-2">
