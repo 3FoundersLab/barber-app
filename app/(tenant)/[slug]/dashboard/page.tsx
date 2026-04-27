@@ -20,7 +20,12 @@ import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import { useNotifications } from '@/hooks/useNotifications'
 import type { Agendamento, Barbearia } from '@/types'
-import type { AlertaDashboard, DashboardFatDiarioPonto } from '@/types/admin-dashboard'
+import type {
+  AlertaDashboard,
+  DashboardFatAtendDiarioPonto,
+  DashboardFatDiarioPonto,
+  DashboardOperacaoDiaKpis,
+} from '@/types/admin-dashboard'
 
 interface AdminDashboardStats {
   agendamentosHoje: number
@@ -33,6 +38,9 @@ interface AdminDashboardStats {
 
 interface DashboardExtra {
   fatDiario: DashboardFatDiarioPonto[]
+  fatAtend7d: DashboardFatAtendDiarioPonto[]
+  operacaoKpisHoje: DashboardOperacaoDiaKpis
+  operacaoKpisOntem: DashboardOperacaoDiaKpis
   recebimentosPendentesHoje: { horario: string }[]
   estoqueCritico: { nome: string; quantidade: number; minimo: number }[]
   clientesNovosUltimos7Dias: number
@@ -53,6 +61,23 @@ function addDaysYmd(ymd: string, deltaDays: number): string {
   const [y, m, d] = ymd.split('-').map(Number)
   const t = new Date(y, m - 1, d + deltaDays)
   return ymdFromDate(t)
+}
+
+async function sumComandaServicosFechadasNoDia(
+  supabase: ReturnType<typeof createClient>,
+  barbeariaId: string,
+  ymd: string,
+): Promise<number> {
+  const { data: comandas } = await supabase
+    .from('comandas')
+    .select('id')
+    .eq('barbearia_id', barbeariaId)
+    .eq('referencia_data', ymd)
+    .eq('status', 'fechada')
+  const ids = comandas?.map((c) => c.id) ?? []
+  if (!ids.length) return 0
+  const { data: lines } = await supabase.from('comanda_servicos').select('quantidade').in('comanda_id', ids)
+  return (lines ?? []).reduce((s, l) => s + (Number(l.quantidade) || 0), 0)
 }
 
 async function sumVendasProdutosNoDia(
@@ -97,6 +122,25 @@ async function loadEquipeHoje(supabase: ReturnType<typeof createClient>, barbear
     .eq('ativo', true)
   const onDuty = new Set(ht?.map((h) => h.barbeiro_id)).size
   return { activeTotal: n, onDuty }
+}
+
+function agregadosOperacaoPorDia(
+  linhas: { data: string; status: string }[],
+  ymd: string,
+): DashboardOperacaoDiaKpis {
+  const rows = linhas.filter((r) => r.data === ymd)
+  const ativo = (s: string) => s !== 'cancelado' && s !== 'faltou'
+  const agendamentosDia = rows.filter((r) => ativo(r.status)).length
+  const executadosDia = rows.filter((r) => r.status === 'concluido').length
+  const pendentesDia = rows.filter((r) => r.status === 'agendado' || r.status === 'em_atendimento').length
+  const atendimentosDia = rows.filter((r) => r.status === 'concluido' || r.status === 'em_atendimento').length
+  return {
+    atendimentosDia,
+    servicosDia: 0,
+    agendamentosDia,
+    executadosDia,
+    pendentesDia,
+  }
 }
 
 export default function AdminDashboardPage() {
@@ -192,6 +236,8 @@ export default function AdminDashboardPage() {
       }
 
       const today = new Date().toISOString().split('T')[0]
+      const yesterdayYmd = addDaysYmd(today, -1)
+      const start7Ymd = addDaysYmd(today, -6)
       const firstDayMonth = new Date()
       firstDayMonth.setDate(1)
       const monthStart = firstDayMonth.toISOString().split('T')[0]
@@ -375,6 +421,60 @@ export default function AdminDashboardPage() {
         })
       }
 
+      const [{ data: agTwoDays }, { data: conc7Rows }, servicosHojeCount, servicosOntemCount] = await Promise.all([
+        supabase
+          .from('agendamentos')
+          .select('data, status')
+          .eq('barbearia_id', barbeariaData.id)
+          .in('data', [today, yesterdayYmd]),
+        supabase
+          .from('agendamentos')
+          .select('data')
+          .eq('barbearia_id', barbeariaData.id)
+          .eq('status', 'concluido')
+          .gte('data', start7Ymd)
+          .lte('data', today),
+        operacaoLiberada
+          ? sumComandaServicosFechadasNoDia(supabase, barbeariaData.id, today)
+          : Promise.resolve(0),
+        operacaoLiberada
+          ? sumComandaServicosFechadasNoDia(supabase, barbeariaData.id, yesterdayYmd)
+          : Promise.resolve(0),
+      ])
+
+      const agKpiRows = (agTwoDays ?? []) as { data: string; status: string }[]
+      const packHoje = agregadosOperacaoPorDia(agKpiRows, today)
+      const packOntem = agregadosOperacaoPorDia(agKpiRows, yesterdayYmd)
+      const operacaoKpisHoje: DashboardOperacaoDiaKpis = {
+        ...packHoje,
+        servicosDia: servicosHojeCount,
+      }
+      const operacaoKpisOntem: DashboardOperacaoDiaKpis = {
+        ...packOntem,
+        servicosDia: servicosOntemCount,
+      }
+
+      const concl7ByDay: Record<string, number> = {}
+      for (const row of conc7Rows ?? []) {
+        const key = row.data as string
+        concl7ByDay[key] = (concl7ByDay[key] ?? 0) + 1
+      }
+
+      const [ty, tmo, tda] = today.split('-').map(Number)
+      const endTodayLocal = new Date(ty, tmo - 1, tda)
+      const fatAtend7d: DashboardFatAtendDiarioPonto[] = []
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(endTodayLocal)
+        d.setDate(endTodayLocal.getDate() - 6 + i)
+        const data = ymdFromDate(d)
+        fatAtend7d.push({
+          data,
+          label: formatDateShort(data),
+          faturamento: fatByDay[data] ?? 0,
+          atendimentos: concl7ByDay[data] ?? 0,
+        })
+      }
+
       const estoqueCritico = operacaoLiberada
         ? (estoqueRows ?? [])
             .filter((r) => r.quantidade <= r.minimo || r.quantidade <= 0)
@@ -416,6 +516,9 @@ export default function AdminDashboardPage() {
 
       setExtra({
         fatDiario,
+        fatAtend7d,
+        operacaoKpisHoje,
+        operacaoKpisOntem,
         recebimentosPendentesHoje: pendPagRows ?? [],
         estoqueCritico,
         clientesNovosUltimos7Dias: novos7 || 0,
@@ -531,6 +634,10 @@ export default function AdminDashboardPage() {
           clientesNovosUltimos7Dias={extra?.clientesNovosUltimos7Dias ?? 0}
           proximosAgendamentos={proximosAgendamentos}
           fatDiario={extra?.fatDiario ?? []}
+          fatAtend7d={extra?.fatAtend7d ?? []}
+          operacaoKpisHoje={extra?.operacaoKpisHoje ?? null}
+          operacaoKpisOntem={extra?.operacaoKpisOntem ?? null}
+          estoqueCritico={extra?.estoqueCritico ?? []}
           tendenciaInsight={tendenciaInsight}
           alertas={alertasNaFaixa}
           isLoading={isLoading}

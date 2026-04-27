@@ -15,29 +15,28 @@ import {
   Users,
   Wallet,
 } from 'lucide-react'
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { AppointmentStatusBadge } from '@/components/shared/status-badge'
 import {
   AdminDashboardHomeTop,
   type AdminDashboardHomeStats,
 } from '@/components/domain/admin-dashboard-home-top'
+import { AdminDashboardOperacaoKpis } from '@/components/domain/admin-dashboard-operacao-kpis'
+import { AdminDashboardFatAtendimentosChart } from '@/components/domain/admin-dashboard-fat-atendimentos-chart'
+import { AdminDashboardTripleCol } from '@/components/domain/admin-dashboard-triple-col'
 import { AdminDashboardAppointmentRowSkeleton } from '@/components/shared/loading-skeleton'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DashboardAlertaRow } from '@/components/domain/admin-dashboard-alerta-row'
-import { formatCurrency, formatTime } from '@/lib/constants'
+import { formatTime } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { AdminDashboardStatusHoje } from '@/lib/build-admin-dashboard-status-hoje'
 import type { Agendamento, Barbearia } from '@/types'
-import type { AlertaDashboard, DashboardFatDiarioPonto } from '@/types/admin-dashboard'
-
-const chartConfig = {
-  fat: {
-    label: 'Faturamento',
-    color: 'var(--chart-1)',
-  },
-} satisfies ChartConfig
+import type {
+  AlertaDashboard,
+  DashboardFatAtendDiarioPonto,
+  DashboardFatDiarioPonto,
+  DashboardOperacaoDiaKpis,
+} from '@/types/admin-dashboard'
 
 const MAX_ALERTAS_PREVIEW = 3
 
@@ -50,6 +49,10 @@ export function AdminDashboardPremium(props: {
   clientesNovosUltimos7Dias: number
   proximosAgendamentos: Agendamento[]
   fatDiario: DashboardFatDiarioPonto[]
+  fatAtend7d: DashboardFatAtendDiarioPonto[]
+  operacaoKpisHoje: DashboardOperacaoDiaKpis | null
+  operacaoKpisOntem: DashboardOperacaoDiaKpis | null
+  estoqueCritico: { nome: string; quantidade: number; minimo: number }[]
   tendenciaInsight: string
   alertas: AlertaDashboard[]
   isLoading: boolean
@@ -78,6 +81,10 @@ export function AdminDashboardPremium(props: {
     clientesNovosUltimos7Dias,
     proximosAgendamentos,
     fatDiario,
+    fatAtend7d,
+    operacaoKpisHoje,
+    operacaoKpisOntem,
+    estoqueCritico,
     tendenciaInsight,
     alertas,
     isLoading,
@@ -93,10 +100,24 @@ export function AdminDashboardPremium(props: {
     onDesmarcarAlertaLido,
   } = props
 
-  const chartData = useMemo(
-    () => fatDiario.map((p) => ({ ...p, fat: Math.round(p.faturamento * 100) / 100 })),
-    [fatDiario],
-  )
+  const insightsLinhas = useMemo(() => {
+    const lines: string[] = []
+    if (operacaoKpisHoje && operacaoKpisHoje.pendentesDia > 0) {
+      lines.push(`${operacaoKpisHoje.pendentesDia} agendamento(ns) ainda não concluído(s) hoje.`)
+    }
+    if (estoqueCritico.length > 0) {
+      lines.push('Há itens de estoque no limite — priorize reposição para não perder vendas.')
+    }
+    if (
+      operacaoKpisHoje &&
+      operacaoKpisOntem &&
+      operacaoKpisHoje.executadosDia > operacaoKpisOntem.executadosDia &&
+      operacaoKpisHoje.executadosDia > 0
+    ) {
+      lines.push('Concluídos hoje superam ontem — ritmo operacional positivo.')
+    }
+    return lines.slice(0, 5)
+  }, [operacaoKpisHoje, operacaoKpisOntem, estoqueCritico.length])
 
   const acoesRapidas = useMemo(() => {
     if (!operacaoLiberada) {
@@ -203,69 +224,38 @@ export function AdminDashboardPremium(props: {
             ) : null}
           </section>
 
-          {/* Seção — Tendências */}
-          <section aria-labelledby="dash-tendencias-heading">
-            <Card className="border-border/80">
-              <CardHeader className="pb-2">
-                <CardTitle id="dash-tendencias-heading" className="text-base">
-                  Estamos crescendo?
-                </CardTitle>
-                <CardDescription>Faturamento confirmado (concluído) nos últimos 14 dias</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {isLoading ? (
-                  <div className="bg-muted h-[220px] animate-pulse rounded-lg" />
-                ) : (
-                  <>
-                    <ChartContainer
-                      config={chartConfig}
-                      className="aspect-auto h-[220px] w-full min-h-[200px] justify-stretch [&_.recharts-responsive-container]:!h-full"
-                    >
-                      <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="dashFatFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="var(--color-fat)" stopOpacity={0.35} />
-                            <stop offset="100%" stopColor="var(--color-fat)" stopOpacity={0.02} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="4 4" vertical={false} className="stroke-border/50" />
-                        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
-                        <YAxis
-                          width={48}
-                          tickLine={false}
-                          axisLine={false}
-                          tickFormatter={(v) =>
-                            typeof v === 'number' && v >= 1000 ? `${Math.round(v / 1000)}k` : String(v)
-                          }
-                        />
-                        <ChartTooltip
-                          content={
-                            <ChartTooltipContent
-                              formatter={(value) => formatCurrency(Number(value))}
-                              labelFormatter={(_, payload) => {
-                                const row = payload?.[0]?.payload as DashboardFatDiarioPonto | undefined
-                                return row?.label ? `Dia ${row.label}` : '—'
-                              }}
-                            />
-                          }
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="fat"
-                          name="fat"
-                          stroke="var(--color-fat)"
-                          fill="url(#dashFatFill)"
-                          strokeWidth={2}
-                        />
-                      </AreaChart>
-                    </ChartContainer>
-                    <p className="text-muted-foreground border-t border-border/60 pt-3 text-sm leading-relaxed">
-                      {tendenciaInsight}
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+          <section aria-labelledby="dash-operacao-kpis-heading" className="space-y-3">
+            <h2 id="dash-operacao-kpis-heading" className="text-foreground text-sm font-semibold tracking-tight">
+              Operação hoje
+            </h2>
+            <AdminDashboardOperacaoKpis
+              hoje={operacaoKpisHoje}
+              ontem={operacaoKpisOntem}
+              isLoading={isLoading}
+              error={error}
+            />
+          </section>
+
+          <section aria-labelledby="dash-fat-atend-heading">
+            <h2 id="dash-fat-atend-heading" className="sr-only">
+              Faturamento e atendimentos
+            </h2>
+            <AdminDashboardFatAtendimentosChart data={fatAtend7d} isLoading={isLoading} error={error} />
+          </section>
+
+          <section aria-labelledby="dash-triple-heading">
+            <h2 id="dash-triple-heading" className="sr-only">
+              Estoque, resumo e insights
+            </h2>
+            <AdminDashboardTripleCol
+              base={base}
+              estoqueCritico={estoqueCritico}
+              resumoTexto={tendenciaInsight}
+              insightsLinhas={insightsLinhas}
+              isLoading={isLoading}
+              error={error}
+              operacaoLiberada={operacaoLiberada}
+            />
           </section>
 
           {/* Próximos agendamentos */}

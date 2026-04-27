@@ -23,3 +23,20 @@ export interface DashboardFatDiarioPonto {
   label: string
   faturamento: number
 }
+
+/** KPIs operacionais do dia (painel admin). */
+export interface DashboardOperacaoDiaKpis {
+  atendimentosDia: number
+  servicosDia: number
+  agendamentosDia: number
+  executadosDia: number
+  pendentesDia: number
+}
+
+/** Série diária: faturamento concluído + atendimentos concluídos (ex.: últimos 7 dias). */
+export interface DashboardFatAtendDiarioPonto {
+  data: string
+  label: string
+  faturamento: number
+  atendimentos: number
+}
