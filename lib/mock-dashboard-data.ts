@@ -1,0 +1,146 @@
+/**
+ * Dados mock realistas para preview/testes do layout do dashboard.
+ * Não ligar em produção sem flag explícita.
+ */
+export const mockDashboardData = {
+  saudacao: { nome: 'João', emoji: '👋' },
+  data: '20 de maio, 2026',
+  notificacoes: 3,
+  kpis: [
+    {
+      id: 1,
+      label: 'Atendimentos do dia',
+      valor: 18,
+      variacao: 12,
+      tipo: 'positivo' as const,
+      icone: 'Users',
+      cor: 'blue',
+    },
+    {
+      id: 2,
+      label: 'Serviços do dia',
+      valor: 27,
+      variacao: 8,
+      tipo: 'positivo' as const,
+      icone: 'Scissors',
+      cor: 'violet',
+    },
+    {
+      id: 3,
+      label: 'Agendamentos do dia',
+      valor: 28,
+      variacao: 0,
+      tipo: 'neutro' as const,
+      icone: 'Calendar',
+      cor: 'orange',
+    },
+    {
+      id: 4,
+      label: 'Executados',
+      valor: 18,
+      variacao: 12,
+      tipo: 'positivo' as const,
+      icone: 'CheckCircle',
+      cor: 'green',
+    },
+    {
+      id: 5,
+      label: 'Pendentes',
+      valor: 10,
+      variacao: -17,
+      tipo: 'negativo' as const,
+      icone: 'Clock',
+      cor: 'amber',
+    },
+  ],
+  grafico: {
+    labels: ['14/05', '15/05', '16/05', '17/05', '18/05', '19/05', '20/05'],
+    faturamento: [2250, 2800, 3150, 4200, 2950, 3700, 3980],
+    atendimentos: [14, 18, 21, 26, 17, 22, 18],
+  },
+  estoqueCritico: [
+    { nome: 'Pomada modeladora', estoque: 2, minimo: 10 },
+    { nome: 'Óleo para barba', estoque: 3, minimo: 8 },
+    { nome: 'Lâmina de barbear', estoque: 5, minimo: 15 },
+  ],
+  resumoDia: {
+    faturamento: 3960,
+    ticketMedio: 221.11,
+    novosClientes: 3,
+    avaliacao: 4.8,
+    totalAvaliacoes: 12,
+  },
+  insights: [
+    {
+      tipo: 'positivo' as const,
+      icone: 'TrendingUp',
+      texto: 'Seu faturamento está 12% maior do que ontem. Parabéns!',
+    },
+    {
+      tipo: 'alerta' as const,
+      icone: 'Clock',
+      texto: 'Você tem 5 horários vagos ainda hoje.',
+      acao: 'Ver horários',
+    },
+    {
+      tipo: 'info' as const,
+      icone: 'Users',
+      texto: 'Sábado é seu dia mais movimentado da semana.',
+    },
+  ],
+  agenda: {
+    resumo: { agendados: 28, executados: 18, pendentes: 10, cancelados: 0 },
+    itens: [
+      {
+        horario: '09:00',
+        cliente: 'Lucas Almeida',
+        servico: 'Corte masculino',
+        barbeiro: 'Carlos',
+        status: 'concluida',
+      },
+      {
+        horario: '09:30',
+        cliente: 'Marcos Pereira',
+        servico: 'Corte + barba',
+        barbeiro: 'Carlos',
+        status: 'concluida',
+      },
+      {
+        horario: '10:00',
+        cliente: 'Rafael Souza',
+        servico: 'Corte masculino',
+        barbeiro: 'João',
+        status: 'concluida',
+      },
+      {
+        horario: '10:30',
+        cliente: 'Bruno Oliveira',
+        servico: 'Corte + barba + sobrancelha',
+        barbeiro: 'João',
+        status: 'proxima',
+      },
+      {
+        horario: '11:00',
+        cliente: 'Felipe Santos',
+        servico: 'Corte masculino',
+        barbeiro: 'Carlos',
+        status: 'pendente',
+      },
+      {
+        horario: '11:30',
+        cliente: 'Gabriel Lima',
+        servico: 'Barba',
+        barbeiro: 'João',
+        status: 'pendente',
+      },
+    ],
+  },
+  acoesRapidas: [
+    { icone: 'Calendar', label: 'Novo agendamento', acao: '/agendamentos/novo' },
+    { icone: 'Scissors', label: 'Novo atendimento', acao: '/comandas/nova' },
+    { icone: 'UserPlus', label: 'Cadastrar cliente', acao: '/clientes/novo' },
+    { icone: 'DollarSign', label: 'Venda rápida', acao: '/comandas/rapida' },
+    { icone: 'MessageCircle', label: 'Enviar mensagem', acao: '/marketing/mensagem' },
+    { icone: 'BarChart', label: 'Ver relatórios', acao: '/relatorios' },
+  ],
+} as const

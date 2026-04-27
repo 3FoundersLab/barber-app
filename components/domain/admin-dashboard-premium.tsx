@@ -1,19 +1,10 @@
 'use client'
 
-import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { ArrowRight } from 'lucide-react'
-import {
-  AdminDashboardHomeTop,
-  type AdminDashboardHomeStats,
-} from '@/components/domain/admin-dashboard-home-top'
-import { AdminDashboardOperacaoKpis } from '@/components/domain/admin-dashboard-operacao-kpis'
-import { AdminDashboardFatAtendimentosChart } from '@/components/domain/admin-dashboard-fat-atendimentos-chart'
-import { AdminDashboardAcoesRapidas } from '@/components/domain/admin-dashboard-acoes-rapidas'
-import { AdminDashboardAgendaDia } from '@/components/domain/admin-dashboard-agenda-dia'
-import { AdminDashboardTripleCol } from '@/components/domain/admin-dashboard-triple-col'
+import type { AdminDashboardHomeStats } from '@/components/domain/admin-dashboard-home-top'
+import { DashboardPage } from '@/components/dashboard/DashboardPage'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DashboardAlertaRow } from '@/components/domain/admin-dashboard-alerta-row'
 import { cn } from '@/lib/utils'
 import type { AdminDashboardStatusHoje } from '@/lib/build-admin-dashboard-status-hoje'
@@ -99,7 +90,6 @@ export function AdminDashboardPremium(props: {
 
   return (
     <div className="space-y-6 md:space-y-8">
-      {/* Seção 1 — Alertas */}
       {!error && (
         <div
           className={cn('-mx-4 px-4 py-3 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8')}
@@ -148,90 +138,29 @@ export function AdminDashboardPremium(props: {
         </div>
       )}
 
-      <div className="min-w-0 space-y-6">
-          <section aria-labelledby="dash-home-heading">
-            <h2 id="dash-home-heading" className="sr-only">
-              Resumo do painel
-            </h2>
-            <AdminDashboardHomeTop
-              userPrimeiroNome={userPrimeiroNome}
-              barbeariaNome={barbearia?.nome ?? null}
-              stats={stats}
-              statusHoje={statusHoje}
-              fatDiario={fatDiario}
-              mediaAgendamentosPorDia14d={mediaAgendamentosPorDia14d}
-              clientesNovosUltimos7Dias={clientesNovosUltimos7Dias}
-              isLoading={isLoading}
-              error={error}
-              notificationsSlot={notificationsSlot}
-            />
-            {!error && barbearia && pagamentoPendentePlano ? (
-              <div className="mt-4 flex justify-end">
-                <Button size="sm" variant="outline" asChild>
-                  <Link href={`${base}/assinatura`}>Concluir ativação</Link>
-                </Button>
-              </div>
-            ) : null}
-            {!error && barbearia && !pagamentoPendentePlano ? (
-              <div className="mt-4 hidden justify-end sm:flex">
-                <Button size="sm" variant="outline" asChild>
-                  <Link href={`${base}/relatorios`}>Relatórios</Link>
-                </Button>
-              </div>
-            ) : null}
-          </section>
-
-          <section aria-labelledby="dash-operacao-kpis-heading" className="space-y-3">
-            <h2 id="dash-operacao-kpis-heading" className="text-foreground text-sm font-semibold tracking-tight">
-              Operação hoje
-            </h2>
-            <AdminDashboardOperacaoKpis
-              hoje={operacaoKpisHoje}
-              ontem={operacaoKpisOntem}
-              isLoading={isLoading}
-              error={error}
-            />
-          </section>
-
-          <section aria-labelledby="dash-fat-atend-heading">
-            <h2 id="dash-fat-atend-heading" className="sr-only">
-              Faturamento e atendimentos
-            </h2>
-            <AdminDashboardFatAtendimentosChart data={fatAtend7d} isLoading={isLoading} error={error} />
-          </section>
-
-          <section aria-labelledby="dash-triple-heading">
-            <h2 id="dash-triple-heading" className="sr-only">
-              Estoque, resumo e insights
-            </h2>
-            <AdminDashboardTripleCol
-              base={base}
-              estoqueCritico={estoqueCritico}
-              resumoDia={resumoDia}
-              insightsDia={insightsDia}
-              isLoading={isLoading}
-              error={error}
-              operacaoLiberada={operacaoLiberada}
-            />
-          </section>
-
-          <section aria-labelledby="dash-agenda-dia-heading">
-            <h2 id="dash-agenda-dia-heading" className="sr-only">
-              Agenda do dia
-            </h2>
-            <AdminDashboardAgendaDia
-              base={base}
-              stats={agendaStats}
-              agendamentos={agendaHoje}
-              isLoading={isLoading}
-              error={error}
-            />
-          </section>
-
-          <section aria-label="Ações rápidas">
-            <AdminDashboardAcoesRapidas base={base} operacaoLiberada={operacaoLiberada} />
-          </section>
-      </div>
+      <DashboardPage
+        base={base}
+        barbearia={barbearia}
+        userPrimeiroNome={userPrimeiroNome}
+        stats={stats}
+        mediaAgendamentosPorDia14d={mediaAgendamentosPorDia14d}
+        clientesNovosUltimos7Dias={clientesNovosUltimos7Dias}
+        agendaHoje={agendaHoje}
+        fatDiario={fatDiario}
+        fatAtend7d={fatAtend7d}
+        operacaoKpisHoje={operacaoKpisHoje}
+        operacaoKpisOntem={operacaoKpisOntem}
+        estoqueCritico={estoqueCritico}
+        resumoDia={resumoDia}
+        insightsDia={insightsDia}
+        agendaStats={agendaStats}
+        isLoading={isLoading}
+        error={error}
+        pagamentoPendentePlano={pagamentoPendentePlano}
+        operacaoLiberada={operacaoLiberada}
+        statusHoje={statusHoje}
+        notificationsSlot={notificationsSlot}
+      />
     </div>
   )
 }
