@@ -1,21 +1,64 @@
 'use client'
 
 import Link from 'next/link'
-import { AlertTriangle, ArrowRight, Lightbulb, ListOrdered } from 'lucide-react'
+import {
+  AlertTriangle,
+  ArrowRight,
+  CircleDollarSign,
+  Clock,
+  Star,
+  Ticket,
+  TrendingUp,
+  User,
+  Users,
+} from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatCurrency } from '@/lib/constants'
+import { cn } from '@/lib/utils'
+import type { DashboardInsightsDia, DashboardResumoDia } from '@/types/admin-dashboard'
+
+function ResumoLinha(props: {
+  icon: typeof CircleDollarSign
+  titulo: string
+  valor: string
+  iconWrap: string
+}) {
+  const I = props.icon
+  return (
+    <div className="flex gap-3">
+      <div
+        className={cn(
+          'flex size-10 shrink-0 items-center justify-center rounded-full text-white shadow-sm',
+          props.iconWrap,
+        )}
+      >
+        <I className="size-5" aria-hidden />
+      </div>
+      <div className="min-w-0 flex-1 space-y-0.5">
+        <p className="text-muted-foreground text-xs font-medium">{props.titulo}</p>
+        <p className="text-foreground text-base font-bold tabular-nums tracking-tight">{props.valor}</p>
+      </div>
+    </div>
+  )
+}
+
 export function AdminDashboardTripleCol(props: {
   base: string
   estoqueCritico: { nome: string; quantidade: number; minimo: number }[]
-  resumoTexto: string
-  insightsLinhas: string[]
+  resumoDia: DashboardResumoDia | null
+  insightsDia: DashboardInsightsDia | null
   isLoading: boolean
   error: string | null
   operacaoLiberada: boolean
 }) {
-  const { base, estoqueCritico, resumoTexto, insightsLinhas, isLoading, error, operacaoLiberada } = props
+  const { base, estoqueCritico, resumoDia, insightsDia, isLoading, error, operacaoLiberada } = props
   const nCrit = estoqueCritico.length
+
+  const fatPct = insightsDia?.fatPctVsOntem
+  const vagos = insightsDia?.vagosEstimados
+  const diaMov = insightsDia?.diaMaisMovimentado
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -86,40 +129,122 @@ export function AdminDashboardTripleCol(props: {
 
       <Card className="border-border/80">
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base font-semibold">
-            <ListOrdered className="text-accent size-4 shrink-0" aria-hidden />
-            Resumo
-          </CardTitle>
+          <CardTitle className="text-base font-semibold">Resumo do dia</CardTitle>
         </CardHeader>
-        <CardContent className="pt-0">
-          {isLoading ? (
-            <div className="bg-muted h-28 animate-pulse rounded-md" />
+        <CardContent className="space-y-5 pt-0">
+          {isLoading || error ? (
+            <div className="bg-muted h-40 animate-pulse rounded-md" />
+          ) : !resumoDia ? (
+            <p className="text-muted-foreground text-sm">Sem dados do dia.</p>
           ) : (
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              {resumoTexto || 'Carregue os dados da barbearia para ver o resumo automático do período.'}
-            </p>
+            <>
+              <ResumoLinha
+                icon={CircleDollarSign}
+                titulo="Faturamento do dia"
+                valor={formatCurrency(resumoDia.faturamentoDia)}
+                iconWrap="bg-emerald-500/90"
+              />
+              <ResumoLinha
+                icon={Ticket}
+                titulo="Ticket médio"
+                valor={formatCurrency(resumoDia.ticketMedio)}
+                iconWrap="bg-violet-500/90"
+              />
+              <ResumoLinha
+                icon={User}
+                titulo="Novos clientes"
+                valor={String(resumoDia.novosClientesDia)}
+                iconWrap="bg-sky-500/90"
+              />
+              <div className="flex gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-500/90 text-white shadow-sm">
+                  <Star className="size-5" aria-hidden />
+                </div>
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <p className="text-muted-foreground text-xs font-medium">Avaliação média</p>
+                  {resumoDia.avaliacaoMedia != null ? (
+                    <>
+                      <p className="text-foreground text-base font-bold tabular-nums tracking-tight">
+                        {resumoDia.avaliacaoMedia.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                      </p>
+                      <p className="text-muted-foreground text-[11px] leading-snug">
+                        {resumoDia.avaliacaoEhEstimativa
+                          ? `Estimativa com base em ${resumoDia.nAvaliacoesBase} atendimento(s) concluído(s) nos últimos 30 dias.`
+                          : `Baseado em ${resumoDia.nAvaliacoesBase} avaliações.`}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">Ainda sem base suficiente para estimar (mín. 5 atendimentos em 30 dias).</p>
+                  )}
+                </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
       <Card className="border-border/80">
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base font-semibold">
-            <Lightbulb className="text-accent size-4 shrink-0" aria-hidden />
-            Insights
-          </CardTitle>
+          <CardTitle className="text-base font-semibold">Insights do dia</CardTitle>
         </CardHeader>
-        <CardContent className="pt-0">
-          {isLoading ? (
-            <div className="bg-muted h-28 animate-pulse rounded-md" />
-          ) : insightsLinhas.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Nenhum insight adicional no momento.</p>
+        <CardContent className="space-y-5 pt-0">
+          {isLoading || error ? (
+            <div className="bg-muted h-40 animate-pulse rounded-md" />
+          ) : !insightsDia ? (
+            <p className="text-muted-foreground text-sm">Sem insights no momento.</p>
           ) : (
-            <ul className="text-muted-foreground list-inside list-disc space-y-2 text-sm leading-relaxed">
-              {insightsLinhas.map((line, i) => (
-                <li key={i}>{line}</li>
-              ))}
-            </ul>
+            <>
+              {fatPct != null && fatPct > 0 ? (
+                <div className="space-y-1">
+                  <p className="text-foreground inline-flex items-start gap-2 text-sm font-medium leading-snug">
+                    <TrendingUp className="text-emerald-600 mt-0.5 size-4 shrink-0" aria-hidden />
+                    <span>
+                      Seu faturamento está <span className="font-bold tabular-nums">{Math.round(fatPct)}%</span> maior do que
+                      ontem. Parabéns!
+                    </span>
+                  </p>
+                </div>
+              ) : fatPct != null && fatPct < 0 ? (
+                <p className="text-muted-foreground text-sm leading-snug">
+                  Faturamento hoje está <span className="font-semibold tabular-nums">{Math.abs(Math.round(fatPct))}%</span>{' '}
+                  abaixo de ontem — vale revisar a ocupação da agenda.
+                </p>
+              ) : fatPct === 0 ? (
+                <p className="text-muted-foreground text-sm leading-snug">Faturamento alinhado ao dia anterior.</p>
+              ) : null}
+
+              {vagos != null && vagos > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-foreground inline-flex items-start gap-2 text-sm font-medium leading-snug">
+                    <Clock className="text-amber-600 mt-0.5 size-4 shrink-0" aria-hidden />
+                    <span>
+                      Você tem <span className="font-bold tabular-nums">{vagos}</span> horário(s) vago(s) estimado(s) ainda hoje
+                      (capacidade da escala vs. ocupados).
+                    </span>
+                  </p>
+                  <Button variant="link" className="text-primary h-auto p-0 text-xs font-semibold" asChild>
+                    <Link href={`${base}/agendamentos`}>Ver horários →</Link>
+                  </Button>
+                </div>
+              ) : null}
+
+              {diaMov ? (
+                <p className="text-foreground inline-flex items-start gap-2 text-sm font-medium leading-snug">
+                  <Users className="text-accent mt-0.5 size-4 shrink-0" aria-hidden />
+                  <span>
+                    <span className="font-semibold">{diaMov}</span> é o dia da semana com mais atendimentos concluídos nos
+                    últimos ~8 semanas.
+                  </span>
+                </p>
+              ) : null}
+
+              <Button variant="outline" size="sm" className="w-full gap-1 text-xs" asChild>
+                <Link href={`${base}/relatorios`}>
+                  Ver todos os insights
+                  <span aria-hidden>→</span>
+                </Link>
+              </Button>
+            </>
           )}
         </CardContent>
       </Card>

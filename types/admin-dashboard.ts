@@ -40,3 +40,28 @@ export interface DashboardFatAtendDiarioPonto {
   faturamento: number
   atendimentos: number
 }
+
+/** Resumo estruturado da coluna “Resumo do dia”. */
+export interface DashboardResumoDia {
+  faturamentoDia: number
+  ticketMedio: number
+  novosClientesDia: number
+  avaliacaoMedia: number | null
+  /** Base numérica para o subtítulo (atendimentos concluídos em 30d ou avaliações reais no futuro). */
+  nAvaliacoesBase: number
+  /** Quando true, a nota é estimada (sem módulo de reviews). */
+  avaliacaoEhEstimativa: boolean
+}
+
+export interface DashboardAgendaDiaStats {
+  agendados: number
+  executados: number
+  pendentes: number
+  cancelados: number
+}
+
+export interface DashboardInsightsDia {
+  fatPctVsOntem: number | null
+  vagosEstimados: number | null
+  diaMaisMovimentado: string | null
+}

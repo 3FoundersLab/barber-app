@@ -6,11 +6,10 @@ import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/sh
 import { AdminDashboardPremium } from '@/components/domain/admin-dashboard-premium'
 import { NotificationPanel } from '@/components/notifications/NotificationPanel'
 import { Alert, AlertDescription, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
-import { formatDateShort } from '@/lib/constants'
-import {
-  buildAdminDashboardAlerts,
-  buildDashboardResumoTendencia,
-} from '@/lib/build-admin-dashboard-alerts'
+import { DIAS_SEMANA, formatDateShort } from '@/lib/constants'
+import { estimarSlotsVagosHoje } from '@/lib/dashboard-operacao-helpers'
+import { notaEstimadaBarbeiro } from '@/lib/relatorios-barbeiros-analise'
+import { buildAdminDashboardAlerts } from '@/lib/build-admin-dashboard-alerts'
 import { listAniversariosEquipeNaJanela } from '@/lib/birthday-countdown'
 import { buildAdminDashboardStatusHoje, type AdminDashboardStatusHoje } from '@/lib/build-admin-dashboard-status-hoje'
 import { mapApiNotificationStateToRow, type NotificationApiState } from '@/lib/notification-api-state'
@@ -22,9 +21,12 @@ import { useNotifications } from '@/hooks/useNotifications'
 import type { Agendamento, Barbearia } from '@/types'
 import type {
   AlertaDashboard,
+  DashboardAgendaDiaStats,
   DashboardFatAtendDiarioPonto,
   DashboardFatDiarioPonto,
+  DashboardInsightsDia,
   DashboardOperacaoDiaKpis,
+  DashboardResumoDia,
 } from '@/types/admin-dashboard'
 
 interface AdminDashboardStats {
@@ -48,6 +50,9 @@ interface DashboardExtra {
   aniversariosEquipeProximos: { nome: string; telefone: string | null; diasRestantes: number }[]
   mediaAgendamentosRecente: number
   statusHoje: AdminDashboardStatusHoje
+  resumoDia: DashboardResumoDia
+  insightsDia: DashboardInsightsDia
+  agendaStats: DashboardAgendaDiaStats
 }
 
 function ymdFromDate(d: Date): string {
@@ -274,6 +279,9 @@ export default function AdminDashboardPage() {
         { data: concl14Rows },
         { count: concHojeCount },
         vendasPack,
+        { count: novosHojeCount },
+        { data: ag30statusRows },
+        { data: conc56Data },
       ] = await Promise.all([
         supabase
           .from('agendamentos')
@@ -313,9 +321,8 @@ export default function AdminDashboardPage() {
           )
           .eq('barbearia_id', barbeariaData.id)
           .eq('data', today)
-          .in('status', ['agendado', 'em_atendimento'])
           .order('horario', { ascending: true })
-          .limit(5),
+          .limit(25),
         supabase
           .from('agendamentos')
           .select('data, valor')
@@ -387,6 +394,25 @@ export default function AdminDashboardPage() {
               return { hoje, semana }
             })()
           : Promise.resolve({ hoje: 0, semana: 0 }),
+        supabase
+          .from('clientes')
+          .select('id', { count: 'exact', head: true })
+          .eq('barbearia_id', barbeariaData.id)
+          .gte('created_at', `${today}T00:00:00.000Z`)
+          .lt('created_at', `${addDaysYmd(today, 1)}T00:00:00.000Z`),
+        supabase
+          .from('agendamentos')
+          .select('status')
+          .eq('barbearia_id', barbeariaData.id)
+          .gte('data', addDaysYmd(today, -29))
+          .lte('data', today),
+        supabase
+          .from('agendamentos')
+          .select('data')
+          .eq('barbearia_id', barbeariaData.id)
+          .eq('status', 'concluido')
+          .gte('data', addDaysYmd(today, -55))
+          .lte('data', today),
       ])
 
       const fHoje = todayRevenue?.reduce((acc, a) => acc + Number(a.valor), 0) || 0
@@ -514,6 +540,68 @@ export default function AdminDashboardPage() {
         vendasProdutosSemanaAnterior: vendasPack.semana,
       })
 
+      let c30 = 0
+      let t30 = 0
+      for (const row of ag30statusRows ?? []) {
+        const s = (row as { status: string }).status
+        if (s === 'concluido') c30++
+        if (s !== 'cancelado' && s !== 'faltou') t30++
+      }
+      const avaliacaoMedia = notaEstimadaBarbeiro(c30, t30)
+
+      const byDow = [0, 0, 0, 0, 0, 0, 0]
+      for (const row of conc56Data ?? []) {
+        const raw = row as { data: string }
+        const [Y, M, D] = raw.data.split('-').map(Number)
+        const dt = new Date(Y, M - 1, D)
+        byDow[dt.getDay()] = (byDow[dt.getDay()] ?? 0) + 1
+      }
+      let maxC = 0
+      let maxI = 0
+      for (let i = 0; i < 7; i++) {
+        if (byDow[i] > maxC) {
+          maxC = byDow[i]
+          maxI = i
+        }
+      }
+      const diaMaisMovimentado = maxC > 0 ? DIAS_SEMANA[maxI]! : null
+
+      const todayKpiRows = agKpiRows.filter((r) => r.data === today)
+      const canceladosHoje = todayKpiRows.filter((r) => r.status === 'cancelado').length
+      const agendaStats: DashboardAgendaDiaStats = {
+        agendados: packHoje.agendamentosDia,
+        executados: packHoje.executadosDia,
+        pendentes: packHoje.pendentesDia,
+        cancelados: canceladosHoje,
+      }
+
+      const fatOntemVal = fatByDay[yesterdayYmd] ?? 0
+      let fatPctVsOntem: number | null = null
+      if (fHoje === fatOntemVal) fatPctVsOntem = 0
+      else if (fatOntemVal > 0) fatPctVsOntem = ((fHoje - fatOntemVal) / fatOntemVal) * 100
+      else if (fHoje > 0) fatPctVsOntem = 100
+
+      const vagosEstimados = estimarSlotsVagosHoje(
+        barbeariaData,
+        equipePack.onDuty,
+        packHoje.agendamentosDia,
+      )
+
+      const resumoDia: DashboardResumoDia = {
+        faturamentoDia: fHoje,
+        ticketMedio: fHoje / Math.max(1, concHojeCount ?? 0),
+        novosClientesDia: novosHojeCount ?? 0,
+        avaliacaoMedia,
+        nAvaliacoesBase: c30,
+        avaliacaoEhEstimativa: true,
+      }
+
+      const insightsDia: DashboardInsightsDia = {
+        fatPctVsOntem,
+        vagosEstimados,
+        diaMaisMovimentado,
+      }
+
       setExtra({
         fatDiario,
         fatAtend7d,
@@ -526,6 +614,9 @@ export default function AdminDashboardPage() {
         aniversariosEquipeProximos,
         mediaAgendamentosRecente: (count14 || 0) / 14,
         statusHoje,
+        resumoDia,
+        insightsDia,
+        agendaStats,
       })
 
       setIsLoading(false)
@@ -543,16 +634,6 @@ export default function AdminDashboardPage() {
   const solicitarAbrirNotificacoes = useCallback(() => {
     setNotificacoesAbrirChave((k) => k + 1)
   }, [])
-
-  const tendenciaInsight = useMemo(() => {
-    if (!extra || !stats) return ''
-    const { insightLinha } = buildDashboardResumoTendencia(
-      extra.fatDiario,
-      stats.faturamentoMes,
-      new Date().getDate(),
-    )
-    return insightLinha
-  }, [extra, stats])
 
   const headerNotificacoes = useMemo(
     () =>
@@ -632,13 +713,15 @@ export default function AdminDashboardPage() {
           stats={stats}
           mediaAgendamentosPorDia14d={extra?.mediaAgendamentosRecente ?? 0}
           clientesNovosUltimos7Dias={extra?.clientesNovosUltimos7Dias ?? 0}
-          proximosAgendamentos={proximosAgendamentos}
+          agendaHoje={proximosAgendamentos}
           fatDiario={extra?.fatDiario ?? []}
           fatAtend7d={extra?.fatAtend7d ?? []}
           operacaoKpisHoje={extra?.operacaoKpisHoje ?? null}
           operacaoKpisOntem={extra?.operacaoKpisOntem ?? null}
           estoqueCritico={extra?.estoqueCritico ?? []}
-          tendenciaInsight={tendenciaInsight}
+          resumoDia={extra?.resumoDia ?? null}
+          insightsDia={extra?.insightsDia ?? null}
+          agendaStats={extra?.agendaStats ?? null}
           alertas={alertasNaFaixa}
           isLoading={isLoading}
           error={error}

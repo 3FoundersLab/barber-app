@@ -15,27 +15,28 @@ import {
   Users,
   Wallet,
 } from 'lucide-react'
-import { AppointmentStatusBadge } from '@/components/shared/status-badge'
 import {
   AdminDashboardHomeTop,
   type AdminDashboardHomeStats,
 } from '@/components/domain/admin-dashboard-home-top'
 import { AdminDashboardOperacaoKpis } from '@/components/domain/admin-dashboard-operacao-kpis'
 import { AdminDashboardFatAtendimentosChart } from '@/components/domain/admin-dashboard-fat-atendimentos-chart'
+import { AdminDashboardAgendaDia } from '@/components/domain/admin-dashboard-agenda-dia'
 import { AdminDashboardTripleCol } from '@/components/domain/admin-dashboard-triple-col'
-import { AdminDashboardAppointmentRowSkeleton } from '@/components/shared/loading-skeleton'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DashboardAlertaRow } from '@/components/domain/admin-dashboard-alerta-row'
-import { formatTime } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { AdminDashboardStatusHoje } from '@/lib/build-admin-dashboard-status-hoje'
 import type { Agendamento, Barbearia } from '@/types'
 import type {
   AlertaDashboard,
+  DashboardAgendaDiaStats,
   DashboardFatAtendDiarioPonto,
   DashboardFatDiarioPonto,
+  DashboardInsightsDia,
   DashboardOperacaoDiaKpis,
+  DashboardResumoDia,
 } from '@/types/admin-dashboard'
 
 const MAX_ALERTAS_PREVIEW = 3
@@ -47,13 +48,15 @@ export function AdminDashboardPremium(props: {
   stats: AdminDashboardHomeStats | null
   mediaAgendamentosPorDia14d: number
   clientesNovosUltimos7Dias: number
-  proximosAgendamentos: Agendamento[]
+  agendaHoje: Agendamento[]
   fatDiario: DashboardFatDiarioPonto[]
   fatAtend7d: DashboardFatAtendDiarioPonto[]
   operacaoKpisHoje: DashboardOperacaoDiaKpis | null
   operacaoKpisOntem: DashboardOperacaoDiaKpis | null
   estoqueCritico: { nome: string; quantidade: number; minimo: number }[]
-  tendenciaInsight: string
+  resumoDia: DashboardResumoDia | null
+  insightsDia: DashboardInsightsDia | null
+  agendaStats: DashboardAgendaDiaStats | null
   alertas: AlertaDashboard[]
   isLoading: boolean
   error: string | null
@@ -79,13 +82,15 @@ export function AdminDashboardPremium(props: {
     stats,
     mediaAgendamentosPorDia14d,
     clientesNovosUltimos7Dias,
-    proximosAgendamentos,
+    agendaHoje,
     fatDiario,
     fatAtend7d,
     operacaoKpisHoje,
     operacaoKpisOntem,
     estoqueCritico,
-    tendenciaInsight,
+    resumoDia,
+    insightsDia,
+    agendaStats,
     alertas,
     isLoading,
     error,
@@ -99,25 +104,6 @@ export function AdminDashboardPremium(props: {
     onOcultarTipoAlerta,
     onDesmarcarAlertaLido,
   } = props
-
-  const insightsLinhas = useMemo(() => {
-    const lines: string[] = []
-    if (operacaoKpisHoje && operacaoKpisHoje.pendentesDia > 0) {
-      lines.push(`${operacaoKpisHoje.pendentesDia} agendamento(ns) ainda não concluído(s) hoje.`)
-    }
-    if (estoqueCritico.length > 0) {
-      lines.push('Há itens de estoque no limite — priorize reposição para não perder vendas.')
-    }
-    if (
-      operacaoKpisHoje &&
-      operacaoKpisOntem &&
-      operacaoKpisHoje.executadosDia > operacaoKpisOntem.executadosDia &&
-      operacaoKpisHoje.executadosDia > 0
-    ) {
-      lines.push('Concluídos hoje superam ontem — ritmo operacional positivo.')
-    }
-    return lines.slice(0, 5)
-  }, [operacaoKpisHoje, operacaoKpisOntem, estoqueCritico.length])
 
   const acoesRapidas = useMemo(() => {
     if (!operacaoLiberada) {
@@ -250,66 +236,26 @@ export function AdminDashboardPremium(props: {
             <AdminDashboardTripleCol
               base={base}
               estoqueCritico={estoqueCritico}
-              resumoTexto={tendenciaInsight}
-              insightsLinhas={insightsLinhas}
+              resumoDia={resumoDia}
+              insightsDia={insightsDia}
               isLoading={isLoading}
               error={error}
               operacaoLiberada={operacaoLiberada}
             />
           </section>
 
-          {/* Próximos agendamentos */}
-          <Card className="border-border/80">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base">Agenda de hoje</CardTitle>
-              <Link href={`${base}/agendamentos`}>
-                <Button variant="ghost" size="sm" className="text-muted-foreground h-auto p-0 text-xs">
-                  Ver todos
-                  <ArrowRight className="ml-1 h-3 w-3" />
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {error ? (
-                <p className="text-muted-foreground py-4 text-center text-sm">
-                  Não foi possível exibir os agendamentos.
-                </p>
-              ) : isLoading ? (
-                <div className="space-y-3">
-                  {[0, 1, 2].map((i) => (
-                    <AdminDashboardAppointmentRowSkeleton key={i} />
-                  ))}
-                </div>
-              ) : proximosAgendamentos.length > 0 ? (
-                proximosAgendamentos.map((agendamento) => (
-                  <div
-                    key={agendamento.id}
-                    className="border-border/80 flex items-center gap-3 rounded-lg border bg-card/50 p-3"
-                  >
-                    <div className="bg-primary text-primary-foreground flex h-10 w-10 flex-col items-center justify-center rounded-md text-center shadow-sm">
-                      <span className="text-sm font-bold leading-none">
-                        {formatTime(agendamento.horario).split(':')[0]}
-                      </span>
-                      <span className="text-[10px] leading-none">
-                        :{formatTime(agendamento.horario).split(':')[1]}
-                      </span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{agendamento.cliente?.nome}</p>
-                      <p className="text-muted-foreground truncate text-xs">
-                        {agendamento.servico?.nome} — {agendamento.barbeiro?.nome ?? '—'}
-                      </p>
-                    </div>
-                    <AppointmentStatusBadge status={agendamento.status} />
-                  </div>
-                ))
-              ) : (
-                <p className="text-muted-foreground py-6 text-center text-sm">
-                  Nenhum agendamento ativo para hoje neste recorte.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <section aria-labelledby="dash-agenda-dia-heading">
+            <h2 id="dash-agenda-dia-heading" className="sr-only">
+              Agenda do dia
+            </h2>
+            <AdminDashboardAgendaDia
+              base={base}
+              stats={agendaStats}
+              agendamentos={agendaHoje}
+              isLoading={isLoading}
+              error={error}
+            />
+          </section>
         </div>
 
         {/* Seção 4 — Ações rápidas (desktop lateral) */}
