@@ -636,28 +636,26 @@ export default function AdminDashboardPage() {
   }, [])
 
   const headerNotificacoes = useMemo(
-    () =>
-      !error ? (
-        <NotificationPanel
-          alertas={notif.alertasVisiveis}
-          alertasArquivados={notif.alertasArquivados}
-          tiposOcultos={notif.tiposOcultos}
-          lidosIds={notif.alertasLidosIds}
-          lidosAt={notif.alertasLidosAt}
-          isLoading={isLoading}
-          onMarkAsRead={notif.marcarAlertaLido}
-          onMarkAsUnread={notif.desmarcarAlertaLido}
-          onArchive={notif.arquivarAlerta}
-          onUnarchive={notif.desarquivarAlerta}
-          onMuteType={notif.ocultarTipoAlerta}
-          onUnmuteType={notif.mostrarTipoAlerta}
-          onMarkAllAsRead={notif.limparTodasNotificacoes}
-          openRequestKey={notificacoesAbrirChave}
-          unreadBadgeClassName="bg-destructive text-destructive-foreground shadow-sm"
-        />
-      ) : null,
+    () => (
+      <NotificationPanel
+        alertas={notif.alertasVisiveis}
+        alertasArquivados={notif.alertasArquivados}
+        tiposOcultos={notif.tiposOcultos}
+        lidosIds={notif.alertasLidosIds}
+        lidosAt={notif.alertasLidosAt}
+        isLoading={isLoading}
+        onMarkAsRead={notif.marcarAlertaLido}
+        onMarkAsUnread={notif.desmarcarAlertaLido}
+        onArchive={notif.arquivarAlerta}
+        onUnarchive={notif.desarquivarAlerta}
+        onMuteType={notif.ocultarTipoAlerta}
+        onUnmuteType={notif.mostrarTipoAlerta}
+        onMarkAllAsRead={notif.limparTodasNotificacoes}
+        openRequestKey={notificacoesAbrirChave}
+        unreadBadgeClassName="bg-destructive text-destructive-foreground shadow-sm"
+      />
+    ),
     [
-      error,
       notif.alertasVisiveis,
       notif.alertasArquivados,
       notif.alertasLidosIds,
@@ -680,7 +678,7 @@ export default function AdminDashboardPage() {
       <TenantPanelPageHeader
         greetingOnly
         hideGreeting
-        suppressDefaultNotifications
+        actions={headerNotificacoes}
         profileHref={`${base}/configuracoes`}
         avatarFallback="A"
       />
@@ -728,7 +726,7 @@ export default function AdminDashboardPage() {
           pagamentoPendentePlano={barbearia?.status_cadastro === 'pagamento_pendente'}
           operacaoLiberada={operacaoLiberada}
           statusHoje={extra?.statusHoje ?? null}
-          notificationsSlot={headerNotificacoes}
+          notificationsSlot={null}
           onVerMaisNotificacoes={!error ? solicitarAbrirNotificacoes : undefined}
           onMarcarAlertaLido={!error ? notif.marcarAlertaLido : undefined}
           onArquivarAlerta={!error ? notif.arquivarAlerta : undefined}

@@ -215,7 +215,7 @@ export function AdminDashboardHomeTop(props: {
             <Calendar className="text-accent size-4 shrink-0" aria-hidden />
             <span className="text-foreground tabular-nums">{dataFormatada}</span>
           </div>
-          <div className="flex items-center gap-1">{notificationsSlot}</div>
+          {notificationsSlot ? <div className="flex items-center gap-1">{notificationsSlot}</div> : null}
         </div>
       </div>
 
