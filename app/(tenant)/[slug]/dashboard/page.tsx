@@ -26,7 +26,6 @@ import type {
   DashboardFatAtendDiarioPonto,
   DashboardFatDiarioPonto,
   DashboardInsightsDia,
-  DashboardOperacaoDiaKpis,
   DashboardResumoDia,
 } from '@/types/admin-dashboard'
 
@@ -42,8 +41,6 @@ interface AdminDashboardStats {
 interface DashboardExtra {
   fatDiario: DashboardFatDiarioPonto[]
   fatAtend7d: DashboardFatAtendDiarioPonto[]
-  operacaoKpisHoje: DashboardOperacaoDiaKpis
-  operacaoKpisOntem: DashboardOperacaoDiaKpis
   recebimentosPendentesHoje: { horario: string }[]
   estoqueCritico: { nome: string; quantidade: number; minimo: number }[]
   clientesNovosUltimos7Dias: number
@@ -74,23 +71,6 @@ function toAppointmentDateTime(dataYmd: string, horario: string): Date {
   const [y, m, d] = dataYmd.split('-').map(Number)
   const [hh, mm] = horario.slice(0, 5).split(':').map(Number)
   return new Date(y, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0, 0, 0)
-}
-
-async function sumComandaServicosFechadasNoDia(
-  supabase: ReturnType<typeof createClient>,
-  barbeariaId: string,
-  ymd: string,
-): Promise<number> {
-  const { data: comandas } = await supabase
-    .from('comandas')
-    .select('id')
-    .eq('barbearia_id', barbeariaId)
-    .eq('referencia_data', ymd)
-    .eq('status', 'fechada')
-  const ids = comandas?.map((c) => c.id) ?? []
-  if (!ids.length) return 0
-  const { data: lines } = await supabase.from('comanda_servicos').select('quantidade').in('comanda_id', ids)
-  return (lines ?? []).reduce((s, l) => s + (Number(l.quantidade) || 0), 0)
 }
 
 async function sumVendasProdutosNoDia(
@@ -137,22 +117,13 @@ async function loadEquipeHoje(supabase: ReturnType<typeof createClient>, barbear
   return { activeTotal: n, onDuty }
 }
 
-function agregadosOperacaoPorDia(
-  linhas: { data: string; status: string }[],
-  ymd: string,
-): DashboardOperacaoDiaKpis {
+function contagensAgendaPorDia(linhas: { data: string; status: string }[], ymd: string) {
   const rows = linhas.filter((r) => r.data === ymd)
   const ativo = (s: string) => s !== 'cancelado' && s !== 'faltou'
-  const agendamentosDia = rows.filter((r) => ativo(r.status)).length
-  const executadosDia = rows.filter((r) => r.status === 'concluido').length
-  const pendentesDia = rows.filter((r) => r.status === 'agendado' || r.status === 'em_atendimento').length
-  const atendimentosDia = rows.filter((r) => r.status === 'concluido' || r.status === 'em_atendimento').length
   return {
-    atendimentosDia,
-    servicosDia: 0,
-    agendamentosDia,
-    executadosDia,
-    pendentesDia,
+    agendamentosDia: rows.filter((r) => ativo(r.status)).length,
+    executadosDia: rows.filter((r) => r.status === 'concluido').length,
+    pendentesDia: rows.filter((r) => r.status === 'agendado' || r.status === 'em_atendimento').length,
   }
 }
 
@@ -479,7 +450,7 @@ export default function AdminDashboardPage() {
         })
       }
 
-      const [{ data: agTwoDays }, { data: conc7Rows }, servicosHojeCount, servicosOntemCount] = await Promise.all([
+      const [{ data: agTwoDays }, { data: conc7Rows }] = await Promise.all([
         supabase
           .from('agendamentos')
           .select('data, status')
@@ -492,25 +463,10 @@ export default function AdminDashboardPage() {
           .eq('status', 'concluido')
           .gte('data', start7Ymd)
           .lte('data', today),
-        operacaoLiberada
-          ? sumComandaServicosFechadasNoDia(supabase, barbeariaData.id, today)
-          : Promise.resolve(0),
-        operacaoLiberada
-          ? sumComandaServicosFechadasNoDia(supabase, barbeariaData.id, yesterdayYmd)
-          : Promise.resolve(0),
       ])
 
       const agKpiRows = (agTwoDays ?? []) as { data: string; status: string }[]
-      const packHoje = agregadosOperacaoPorDia(agKpiRows, today)
-      const packOntem = agregadosOperacaoPorDia(agKpiRows, yesterdayYmd)
-      const operacaoKpisHoje: DashboardOperacaoDiaKpis = {
-        ...packHoje,
-        servicosDia: servicosHojeCount,
-      }
-      const operacaoKpisOntem: DashboardOperacaoDiaKpis = {
-        ...packOntem,
-        servicosDia: servicosOntemCount,
-      }
+      const packHoje = contagensAgendaPorDia(agKpiRows, today)
 
       const concl7ByDay: Record<string, number> = {}
       for (const row of conc7Rows ?? []) {
@@ -666,8 +622,6 @@ export default function AdminDashboardPage() {
       setExtra({
         fatDiario,
         fatAtend7d,
-        operacaoKpisHoje,
-        operacaoKpisOntem,
         recebimentosPendentesHoje: pendPagRows ?? [],
         estoqueCritico,
         clientesNovosUltimos7Dias: novos7 || 0,
@@ -727,8 +681,6 @@ export default function AdminDashboardPage() {
           agendaHoje={proximosAgendamentos}
           fatDiario={extra?.fatDiario ?? []}
           fatAtend7d={extra?.fatAtend7d ?? []}
-          operacaoKpisHoje={extra?.operacaoKpisHoje ?? null}
-          operacaoKpisOntem={extra?.operacaoKpisOntem ?? null}
           estoqueCritico={extra?.estoqueCritico ?? []}
           resumoDia={extra?.resumoDia ?? null}
           insightsDia={extra?.insightsDia ?? null}

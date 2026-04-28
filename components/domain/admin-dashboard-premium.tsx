@@ -14,7 +14,6 @@ import type {
   DashboardFatAtendDiarioPonto,
   DashboardFatDiarioPonto,
   DashboardInsightsDia,
-  DashboardOperacaoDiaKpis,
   DashboardResumoDia,
 } from '@/types/admin-dashboard'
 
@@ -30,8 +29,6 @@ export function AdminDashboardPremium(props: {
   agendaHoje: Agendamento[]
   fatDiario: DashboardFatDiarioPonto[]
   fatAtend7d: DashboardFatAtendDiarioPonto[]
-  operacaoKpisHoje: DashboardOperacaoDiaKpis | null
-  operacaoKpisOntem: DashboardOperacaoDiaKpis | null
   estoqueCritico: { nome: string; quantidade: number; minimo: number }[]
   resumoDia: DashboardResumoDia | null
   insightsDia: DashboardInsightsDia | null
@@ -64,8 +61,6 @@ export function AdminDashboardPremium(props: {
     agendaHoje,
     fatDiario,
     fatAtend7d,
-    operacaoKpisHoje,
-    operacaoKpisOntem,
     estoqueCritico,
     resumoDia,
     insightsDia,
@@ -139,8 +134,6 @@ export function AdminDashboardPremium(props: {
         agendaHoje={agendaHoje}
         fatDiario={fatDiario}
         fatAtend7d={fatAtend7d}
-        operacaoKpisHoje={operacaoKpisHoje}
-        operacaoKpisOntem={operacaoKpisOntem}
         estoqueCritico={estoqueCritico}
         resumoDia={resumoDia}
         insightsDia={insightsDia}
