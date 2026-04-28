@@ -6,7 +6,6 @@ import { AgendaDoDia } from '@/components/dashboard/AgendaDoDia'
 import { dashboardStaggerParent } from '@/components/dashboard/dashboard-motion'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { GraficoFaturamento } from '@/components/dashboard/GraficoFaturamento'
-import { KPICards } from '@/components/dashboard/KPICards'
 import { SecaoTresColunas } from '@/components/dashboard/SecaoTresColunas'
 import type { AdminDashboardHomeStats } from '@/components/domain/admin-dashboard-home-top'
 import type { AdminDashboardStatusHoje } from '@/lib/build-admin-dashboard-status-hoje'
@@ -16,7 +15,6 @@ import type {
   DashboardFatAtendDiarioPonto,
   DashboardFatDiarioPonto,
   DashboardInsightsDia,
-  DashboardOperacaoDiaKpis,
   DashboardResumoDia,
 } from '@/types/admin-dashboard'
 import type { ReactNode } from 'react'
@@ -31,8 +29,6 @@ export function DashboardPage(props: {
   agendaHoje: Agendamento[]
   fatDiario: DashboardFatDiarioPonto[]
   fatAtend7d: DashboardFatAtendDiarioPonto[]
-  operacaoKpisHoje: DashboardOperacaoDiaKpis | null
-  operacaoKpisOntem: DashboardOperacaoDiaKpis | null
   estoqueCritico: { nome: string; quantidade: number; minimo: number }[]
   resumoDia: DashboardResumoDia | null
   insightsDia: DashboardInsightsDia | null
@@ -60,8 +56,6 @@ export function DashboardPage(props: {
     agendaHoje,
     fatDiario,
     fatAtend7d,
-    operacaoKpisHoje,
-    operacaoKpisOntem,
     estoqueCritico,
     resumoDia,
     insightsDia,
@@ -97,7 +91,6 @@ export function DashboardPage(props: {
         alertasDoDiaSlot={alertasDoDiaSlot}
         pagamentoPendentePlano={pagamentoPendentePlano}
       />
-      <KPICards hoje={operacaoKpisHoje} ontem={operacaoKpisOntem} isLoading={isLoading} error={error} />
       <GraficoFaturamento data={fatAtend7d} isLoading={isLoading} error={error} />
       <SecaoTresColunas
         base={base}
