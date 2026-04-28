@@ -134,7 +134,9 @@ export function AppPageHeader(props: AppPageHeaderProps) {
 
   const greeting = greetingFromProfile(effectiveProfile)
   const greetingMuted = (
-    <p className="text-sm text-muted-foreground">{greeting}</p>
+    <p className="text-sm text-muted-foreground">
+      {greeting} <span className="align-middle text-lg leading-none">👋</span>
+    </p>
   )
 
   let left: React.ReactNode
