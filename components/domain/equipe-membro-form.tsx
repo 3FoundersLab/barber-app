@@ -112,12 +112,19 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
   const [showSenha, setShowSenha] = useState(false)
   const [showConfirmarSenha, setShowConfirmarSenha] = useState(false)
   const [horariosSemana, setHorariosSemana] = useState<DiaHorarioForm[]>(buildDefaultHorariosSemana)
+  const [invalidFields, setInvalidFields] = useState<{
+    nome?: boolean
+    email?: boolean
+    senha?: boolean
+    confirmarSenha?: boolean
+  }>({})
 
   useEffect(() => {
     setError(null)
     setPendingAvatarFile(null)
     setShowSenha(false)
     setShowConfirmarSenha(false)
+    setInvalidFields({})
     const b = editingBarbeiro
     if (!b) {
       setFormData(emptyForm())
@@ -168,6 +175,19 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
     })()
   }, [editingBarbeiro?.id])
 
+  const focusInvalidField = (fieldId: string) => {
+    const el = document.getElementById(fieldId)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    window.setTimeout(() => {
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
+        el.focus()
+      } else {
+        ;(el as HTMLElement).focus?.()
+      }
+    }, 180)
+  }
+
   const handleToggleDiaHorario = (dia: number) => {
     setHorariosSemana((prev) => prev.map((h) => (h.dia_semana === dia ? { ...h, ativo: !h.ativo } : h)))
   }
@@ -215,19 +235,53 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
   const handleSave = async () => {
     const senha = formData.senha.trim()
     const confirmarSenha = formData.confirmarSenha.trim()
-    if (senha.length < 6) {
-      setError('A senha de acesso é obrigatória e deve ter pelo menos 6 caracteres.')
-      return
-    }
-    if (senha !== confirmarSenha) {
-      setError('As senhas não coincidem.')
-      return
-    }
+    const nomeTrim = formData.nome.trim()
     const emailTrim = formData.email.trim()
+    const isEditing = Boolean(editingBarbeiro)
+    const hasExistingLogin = Boolean(editingBarbeiro?.user_id)
+    const wantsToChangePassword = senha.length > 0 || confirmarSenha.length > 0
+    const mustValidatePassword = !isEditing || !hasExistingLogin || wantsToChangePassword
+    const nextInvalid: {
+      nome?: boolean
+      email?: boolean
+      senha?: boolean
+      confirmarSenha?: boolean
+    } = {}
+    let firstInvalidFieldId: string | null = null
+
+    if (!nomeTrim) {
+      nextInvalid.nome = true
+      firstInvalidFieldId ??= 'equipe-membro-nome'
+    }
     if (!emailTrim) {
-      setError('Informe o e-mail do membro para criar ou usar o login.')
+      nextInvalid.email = true
+      firstInvalidFieldId ??= 'equipe-membro-email'
+    }
+    if (mustValidatePassword && senha.length < 6) {
+      nextInvalid.senha = true
+      firstInvalidFieldId ??= 'equipe-membro-senha'
+    }
+    if (mustValidatePassword && confirmarSenha.length === 0) {
+      nextInvalid.confirmarSenha = true
+      firstInvalidFieldId ??= 'equipe-membro-confirmar-senha'
+    }
+    if (mustValidatePassword && senha.length >= 6 && confirmarSenha.length > 0 && senha !== confirmarSenha) {
+      nextInvalid.senha = true
+      nextInvalid.confirmarSenha = true
+      firstInvalidFieldId ??= 'equipe-membro-confirmar-senha'
+    }
+
+    if (Object.keys(nextInvalid).length > 0) {
+      setInvalidFields(nextInvalid)
+      if (nextInvalid.nome) setError('Preencha o nome do membro.')
+      else if (nextInvalid.email) setError('Informe o e-mail do membro para criar ou usar o login.')
+      else if (nextInvalid.senha && nextInvalid.confirmarSenha && senha !== confirmarSenha) setError('As senhas não coincidem.')
+      else setError('Revise os campos obrigatórios destacados para continuar.')
+      if (firstInvalidFieldId) focusInvalidField(firstInvalidFieldId)
       return
     }
+
+    setInvalidFields({})
 
     setIsSaving(true)
     setError(null)
@@ -374,7 +428,7 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
         return
       }
 
-      if (editingBarbeiro.user_id) {
+      if (editingBarbeiro.user_id && wantsToChangePassword) {
         const res = await fetch('/api/tenant/equipe-barbeiro-conta', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -391,7 +445,7 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
           setIsSaving(false)
           return
         }
-      } else {
+      } else if (!editingBarbeiro.user_id) {
         const res = await fetch('/api/tenant/equipe-barbeiro-conta', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -466,13 +520,6 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
     router.refresh()
   }
 
-  const senhaObrigatoriaUi = true
-  const canSubmit =
-    formData.nome.trim().length > 0 &&
-    formData.email.trim().length > 0 &&
-    formData.senha.trim().length > 0 &&
-    formData.confirmarSenha.trim().length > 0
-
   return (
     <div className="space-y-4 pb-24">
       {error ? (
@@ -511,11 +558,15 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
                   <Input
                     id="equipe-membro-nome"
                     value={formData.nome}
-                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, nome: e.target.value })
+                      if (invalidFields.nome) setInvalidFields((prev) => ({ ...prev, nome: false }))
+                    }}
                     placeholder="Como aparece para clientes e no painel"
-                    className="text-base sm:text-sm"
+                    className={`text-base sm:text-sm ${invalidFields.nome ? 'border-destructive ring-1 ring-destructive/30 focus-visible:ring-destructive/40' : ''}`}
                     autoComplete="name"
                     aria-required="true"
+                    aria-invalid={invalidFields.nome ? 'true' : undefined}
                   />
                 </div>
                 <div className="space-y-2">
@@ -526,18 +577,23 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
                     id="equipe-membro-email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: normalizeEmailInput(e.target.value) })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: normalizeEmailInput(e.target.value) })
+                      if (invalidFields.email) setInvalidFields((prev) => ({ ...prev, email: false }))
+                    }}
                     placeholder="nome@exemplo.com"
                     inputMode="email"
                     autoComplete="email"
                     aria-required="true"
+                    className={invalidFields.email ? 'border-destructive ring-1 ring-destructive/30 focus-visible:ring-destructive/40' : ''}
+                    aria-invalid={invalidFields.email ? 'true' : undefined}
                   />
                   <p className="text-xs text-muted-foreground">Obrigatório para o login do profissional.</p>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="equipe-membro-senha">
-                      {editingBarbeiro?.user_id ? 'Nova senha' : 'Senha'} <Req />
+                      {editingBarbeiro?.user_id ? 'Nova senha' : 'Senha'} {!editingBarbeiro?.user_id ? <Req /> : null}
                       <span className="font-normal text-muted-foreground"> (mín. 6)</span>
                     </Label>
                     <div className="relative">
@@ -545,10 +601,14 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
                         id="equipe-membro-senha"
                         type={showSenha ? 'text' : 'password'}
                         value={formData.senha}
-                        onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, senha: e.target.value })
+                          if (invalidFields.senha) setInvalidFields((prev) => ({ ...prev, senha: false }))
+                        }}
                         autoComplete="new-password"
                         placeholder="••••••"
-                        className="pr-10"
+                        className={`pr-10 ${invalidFields.senha ? 'border-destructive ring-1 ring-destructive/30 focus-visible:ring-destructive/40' : ''}`}
+                        aria-invalid={invalidFields.senha ? 'true' : undefined}
                       />
                       <button
                         type="button"
@@ -559,20 +619,30 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
                         {showSenha ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                       </button>
                     </div>
+                    {editingBarbeiro?.user_id ? (
+                      <p className="text-xs text-muted-foreground">
+                        Use o ícone de olho para visualizar a nova senha digitada. A senha atual não pode ser exibida.
+                      </p>
+                    ) : null}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="equipe-membro-confirmar-senha">
-                      {editingBarbeiro?.user_id ? 'Confirmar nova senha' : 'Confirmar senha'} <Req />
+                      {editingBarbeiro?.user_id ? 'Confirmar nova senha' : 'Confirmar senha'}{' '}
+                      {!editingBarbeiro?.user_id ? <Req /> : null}
                     </Label>
                     <div className="relative">
                       <Input
                         id="equipe-membro-confirmar-senha"
                         type={showConfirmarSenha ? 'text' : 'password'}
                         value={formData.confirmarSenha}
-                        onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, confirmarSenha: e.target.value })
+                          if (invalidFields.confirmarSenha) setInvalidFields((prev) => ({ ...prev, confirmarSenha: false }))
+                        }}
                         autoComplete="new-password"
                         placeholder="••••••"
-                        className="pr-10"
+                        className={`pr-10 ${invalidFields.confirmarSenha ? 'border-destructive ring-1 ring-destructive/30 focus-visible:ring-destructive/40' : ''}`}
+                        aria-invalid={invalidFields.confirmarSenha ? 'true' : undefined}
                       />
                       <button
                         type="button"
@@ -869,7 +939,7 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
         >
           Cancelar
         </Button>
-        <Button onClick={() => void handleSave()} disabled={isSaving || !canSubmit} className="w-full sm:w-auto">
+        <Button onClick={() => void handleSave()} disabled={isSaving} className="w-full sm:w-auto">
           {isSaving ? <Spinner className="mr-2" /> : null}
           {isSaving ? 'Salvando...' : 'Salvar'}
         </Button>
