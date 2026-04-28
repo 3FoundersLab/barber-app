@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   Clock,
   History,
+  MessageCircle,
   Loader2,
   MoreHorizontal,
   Pencil,
@@ -35,7 +36,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { PAYMENT_STATUS_LABELS } from '@/lib/constants'
-import { formatCurrency, formatTime } from '@/lib/constants'
+import { formatCurrency, formatDate, formatTime } from '@/lib/constants'
+import { whatsappChatHref } from '@/lib/format-contato'
 import { cn } from '@/lib/utils'
 import type { Agendamento, AppointmentStatus } from '@/types'
 
@@ -78,6 +80,7 @@ function minutesUntilStart(dataYmd: string, horario: string): number {
 
 interface AppointmentCardProps {
   appointment: Agendamento
+  confirmationHref?: string | null
   /** Número da comanda após check-in (carregado separadamente). */
   comandaNumero?: number | null
   onCheckIn?: (id: string) => void | Promise<void>
@@ -100,6 +103,7 @@ interface AppointmentCardProps {
 
 function AppointmentCardComponent({
   appointment,
+  confirmationHref,
   comandaNumero,
   onCheckIn,
   onComplete,
@@ -165,6 +169,21 @@ function AppointmentCardComponent({
     Number.isFinite(untilMin)
 
   const urgencyPercent = showUrgencyBar ? Math.min(100, Math.max(4, (untilMin / 120) * 100)) : 0
+  const confirmationMessage = (() => {
+    const nome = appointment.cliente?.nome?.trim() || 'cliente'
+    const primeiroNome = nome.split(/\s+/)[0] || nome
+    const data = formatDate(appointment.data)
+    const hora = formatTime(appointment.horario)
+    const link = confirmationHref?.trim()
+    const linkTexto = link
+      ? `\n\nConfirme seu horário aqui: ${link}`
+      : ''
+    return `Oi, ${primeiroNome}!\n\nSeu horario ta quase chegando! Temos agendamento marcado para *${data}* as *${hora}*.\n\nPode confirmar pra gente rapidinho?${linkTexto}\n\nValeu!`
+  })()
+  const confirmationWhatsAppHref = whatsappChatHref(
+    appointment.cliente?.telefone,
+    confirmationMessage,
+  )
 
   const handleConfirmCancel = () => {
     const m = cancelMotivo.trim()
@@ -217,6 +236,14 @@ function AppointmentCardComponent({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
+        {confirmationWhatsAppHref ? (
+          <DropdownMenuItem asChild>
+            <a href={confirmationWhatsAppHref} target="_blank" rel="noopener noreferrer">
+              <MessageCircle className="size-4" />
+              Enviar confirmação
+            </a>
+          </DropdownMenuItem>
+        ) : null}
         {onEdit ? (
           <DropdownMenuItem
             onSelect={() => {
@@ -239,7 +266,7 @@ function AppointmentCardComponent({
         ) : null}
         {showCancelMenu ? (
           <>
-            {(onEdit || onViewHistory) && <DropdownMenuSeparator />}
+            {(confirmationWhatsAppHref || onEdit || onViewHistory) && <DropdownMenuSeparator />}
             <DropdownMenuItem variant="destructive" onSelect={() => setCancelOpen(true)}>
               <X className="size-4" />
               Cancelar
@@ -660,6 +687,7 @@ function appointmentCardPropsAreEqual(
     (a.cliente?.nome ?? '') === (b.cliente?.nome ?? '') &&
     (a.barbeiro?.nome ?? '') === (b.barbeiro?.nome ?? '') &&
     prev.comandaNumero === next.comandaNumero &&
+    prev.confirmationHref === next.confirmationHref &&
     prev.isNext === next.isNext &&
     prev.listLayout === next.listLayout &&
     prev.inSheet === next.inSheet &&

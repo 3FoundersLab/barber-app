@@ -134,10 +134,18 @@ export default function AdminAgendamentosPage() {
   >({})
   const [listQuickFocus, setListQuickFocus] = useState<ListQuickFocus>('todos')
   const loadAgendamentosRequestId = useRef(0)
+  const [appOrigin, setAppOrigin] = useState<string>('')
 
   useEffect(() => {
     setFabPortalHost(document.body)
+    setAppOrigin(window.location.origin)
   }, [])
+
+  const getConfirmationHref = useCallback(
+    (agendamentoId: string) =>
+      appOrigin ? `${appOrigin}/confirmar-agendamento/${agendamentoId}` : null,
+    [appOrigin],
+  )
 
   useEffect(() => {
     if (viewMode !== 'grade') setShowIrParaAgoraFab(false)
@@ -746,6 +754,7 @@ export default function AdminAgendamentosPage() {
                       {onBackToList ? <Separator className="mb-3" /> : null}
                       <AppointmentCard
                         appointment={a}
+                        confirmationHref={getConfirmationHref(a.id)}
                         inSheet
                         comandaNumero={comandaMapEfetivo[a.id]}
                         onCheckIn={handleCheckIn}
@@ -905,6 +914,7 @@ export default function AdminAgendamentosPage() {
                       <AppointmentCard
                         key={agendamento.id}
                         appointment={agendamento}
+                        confirmationHref={getConfirmationHref(agendamento.id)}
                         listLayout
                         comandaNumero={comandaMapEfetivo[agendamento.id]}
                         isNext={agendamento.id === nextAppointmentId}
@@ -949,6 +959,7 @@ export default function AdminAgendamentosPage() {
                               <AppointmentCard
                                 key={agendamento.id}
                                 appointment={agendamento}
+                                confirmationHref={getConfirmationHref(agendamento.id)}
                                 listLayout
                                 comandaNumero={comandaMapEfetivo[agendamento.id]}
                                 isNext={agendamento.id === nextAppointmentId}
@@ -1076,6 +1087,7 @@ export default function AdminAgendamentosPage() {
           {detailAppointment && (
             <AppointmentCard
               appointment={detailAppointment}
+              confirmationHref={getConfirmationHref(detailAppointment.id)}
               inSheet
               comandaNumero={comandaMapEfetivo[detailAppointment.id]}
               onCheckIn={handleCheckIn}

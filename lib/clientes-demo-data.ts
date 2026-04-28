@@ -22,6 +22,7 @@ const ORIGEM_NASC: Array<{ origem_canal: string; data_nascimento: string }> = [
 ]
 
 const NOTAS_DEMO = 'Dado de demonstração; não representa pessoa real.'
+const TELEFONE_TESTE_WHATSAPP = '5511 986185400'
 
 /**
  * Lista fixa de clientes fictícios para o painel (toggle “Dados fictícios”).
@@ -36,7 +37,7 @@ export function getClientesDemoForBarbearia(barbeariaId: string): Cliente[] {
       id: `33333333-3333-3333-3333-${idSuffix}`,
       barbearia_id: barbeariaId,
       nome: `Cliente fictício ${label}`,
-      telefone: `(11) 90000-${1000 + n}`,
+      telefone: TELEFONE_TESTE_WHATSAPP,
       email: `cliente-ficticio-${label}@example.com`,
       notas: NOTAS_DEMO,
       origem_canal: extra.origem_canal,

@@ -58,10 +58,14 @@ function servico(partial: Pick<Servico, 'id' | 'nome' | 'duracao'>): Servico {
   }
 }
 
+function demoTelefoneFromId(_id: string): string {
+  return '5511 986185400'
+}
+
 function cliente(partial: Pick<Cliente, 'id' | 'nome'>): Cliente {
   return {
     barbearia_id: 'demo-bb',
-    telefone: '',
+    telefone: demoTelefoneFromId(partial.id),
     created_at: '',
     updated_at: '',
     ...partial,

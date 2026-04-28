@@ -133,6 +133,8 @@ export interface Agendamento {
   observacoes?: string
   /** Preenchido ao cancelar pelo painel (opcional). */
   motivo_cancelamento?: string | null
+  /** Preenchido quando o cliente confirma o horário pelo link público. */
+  confirmado_cliente_em?: string | null
   created_at: string
   updated_at: string
   // Relacionamentos (para exibição)
