@@ -141,15 +141,23 @@ export default function AdminAgendamentosPage() {
   const [listQuickFocus, setListQuickFocus] = useState<ListQuickFocus>('todos')
   const loadAgendamentosRequestId = useRef(0)
   const [appOrigin, setAppOrigin] = useState<string>('')
+  const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()
 
   useEffect(() => {
     setFabPortalHost(document.body)
+    const normalizedConfigured = configuredAppUrl
+      ? configuredAppUrl.replace(/\/+$/, '')
+      : ''
+    if (normalizedConfigured) {
+      setAppOrigin(normalizedConfigured)
+      return
+    }
     setAppOrigin(window.location.origin)
-  }, [])
+  }, [configuredAppUrl])
 
   const getConfirmationHref = useCallback(
     (agendamentoId: string) =>
-      appOrigin ? `${appOrigin}/confirmar-agendamento/${agendamentoId}` : null,
+      appOrigin ? `${appOrigin}/confirmar-agendamento/${encodeURIComponent(agendamentoId)}` : null,
     [appOrigin],
   )
 

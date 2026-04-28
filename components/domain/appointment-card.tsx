@@ -130,6 +130,7 @@ function AppointmentCardComponent({
   const isEmAtendimento = appointment.status === 'em_atendimento'
   const isCancelado =
     appointment.status === 'cancelado' || appointment.status === 'faltou'
+  const isConfirmadoPeloCliente = Boolean(appointment.confirmado_cliente_em) && isAgendado
   const canMarkPaid =
     appointment.status === 'concluido' && appointment.status_pagamento === 'pendente'
   const showCheckIn = Boolean(onCheckIn && isAgendado)
@@ -372,6 +373,12 @@ function AppointmentCardComponent({
                   <span className="inline-flex items-center rounded-lg bg-zinc-900 px-2.5 py-1 text-sm font-semibold tabular-nums text-white shadow-sm dark:bg-zinc-100 dark:text-zinc-900">
                     {timeStr}
                   </span>
+                  {isConfirmadoPeloCliente ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900 ring-1 ring-emerald-600/25 dark:bg-emerald-500/20 dark:text-emerald-100 dark:ring-emerald-400/30">
+                      <Check className="size-3.5 shrink-0" />
+                      Confirmado pelo cliente
+                    </span>
+                  ) : null}
                   {isEmAtendimento ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900 ring-1 ring-emerald-600/25 dark:bg-emerald-500/20 dark:text-emerald-100 dark:ring-emerald-400/30">
                       <span className="relative flex h-1.5 w-1.5 shrink-0" aria-hidden>
