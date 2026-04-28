@@ -20,6 +20,7 @@ import {
   HORARIOS_PADRAO,
   resolveBarbeariaAgendaTimeRange,
 } from '@/lib/constants'
+import { listAvailableStartSlots } from '@/lib/agenda-availability'
 import {
   formatDiasFuncionamentoLegenda,
   isBarbeariaAbertaNoDia,
@@ -47,6 +48,10 @@ export default function AgendarPage() {
   const [selectedBarbeiro, setSelectedBarbeiro] = useState<Barbeiro | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [selectedHorario, setSelectedHorario] = useState<string | null>(null)
+  const [busyAppointments, setBusyAppointments] = useState<
+    { horario: string; servico: { duracao: number } | null }[]
+  >([])
+  const [isLoadingHorarios, setIsLoadingHorarios] = useState(false)
   const [barbeariaHorarioAbertura, setBarbeariaHorarioAbertura] = useState<string | null>(null)
   const [barbeariaHorarioFechamento, setBarbeariaHorarioFechamento] = useState<string | null>(null)
   const [diasFuncionamento, setDiasFuncionamento] = useState<number[]>(() =>
@@ -55,8 +60,21 @@ export default function AgendarPage() {
 
   const horariosDisponiveis = useMemo(() => {
     const range = resolveBarbeariaAgendaTimeRange(barbeariaHorarioAbertura, barbeariaHorarioFechamento)
-    return buildAgendaSlotStrings(range.start, range.end, HORARIOS_PADRAO.intervalo)
-  }, [barbeariaHorarioAbertura, barbeariaHorarioFechamento])
+    const slots = buildAgendaSlotStrings(range.start, range.end, HORARIOS_PADRAO.intervalo)
+    if (!selectedServico) return slots
+    return listAvailableStartSlots({
+      slotStrings: slots,
+      dayStart: range.start,
+      dayEnd: range.end,
+      targetDurationMinutes: selectedServico.duracao,
+      appointments: busyAppointments,
+    })
+  }, [
+    barbeariaHorarioAbertura,
+    barbeariaHorarioFechamento,
+    selectedServico,
+    busyAppointments,
+  ])
 
   useEffect(() => {
     async function loadData() {
@@ -109,6 +127,49 @@ export default function AgendarPage() {
     loadData()
   }, [])
 
+  useEffect(() => {
+    if (!selectedBarbeiro || !selectedDate) {
+      setBusyAppointments([])
+      return
+    }
+
+    let cancelled = false
+    async function loadBusyAppointments() {
+      setIsLoadingHorarios(true)
+      const supabase = createClient()
+      const { data, error: fetchError } = await supabase
+        .from('agendamentos')
+        .select('horario, status, servico:servicos(duracao)')
+        .eq('barbeiro_id', selectedBarbeiro.id)
+        .eq('data', selectedDate.toISOString().split('T')[0])
+        .in('status', ['agendado', 'em_atendimento', 'concluido'])
+
+      if (cancelled) return
+      if (fetchError) {
+        setBusyAppointments([])
+      } else {
+        setBusyAppointments(
+          (data ?? []).map((item) => ({
+            horario: item.horario,
+            servico: item.servico,
+          })),
+        )
+      }
+      setIsLoadingHorarios(false)
+    }
+
+    void loadBusyAppointments()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedBarbeiro, selectedDate])
+
+  useEffect(() => {
+    if (!selectedHorario) return
+    if (horariosDisponiveis.includes(selectedHorario)) return
+    setSelectedHorario(null)
+  }, [selectedHorario, horariosDisponiveis])
+
   const handleBack = () => {
     if (step === 'barbeiro') setStep('servico')
     else if (step === 'data') setStep('barbeiro')
@@ -132,6 +193,37 @@ export default function AgendarPage() {
     
     try {
       const supabase = createClient()
+      const selectedDateYmd = selectedDate.toISOString().split('T')[0]
+      const range = resolveBarbeariaAgendaTimeRange(barbeariaHorarioAbertura, barbeariaHorarioFechamento)
+
+      const { data: currentBusy, error: availabilityError } = await supabase
+        .from('agendamentos')
+        .select('horario, status, servico:servicos(duracao)')
+        .eq('barbeiro_id', selectedBarbeiro.id)
+        .eq('data', selectedDateYmd)
+        .in('status', ['agendado', 'em_atendimento', 'concluido'])
+
+      if (availabilityError) {
+        setError('Não foi possível validar a disponibilidade deste horário')
+        return
+      }
+
+      const stillAvailable = listAvailableStartSlots({
+        slotStrings: [selectedHorario],
+        dayStart: range.start,
+        dayEnd: range.end,
+        targetDurationMinutes: selectedServico.duracao,
+        appointments: (currentBusy ?? []).map((item) => ({
+          horario: item.horario,
+          servico: item.servico,
+        })),
+      }).length > 0
+
+      if (!stillAvailable) {
+        setError('Este horário acabou de ficar indisponível. Escolha outro horário.')
+        setStep('horario')
+        return
+      }
       
       // Get current user
       const { data: { user } } = await supabase.auth.getUser()
@@ -189,14 +281,21 @@ export default function AgendarPage() {
           cliente_id: newCliente.id,
           barbeiro_id: selectedBarbeiro.id,
           servico_id: selectedServico.id,
-          data: selectedDate.toISOString().split('T')[0],
+          data: selectedDateYmd,
           horario: selectedHorario,
           status: 'agendado',
           status_pagamento: 'pendente',
           valor: selectedServico.preco,
         })
         if (insertError) {
-          setError('Não foi possível concluir o agendamento')
+          if (
+            insertError.code === '23514' ||
+            insertError.message.includes('Conflito de horário')
+          ) {
+            setError('Este horário conflita com outro atendimento. Escolha outro horário.')
+          } else {
+            setError('Não foi possível concluir o agendamento')
+          }
           return
         }
       } else {
@@ -206,14 +305,21 @@ export default function AgendarPage() {
           cliente_id: cliente.id,
           barbeiro_id: selectedBarbeiro.id,
           servico_id: selectedServico.id,
-          data: selectedDate.toISOString().split('T')[0],
+          data: selectedDateYmd,
           horario: selectedHorario,
           status: 'agendado',
           status_pagamento: 'pendente',
           valor: selectedServico.preco,
         })
         if (insertError) {
-          setError('Não foi possível concluir o agendamento')
+          if (
+            insertError.code === '23514' ||
+            insertError.message.includes('Conflito de horário')
+          ) {
+            setError('Este horário conflita com outro atendimento. Escolha outro horário.')
+          } else {
+            setError('Não foi possível concluir o agendamento')
+          }
           return
         }
       }
@@ -379,6 +485,17 @@ export default function AgendarPage() {
                 </>
               )}
             </p>
+            {isLoadingHorarios ? (
+              <div className="flex items-center justify-center py-8">
+                <Spinner className="h-5 w-5" />
+              </div>
+            ) : horariosDisponiveis.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                  Não há horários disponíveis para a duração deste serviço nesta data.
+                </CardContent>
+              </Card>
+            ) : null}
             <div className="grid grid-cols-4 gap-2">
               {horariosDisponiveis.map((h) => (
                 <Button

@@ -9,6 +9,7 @@ import {
   HORARIOS_PADRAO,
   resolveBarbeariaAgendaTimeRange,
 } from '@/lib/constants'
+import { listAvailableStartSlots } from '@/lib/agenda-availability'
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 import { cn } from '@/lib/utils'
 import { Alert, AlertTitle } from '@/components/ui/alert'
@@ -93,7 +94,11 @@ export function AppointmentAdminFormDialog({
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isLoadingRefs, setIsLoadingRefs] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false)
   const [clienteComboOpen, setClienteComboOpen] = useState(false)
+  const [busyAppointments, setBusyAppointments] = useState<
+    { id: string; horario: string; servico: { duracao: number } | null }[]
+  >([])
 
   const [clienteId, setClienteId] = useState('')
   const [barbeiroId, setBarbeiroId] = useState('')
@@ -101,6 +106,7 @@ export function AppointmentAdminFormDialog({
   const [dataStr, setDataStr] = useState(formatYMD(initialDate))
   const [horario, setHorario] = useState(horarioFallback)
   const [observacoes, setObservacoes] = useState('')
+  const selectedServico = servicos.find((s) => s.id === servicoId)
 
   const slotOptions = useMemo(() => {
     const base = buildAgendaSlotStrings(
@@ -108,10 +114,34 @@ export function AppointmentAdminFormDialog({
       agendaTimeRange.end,
       HORARIOS_PADRAO.intervalo,
     )
+    const duracaoServico = selectedServico?.duracao
+    const available =
+      typeof duracaoServico === 'number'
+        ? listAvailableStartSlots({
+            slotStrings: base,
+            dayStart: agendaTimeRange.start,
+            dayEnd: agendaTimeRange.end,
+            targetDurationMinutes: duracaoServico,
+            appointments: busyAppointments
+              .filter((appointment) => !editing || appointment.id !== editing.id)
+              .map((appointment) => ({
+                horario: appointment.horario,
+                servico: appointment.servico,
+              })),
+          })
+        : base
     const h = normalizeHorarioLabel(horario, horarioFallback)
-    if (h && !base.includes(h)) return [h, ...base].sort()
-    return base
-  }, [horario, agendaTimeRange.start, agendaTimeRange.end, horarioFallback])
+    if (h && !available.includes(h)) return [h, ...available].sort()
+    return available
+  }, [
+    horario,
+    agendaTimeRange.start,
+    agendaTimeRange.end,
+    horarioFallback,
+    selectedServico,
+    busyAppointments,
+    editing,
+  ])
 
   useEffect(() => {
     if (!open || !barbeariaId) return
@@ -170,7 +200,44 @@ export function AppointmentAdminFormDialog({
     setObservacoes('')
   }, [open, editing, initialDate, defaultBarbeiroId, barbeiros, horarioFallback])
 
-  const selectedServico = servicos.find((s) => s.id === servicoId)
+  useEffect(() => {
+    if (!open || !barbeariaId || !barbeiroId || !dataStr) {
+      setBusyAppointments([])
+      return
+    }
+    let cancelled = false
+    async function loadAvailability() {
+      setIsLoadingAvailability(true)
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('agendamentos')
+        .select('id, horario, status, servico:servicos(duracao)')
+        .eq('barbearia_id', barbeariaId)
+        .eq('barbeiro_id', barbeiroId)
+        .eq('data', dataStr)
+        .in('status', ['agendado', 'em_atendimento', 'concluido'])
+
+      if (cancelled) return
+      if (error) {
+        setBusyAppointments([])
+      } else {
+        setBusyAppointments(data ?? [])
+      }
+      setIsLoadingAvailability(false)
+    }
+    void loadAvailability()
+    return () => {
+      cancelled = true
+    }
+  }, [open, barbeariaId, barbeiroId, dataStr])
+
+  useEffect(() => {
+    const normalized = normalizeHorarioLabel(horario, horarioFallback)
+    if (!normalized) return
+    if (slotOptions.includes(normalized)) return
+    setHorario('')
+  }, [horario, horarioFallback, slotOptions])
+
   const selectedCliente = useMemo(
     () => clientes.find((c) => c.id === clienteId) ?? null,
     [clientes, clienteId],
@@ -206,6 +273,40 @@ export function AppointmentAdminFormDialog({
       observacoes: observacoes.trim() || null,
     }
 
+    const { data: currentBusy, error: availabilityError } = await supabase
+      .from('agendamentos')
+      .select('id, horario, status, servico:servicos(duracao)')
+      .eq('barbearia_id', barbeariaId)
+      .eq('barbeiro_id', barbeiroId)
+      .eq('data', dataStr)
+      .in('status', ['agendado', 'em_atendimento', 'concluido'])
+
+    if (availabilityError) {
+      setIsSubmitting(false)
+      onError('Não foi possível validar a disponibilidade deste horário')
+      return
+    }
+
+    const stillAvailable =
+      listAvailableStartSlots({
+        slotStrings: [horarioNorm],
+        dayStart: agendaTimeRange.start,
+        dayEnd: agendaTimeRange.end,
+        targetDurationMinutes: servico.duracao,
+        appointments: (currentBusy ?? [])
+          .filter((appointment) => !editing || appointment.id !== editing.id)
+          .map((appointment) => ({
+            horario: appointment.horario,
+            servico: appointment.servico,
+          })),
+      }).length > 0
+
+    if (!stillAvailable) {
+      setIsSubmitting(false)
+      onError('Este horário acabou de ficar indisponível. Escolha outro horário.')
+      return
+    }
+
     if (editing) {
       const { error: upErr } = await supabase
         .from('agendamentos')
@@ -213,7 +314,11 @@ export function AppointmentAdminFormDialog({
         .eq('id', editing.id)
       setIsSubmitting(false)
       if (upErr) {
-        onError('Não foi possível atualizar o agendamento')
+        if (upErr.code === '23514' || upErr.message.includes('Conflito de horário')) {
+          onError('Este horário conflita com outro atendimento do profissional.')
+        } else {
+          onError('Não foi possível atualizar o agendamento')
+        }
         return
       }
       onSaved(dataStr)
@@ -228,7 +333,11 @@ export function AppointmentAdminFormDialog({
     })
     setIsSubmitting(false)
     if (insErr) {
-      onError('Não foi possível criar o agendamento')
+      if (insErr.code === '23514' || insErr.message.includes('Conflito de horário')) {
+        onError('Este horário conflita com outro atendimento do profissional.')
+      } else {
+        onError('Não foi possível criar o agendamento')
+      }
       return
     }
     onSaved(dataStr)
@@ -422,6 +531,13 @@ export function AppointmentAdminFormDialog({
                     ))}
                   </SelectContent>
                 </Select>
+                {isLoadingAvailability ? (
+                  <p className="text-xs text-muted-foreground">Carregando disponibilidade...</p>
+                ) : selectedServico && slotOptions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Nenhum horário disponível para este serviço nesta data.
+                  </p>
+                ) : null}
               </div>
             </div>
 
