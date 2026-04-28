@@ -5,9 +5,18 @@ import { normalizeDashboardNotificationState } from '@/lib/dashboard-notificatio
 import type { AlertaDashboardTipo } from '@/types/admin-dashboard'
 
 const TIPOS_VALIDOS: AlertaDashboardTipo[] = ['urgente', 'atencao', 'especial', 'info', 'sucesso']
+const CHAVES_MUTED_VALIDAS = [
+  ...TIPOS_VALIDOS,
+  'atencao:estoque',
+  'atencao:confirmacao_agendamento',
+  'atencao:movimento',
+] as const
 
-function isValidTipoList(v: unknown): v is AlertaDashboardTipo[] {
-  return Array.isArray(v) && v.every((x) => typeof x === 'string' && TIPOS_VALIDOS.includes(x as AlertaDashboardTipo))
+function isValidMutedKeyList(v: unknown): v is string[] {
+  return (
+    Array.isArray(v) &&
+    v.every((x) => typeof x === 'string' && CHAVES_MUTED_VALIDAS.includes(x as (typeof CHAVES_MUTED_VALIDAS)[number]))
+  )
 }
 
 function isStringRecord(v: unknown): v is Record<string, string> {
@@ -77,7 +86,7 @@ export async function PUT(request: NextRequest) {
   const archived_ids = Array.isArray(body.archived_ids)
     ? body.archived_ids.filter((x): x is string => typeof x === 'string')
     : []
-  const muted_types = isValidTipoList(body.muted_types) ? body.muted_types : []
+  const muted_types = isValidMutedKeyList(body.muted_types) ? body.muted_types : []
   const read_at = isStringRecord(body.read_at) ? body.read_at : {}
 
   const { error } = await auth.supabase.from('dashboard_notification_states').upsert(

@@ -44,6 +44,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Spinner } from '@/components/ui/spinner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Checkbox } from '@/components/ui/checkbox'
 import { ProfileAvatarUpload } from '@/components/shared/profile-avatar-upload'
 import { createClient } from '@/lib/supabase/client'
 import { signOutWithPersistenceClear } from '@/lib/supabase/sign-out-client'
@@ -80,6 +81,7 @@ import {
 } from '@/components/landing/landing-classes'
 import { cn } from '@/lib/utils'
 import { DIAS_SEMANA } from '@/lib/constants'
+import type { NotificationApiState } from '@/lib/notification-api-state'
 import {
   BARBEARIA_DIAS_FUNCIONAMENTO_PADRAO,
   diasFuncionamentoToFormFlags,
@@ -130,6 +132,57 @@ const CONFIG_TAB_QUERY = 'tab' as const
 const CONFIG_TAB_BEARBEARIA = 'barbearia' as const
 
 type ConfiguracoesTab = 'conta' | 'barbearia' | 'assinatura'
+type NotificacaoPreferenciaKey =
+  | 'urgente'
+  | 'atencao:estoque'
+  | 'atencao:confirmacao_agendamento'
+  | 'atencao:movimento'
+  | 'especial'
+  | 'info'
+
+const TIPOS_NOTIFICACAO: NotificacaoPreferenciaKey[] = [
+  'urgente',
+  'atencao:estoque',
+  'atencao:confirmacao_agendamento',
+  'atencao:movimento',
+  'especial',
+  'info',
+]
+
+const NOTIFICACAO_OPCOES: Record<NotificacaoPreferenciaKey, { titulo: string; descricao: string }> = {
+  urgente: {
+    titulo: 'Pagamentos pendentes de atendimentos',
+    descricao: 'Atendimentos do dia sem confirmação de pagamento.',
+  },
+  'atencao:estoque': {
+    titulo: 'Estoque crítico',
+    descricao: 'Produtos com quantidade baixa, no mínimo ou esgotados.',
+  },
+  'atencao:confirmacao_agendamento': {
+    titulo: 'Confirmação de agendamentos (24h)',
+    descricao: 'Agendamentos próximos sem confirmação do cliente.',
+  },
+  'atencao:movimento': {
+    titulo: 'Movimento abaixo da média',
+    descricao: 'Quando o dia está abaixo do ritmo recente de agendamentos.',
+  },
+  especial: {
+    titulo: 'Aniversários (clientes e equipe)',
+    descricao: 'Aniversários do dia e próximos aniversários da equipe.',
+  },
+  info: {
+    titulo: 'Clientes novos e avisos de ativação',
+    descricao: 'Novos clientes na semana e mensagens de status do plano.',
+  },
+}
+
+function buildTipoReceberState(chavesOcultas: string[]): Record<NotificacaoPreferenciaKey, boolean> {
+  const ocultos = new Set(chavesOcultas)
+  return TIPOS_NOTIFICACAO.reduce(
+    (acc, tipo) => ({ ...acc, [tipo]: !ocultos.has(tipo) }),
+    {} as Record<NotificacaoPreferenciaKey, boolean>,
+  )
+}
 
 function configuracoesTabFromParam(raw: string | null): ConfiguracoesTab {
   if (raw === 'barbearia' || raw === 'assinatura') return raw
@@ -251,6 +304,11 @@ export default function AdminConfiguracoesPage() {
   const [nomePerfil, setNomePerfil] = useState('')
   const [telefonePerfil, setTelefonePerfil] = useState('')
   const [avatar, setAvatar] = useState('')
+  const [notificationStateSnapshot, setNotificationStateSnapshot] = useState<NotificationApiState | null>(null)
+  const [tiposNotificacaoReceber, setTiposNotificacaoReceber] = useState<Record<NotificacaoPreferenciaKey, boolean>>(
+    buildTipoReceberState([]),
+  )
+  const [isSavingNotificationPrefs, setIsSavingNotificationPrefs] = useState(false)
 
   const [formBarbearia, setFormBarbearia] = useState({
     nome: '',
@@ -361,9 +419,28 @@ export default function AdminConfiguracoesPage() {
               })
             : null,
         )
+
+        try {
+          const prefRes = await fetch(
+            `/api/notifications?barbeariaId=${encodeURIComponent(b.id)}&slug=${encodeURIComponent(slug)}`,
+          )
+          if (prefRes.ok) {
+            const pref = (await prefRes.json()) as NotificationApiState
+            setNotificationStateSnapshot(pref)
+            setTiposNotificacaoReceber(buildTipoReceberState(pref.chavesOcultas))
+          } else {
+            setNotificationStateSnapshot(null)
+            setTiposNotificacaoReceber(buildTipoReceberState([]))
+          }
+        } catch {
+          setNotificationStateSnapshot(null)
+          setTiposNotificacaoReceber(buildTipoReceberState([]))
+        }
       } else {
         setAssinatura(null)
         setAssinaturaFetchError(null)
+        setNotificationStateSnapshot(null)
+        setTiposNotificacaoReceber(buildTipoReceberState([]))
       }
 
       setIsLoading(false)
@@ -772,6 +849,7 @@ export default function AdminConfiguracoesPage() {
     }
 
     setIsSavingProfile(true)
+    setIsSavingNotificationPrefs(true)
     setError(null)
     setWarning(null)
     setSuccessMessage(null)
@@ -798,14 +876,62 @@ export default function AdminConfiguracoesPage() {
       )
       scheduleScrollToSaveFeedback()
       setIsSavingProfile(false)
+      setIsSavingNotificationPrefs(false)
       return
+    }
+
+    if (barbearia) {
+      const muted_types = TIPOS_NOTIFICACAO.filter((tipo) => !tiposNotificacaoReceber[tipo])
+      const state = notificationStateSnapshot
+      const payload = {
+        barbearia_id: barbearia.id,
+        slug,
+        read_ids: state?.lidosIds ?? [],
+        archived_ids: state?.arquivadosIds ?? [],
+        read_at: state?.lidosAt ?? {},
+        muted_types,
+      }
+
+      try {
+        const prefRes = await fetch('/api/notifications', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        if (!prefRes.ok) {
+          const json = (await prefRes.json().catch(() => null)) as { error?: string } | null
+          setError(json?.error ?? 'Dados da conta salvos, mas não foi possível salvar as preferências de notificações.')
+          scheduleScrollToSaveFeedback()
+          setIsSavingProfile(false)
+          setIsSavingNotificationPrefs(false)
+          return
+        }
+        const nextSnapshot: NotificationApiState = {
+          lidosIds: payload.read_ids,
+          arquivadosIds: payload.archived_ids,
+          lidosAt: payload.read_at,
+          chavesOcultas: muted_types,
+          tiposOcultos: muted_types.filter(
+            (tipo): tipo is 'urgente' | 'especial' | 'info' =>
+              ['urgente', 'especial', 'info'].includes(tipo),
+          ),
+        }
+        setNotificationStateSnapshot(nextSnapshot)
+      } catch {
+        setError('Dados da conta salvos, mas não foi possível salvar as preferências de notificações.')
+        scheduleScrollToSaveFeedback()
+        setIsSavingProfile(false)
+        setIsSavingNotificationPrefs(false)
+        return
+      }
     }
 
     setProfile(updated)
     setProfileCache(profile.id, updated)
-    setSuccessMessage('Dados da conta salvos com sucesso.')
+    setSuccessMessage('Dados da conta e preferências de notificações salvos com sucesso.')
     scheduleScrollToSaveFeedback()
     setIsSavingProfile(false)
+    setIsSavingNotificationPrefs(false)
   }
 
   const handleLogout = async () => {
@@ -965,7 +1091,7 @@ export default function AdminConfiguracoesPage() {
                     </TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="conta" className="mt-0 space-y-6 outline-none">
+                  <TabsContent value="conta" className="mt-0 space-y-6 pb-24 outline-none">
                     <section className={cn(superProfileGlassCardClass, 'overflow-hidden')}>
                       <header className="border-b border-zinc-200/80 px-5 py-4 dark:border-white/[0.06] md:px-6">
                         <div className="flex items-center gap-2 text-foreground">
@@ -1064,29 +1190,67 @@ export default function AdminConfiguracoesPage() {
                             className={profileAvatarUploadPremiumClass}
                           />
                         ) : null}
+
+                        <div className="space-y-3 rounded-lg border border-border/70 bg-background/60 p-3 sm:p-4">
+                          <div>
+                            <p className="text-sm font-medium text-foreground">Notificações do painel</p>
+                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                              Selecione quais grupos de notificações você quer receber no sino de notificações.
+                            </p>
+                          </div>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {TIPOS_NOTIFICACAO.map((tipo) => (
+                              <label
+                                key={`cfg-notif-tipo-${tipo}`}
+                                className="flex items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-2 text-sm"
+                              >
+                                <Checkbox
+                                  checked={tiposNotificacaoReceber[tipo]}
+                                  onCheckedChange={(checked) =>
+                                    setTiposNotificacaoReceber((prev) => ({ ...prev, [tipo]: checked === true }))
+                                  }
+                                  disabled={isSavingNotificationPrefs || !barbearia}
+                                  aria-label={`Receber notificações: ${NOTIFICACAO_OPCOES[tipo].titulo}`}
+                                />
+                                <span className="flex min-w-0 flex-col">
+                                  <span className="text-sm font-medium text-foreground">
+                                    {NOTIFICACAO_OPCOES[tipo].titulo}
+                                  </span>
+                                  <span className="text-xs leading-relaxed text-muted-foreground">
+                                    {NOTIFICACAO_OPCOES[tipo].descricao}
+                                  </span>
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </section>
 
-                    <Button
-                      type="button"
-                      className={cn(
-                        landingPrimaryCtaClass,
-                        landingButtonLift,
-                        'h-12 w-full text-xs uppercase tracking-wide sm:text-sm',
-                      )}
-                      onClick={handleSaveProfile}
-                      disabled={isSavingProfile || !profile}
-                    >
-                      {isSavingProfile ? (
-                        <Spinner className="mr-2 h-4 w-4" />
-                      ) : (
-                        <Save className="mr-2 h-4 w-4" />
-                      )}
-                      Salvar dados da conta
-                    </Button>
+                    <div className="sticky bottom-3 z-20">
+                      <div className="rounded-xl border border-zinc-200/80 bg-white/92 p-2 shadow-lg backdrop-blur dark:border-white/15 dark:bg-zinc-950/85">
+                        <Button
+                          type="button"
+                          className={cn(
+                            landingPrimaryCtaClass,
+                            landingButtonLift,
+                            'h-12 w-full text-xs uppercase tracking-wide sm:text-sm',
+                          )}
+                          onClick={handleSaveProfile}
+                          disabled={isSavingProfile || !profile}
+                        >
+                          {isSavingProfile ? (
+                            <Spinner className="mr-2 h-4 w-4" />
+                          ) : (
+                            <Save className="mr-2 h-4 w-4" />
+                          )}
+                          Salvar dados da conta
+                        </Button>
+                      </div>
+                    </div>
                   </TabsContent>
 
-                  <TabsContent value="barbearia" className="mt-0 space-y-6 outline-none">
+                  <TabsContent value="barbearia" className="mt-0 space-y-6 pb-24 outline-none">
                     <section className={cn(superProfileGlassCardClass, 'overflow-hidden')}>
                       <header className="border-b border-zinc-200/80 px-5 py-4 dark:border-white/[0.06] md:px-6">
                         <div className="flex items-center gap-2 text-foreground">
@@ -1600,23 +1764,27 @@ export default function AdminConfiguracoesPage() {
                     </section>
 
                     {barbearia ? (
-                      <Button
-                        type="button"
-                        className={cn(
-                          landingPrimaryCtaClass,
-                          landingButtonLift,
-                          'h-12 w-full text-xs uppercase tracking-wide sm:text-sm',
-                        )}
-                        onClick={handleSaveBarbearia}
-                        disabled={isSavingBarbearia}
-                      >
-                        {isSavingBarbearia ? (
-                          <Spinner className="mr-2 h-4 w-4" />
-                        ) : (
-                          <Save className="mr-2 h-4 w-4" />
-                        )}
-                        Salvar dados da barbearia
-                      </Button>
+                      <div className="sticky bottom-3 z-20">
+                        <div className="rounded-xl border border-zinc-200/80 bg-white/92 p-2 shadow-lg backdrop-blur dark:border-white/15 dark:bg-zinc-950/85">
+                          <Button
+                            type="button"
+                            className={cn(
+                              landingPrimaryCtaClass,
+                              landingButtonLift,
+                              'h-12 w-full text-xs uppercase tracking-wide sm:text-sm',
+                            )}
+                            onClick={handleSaveBarbearia}
+                            disabled={isSavingBarbearia}
+                          >
+                            {isSavingBarbearia ? (
+                              <Spinner className="mr-2 h-4 w-4" />
+                            ) : (
+                              <Save className="mr-2 h-4 w-4" />
+                            )}
+                            Salvar dados da barbearia
+                          </Button>
+                        </div>
+                      </div>
                     ) : null}
                   </TabsContent>
 

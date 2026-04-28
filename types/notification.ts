@@ -40,7 +40,7 @@ export type NotificationPreferencesState = {
 export type NotificationPersistOverrides = {
   lidosIds?: string[]
   arquivadosIds?: string[]
-  tipos?: AlertaDashboardTipo[]
+  tipos?: string[]
   lidosAt?: Record<string, string>
 }
 

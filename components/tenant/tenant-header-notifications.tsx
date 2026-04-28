@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import { CalendarClock } from 'lucide-react'
 import { NotificationPanel } from '@/components/notifications/NotificationPanel'
 import { buildAdminDashboardAlerts } from '@/lib/build-admin-dashboard-alerts'
 import { listAniversariosEquipeNaJanela } from '@/lib/birthday-countdown'
+import { whatsappChatHref } from '@/lib/format-contato'
 import { mapApiNotificationStateToRow, type NotificationApiState } from '@/lib/notification-api-state'
 import { createClient } from '@/lib/supabase/client'
 import { getAuthUserSafe } from '@/lib/supabase/get-auth-user-safe'
@@ -24,6 +26,12 @@ function addDaysYmd(ymd: string, deltaDays: number): string {
   const [y, m, d] = ymd.split('-').map(Number)
   const t = new Date(y, m - 1, d + deltaDays)
   return ymdFromDate(t)
+}
+
+function toAppointmentDateTime(dataYmd: string, horario: string): Date {
+  const [y, m, d] = dataYmd.split('-').map(Number)
+  const [hh, mm] = horario.slice(0, 5).split(':').map(Number)
+  return new Date(y, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0, 0, 0)
 }
 
 export function TenantHeaderNotifications() {
@@ -113,6 +121,7 @@ export function TenantHeaderNotifications() {
           { count: count14 },
           { data: clientesComNascimentoRows },
           { data: barbeirosComNascimentoRows },
+          { data: confirmacoes24hRows },
         ] = await Promise.all([
           operacaoLiberada
             ? supabase
@@ -155,6 +164,25 @@ export function TenantHeaderNotifications() {
             .eq('barbearia_id', barbearia.id)
             .eq('ativo', true)
             .not('data_nascimento', 'is', null),
+          operacaoLiberada
+            ? supabase
+                .from('agendamentos')
+                .select('id, data, horario, status, confirmado_cliente_em, cliente:clientes(nome, telefone)')
+                .eq('barbearia_id', barbearia.id)
+                .gte('data', today)
+                .lte('data', addDaysYmd(today, 1))
+                .eq('status', 'agendado')
+                .is('confirmado_cliente_em', null)
+            : Promise.resolve({
+                data: null as {
+                  id: string
+                  data: string
+                  horario: string
+                  status: string
+                  confirmado_cliente_em: string | null
+                  cliente: { nome: string | null; telefone: string | null } | null
+                }[] | null,
+              }),
         ])
 
         const hoje = new Date()
@@ -192,8 +220,37 @@ export function TenantHeaderNotifications() {
           mediaAgendamentosRecente: (count14 || 0) / 14,
         })
 
+        const now = new Date()
+        const next24h = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+        const confirmacoes24hPendentes = (confirmacoes24hRows ?? []).filter((row) => {
+          const dateTime = toAppointmentDateTime(row.data, row.horario)
+          return dateTime > now && dateTime <= next24h
+        })
+        const alertaConfirmacao24h: AlertaDashboard[] = operacaoLiberada
+          ? confirmacoes24hPendentes
+              .map((row) => {
+                const clienteNome = row.cliente?.nome?.trim() || 'Cliente'
+                const clienteTelefone = row.cliente?.telefone
+                const message = `Olá, ${clienteNome}! Tudo bem? Passando para confirmar seu agendamento de amanhã às ${row.horario.slice(0, 5)}. Você confirma presença?`
+                const whatsappLink = whatsappChatHref(clienteTelefone, message)
+                if (!whatsappLink) return null
+                return {
+                  id: `agenda-confirmacao-24h-${row.id}`,
+                  tipo: 'atencao',
+                  titulo: `Confirmação pendente: ${clienteNome}`,
+                  descricao: `Atendimento em ${row.data} às ${row.horario.slice(0, 5)}. Envie o WhatsApp para confirmar presença.`,
+                  acao: 'Enviar WhatsApp',
+                  link: whatsappLink,
+                  linkTarget: '_blank' as const,
+                  icone: CalendarClock,
+                }
+              })
+              .filter((alerta): alerta is AlertaDashboard => Boolean(alerta))
+              .slice(0, 8)
+          : []
+
         if (!cancelled) {
-          setAlertas(alertasCalculados)
+          setAlertas([...alertasCalculados, ...alertaConfirmacao24h])
           setIsLoading(false)
         }
       } catch {

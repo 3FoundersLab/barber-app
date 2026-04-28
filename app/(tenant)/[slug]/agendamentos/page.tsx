@@ -26,7 +26,7 @@ import {
   type AppointmentDayGridHandle,
 } from '@/components/domain/appointment-day-grid'
 import { Button } from '@/components/ui/button'
-import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
+import { Alert, AlertDescription, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
@@ -80,6 +80,12 @@ function periodoFromHorario(horario: string): PeriodoKey {
   if (mins < 12 * 60) return 'manha'
   if (mins < 18 * 60) return 'tarde'
   return 'noite'
+}
+
+function toAppointmentDateTime(dataYmd: string, horario: string): Date {
+  const [y, m, d] = dataYmd.split('-').map(Number)
+  const [hh, mm] = horario.slice(0, 5).split(':').map(Number)
+  return new Date(y, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0, 0, 0)
 }
 
 const PERIODO_ORDER: PeriodoKey[] = ['manha', 'tarde', 'noite']
@@ -502,6 +508,22 @@ export default function AdminAgendamentosPage() {
     return null
   }, [selectedDateKey, listFilteredSorted, listQuickFocus])
 
+  const confirmationsDueIn24h = useMemo(() => {
+    const now = new Date()
+    const next24h = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+
+    const items = displayAgendamentos
+      .filter((a) => a.status === 'agendado' && !a.confirmado_cliente_em)
+      .map((a) => ({ agendamento: a, dateTime: toAppointmentDateTime(a.data, a.horario) }))
+      .filter(({ dateTime }) => dateTime > now && dateTime <= next24h)
+      .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
+
+    return {
+      total: items.length,
+      items: items.map(({ agendamento }) => agendamento),
+    }
+  }, [displayAgendamentos])
+
   const barbeirosNaGrade = useMemo(() => {
     if (selectedBarbeiro === 'all') return displayBarbeiros
     return displayBarbeiros.filter((b) => b.id === selectedBarbeiro)
@@ -594,19 +616,46 @@ export default function AdminAgendamentosPage() {
             </AlertTitle>
           </Alert>
         )}
+        {!useDemoData && !isLoading && !error && confirmationsDueIn24h.total > 0 && (
+          <Alert variant="info">
+            <AlertTitle>
+              {confirmationsDueIn24h.total === 1
+                ? '1 cliente precisa de mensagem de confirmação nas próximas 24h.'
+                : `${confirmationsDueIn24h.total} clientes precisam de mensagem de confirmação nas próximas 24h.`}
+            </AlertTitle>
+            <AlertDescription className="mt-1.5 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+              <span>
+                Antecipe o contato para organizar a agenda e confirmar os atendimentos do dia seguinte.
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 rounded-full px-3 text-xs"
+                onClick={() => {
+                  const tomorrow = new Date()
+                  tomorrow.setDate(tomorrow.getDate() + 1)
+                  setSelectedDate(tomorrow)
+                  setViewMode('list')
+                  setListQuickFocus('amanha')
+                }}
+              >
+                Ver amanhã
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <p className="text-lg font-semibold leading-snug tracking-tight sm:text-xl">
               {formatDateWeekdayLong(selectedDate)}
             </p>
-            <p className="text-xs text-muted-foreground sm:text-sm">
-              {viewMode === 'grade'
-                ? 'Grade por profissional · 00:00–24:00 (24 h) · intervalos de 15 minutos'
-                : viewMode === 'calendar'
-                  ? 'Calendário mensal — arraste para mover o dia do agendamento'
-                  : 'Lista do dia selecionado'}
-            </p>
+            {viewMode === 'calendar' ? (
+              <p className="text-xs text-muted-foreground sm:text-sm">
+                Calendário mensal — arraste para mover o dia do agendamento
+              </p>
+            ) : null}
             {!useDemoData ? (
               <p className="text-xs text-muted-foreground">
                 Abre em: <span className="font-medium text-foreground">{diasFuncionamentoLegenda}</span>

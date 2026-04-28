@@ -76,10 +76,12 @@ export function NotificationPanel({
 
   const handleLimpar = useCallback(() => {
     if (!onMarkAllAsRead) return
-    if (alertas.length > 3) {
-      const ok = window.confirm(`Marcar ${alertas.length} notificações como lidas?`)
-      if (!ok) return
-    }
+    const mensagem =
+      alertas.length === 1
+        ? 'Tem certeza que deseja limpar 1 notificação? Essa ação envia o item para arquivadas.'
+        : `Tem certeza que deseja limpar ${alertas.length} notificações? Essa ação envia os itens para arquivadas.`
+    const ok = window.confirm(mensagem)
+    if (!ok) return
     onMarkAllAsRead()
   }, [alertas.length, onMarkAllAsRead])
 
@@ -151,7 +153,7 @@ export function NotificationPanel({
                 className="text-muted-foreground hover:text-foreground -mt-1 h-8 shrink-0 px-2 text-xs"
                 onClick={handleLimpar}
               >
-                Marcar todas como lidas
+                Limpar notificações
               </Button>
             ) : null}
           </div>

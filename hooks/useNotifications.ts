@@ -16,6 +16,7 @@ export function useNotifications(slug: string, alertas: AlertaDashboard[]) {
   const [alertasDescartadosIds, setAlertasDescartadosIds] = useState<string[]>([])
   const [alertasLidosIds, setAlertasLidosIds] = useState<string[]>([])
   const [alertasLidosAt, setAlertasLidosAt] = useState<Record<string, string>>({})
+  const [chavesOcultas, setChavesOcultas] = useState<string[]>([])
   const [tiposOcultos, setTiposOcultos] = useState<AlertaDashboard['tipo'][]>([])
   const [persistContext, setPersistContext] = useState<NotificationPersistContext | null>(null)
   const [prefsHydrated, setPrefsHydrated] = useState(false)
@@ -24,6 +25,7 @@ export function useNotifications(slug: string, alertas: AlertaDashboard[]) {
     setAlertasDescartadosIds([])
     setAlertasLidosIds([])
     setAlertasLidosAt({})
+    setChavesOcultas([])
     setTiposOcultos([])
     setPersistContext(null)
     setPrefsHydrated(false)
@@ -34,7 +36,7 @@ export function useNotifications(slug: string, alertas: AlertaDashboard[]) {
       if (!persistContext || !prefsHydrated || !slug) return
       const read_ids = overrides?.lidosIds ?? alertasLidosIds
       const archived_ids = overrides?.arquivadosIds ?? alertasDescartadosIds
-      const muted_types = overrides?.tipos ?? tiposOcultos
+      const muted_types = overrides?.tipos ?? chavesOcultas
       const read_at = overrides?.lidosAt ?? alertasLidosAt
       try {
         const res = await fetch('/api/notifications', {
@@ -57,7 +59,7 @@ export function useNotifications(slug: string, alertas: AlertaDashboard[]) {
         console.error('[dashboard_notification_states] API error:', e)
       }
     },
-    [slug, persistContext, prefsHydrated, alertasLidosIds, alertasDescartadosIds, tiposOcultos, alertasLidosAt],
+    [slug, persistContext, prefsHydrated, alertasLidosIds, alertasDescartadosIds, chavesOcultas, alertasLidosAt],
   )
 
   const hydratePreferences = useCallback(
@@ -66,6 +68,7 @@ export function useNotifications(slug: string, alertas: AlertaDashboard[]) {
       setPersistContext(ctx)
       setAlertasLidosIds(notifState.lidosIds)
       setAlertasDescartadosIds(notifState.arquivadosIds)
+      setChavesOcultas(notifState.chavesOcultas)
       setTiposOcultos(notifState.tiposOcultos)
       setAlertasLidosAt(notifState.lidosAt)
       setPrefsHydrated(true)
@@ -73,17 +76,38 @@ export function useNotifications(slug: string, alertas: AlertaDashboard[]) {
     [],
   )
 
+  const getChaveOcultaPorAlerta = useCallback((alerta: AlertaDashboard): string | null => {
+    if (alerta.id === 'estoque-critico') return 'atencao:estoque'
+    if (alerta.id === 'movimento-abaixo-media') return 'atencao:movimento'
+    if (alerta.id.startsWith('agenda-confirmacao-24h-')) return 'atencao:confirmacao_agendamento'
+    return null
+  }, [])
+
   const alertasVisiveis = useMemo(() => {
     const descartados = new Set(alertasDescartadosIds)
     const ocultos = new Set(tiposOcultos)
-    return alertas.filter((a) => !descartados.has(a.id) && !ocultos.has(a.tipo))
-  }, [alertas, alertasDescartadosIds, tiposOcultos])
+    const chavesOcultasSet = new Set(chavesOcultas)
+    return alertas.filter((a) => {
+      if (descartados.has(a.id)) return false
+      if (ocultos.has(a.tipo)) return false
+      const chave = getChaveOcultaPorAlerta(a)
+      if (chave && chavesOcultasSet.has(chave)) return false
+      return true
+    })
+  }, [alertas, alertasDescartadosIds, tiposOcultos, chavesOcultas, getChaveOcultaPorAlerta])
 
   const alertasArquivados = useMemo(() => {
     const descartados = new Set(alertasDescartadosIds)
     const ocultos = new Set(tiposOcultos)
-    return alertas.filter((a) => descartados.has(a.id) && !ocultos.has(a.tipo))
-  }, [alertas, alertasDescartadosIds, tiposOcultos])
+    const chavesOcultasSet = new Set(chavesOcultas)
+    return alertas.filter((a) => {
+      if (!descartados.has(a.id)) return false
+      if (ocultos.has(a.tipo)) return false
+      const chave = getChaveOcultaPorAlerta(a)
+      if (chave && chavesOcultasSet.has(chave)) return false
+      return true
+    })
+  }, [alertas, alertasDescartadosIds, tiposOcultos, chavesOcultas, getChaveOcultaPorAlerta])
 
   const marcarAlertaLido = useCallback(
     (id: string) => {
@@ -98,13 +122,16 @@ export function useNotifications(slug: string, alertas: AlertaDashboard[]) {
 
   const limparTodasNotificacoes = useCallback(() => {
     const now = new Date().toISOString()
-    const nextLidos = [...new Set([...alertasLidosIds, ...alertasVisiveis.map((a) => a.id)])]
+    const idsVisiveis = alertasVisiveis.map((a) => a.id)
+    const nextLidos = [...new Set([...alertasLidosIds, ...idsVisiveis])]
+    const nextArquivados = [...new Set([...alertasDescartadosIds, ...idsVisiveis])]
     const nextLidosAt = { ...alertasLidosAt }
     for (const alerta of alertasVisiveis) nextLidosAt[alerta.id] ||= now
     setAlertasLidosIds(nextLidos)
+    setAlertasDescartadosIds(nextArquivados)
     setAlertasLidosAt(nextLidosAt)
-    void persistNotificationState({ lidosIds: nextLidos, lidosAt: nextLidosAt })
-  }, [alertasLidosAt, alertasLidosIds, alertasVisiveis, persistNotificationState])
+    void persistNotificationState({ lidosIds: nextLidos, arquivadosIds: nextArquivados, lidosAt: nextLidosAt })
+  }, [alertasDescartadosIds, alertasLidosAt, alertasLidosIds, alertasVisiveis, persistNotificationState])
 
   const desmarcarAlertaLido = useCallback(
     (id: string) => {
@@ -138,20 +165,28 @@ export function useNotifications(slug: string, alertas: AlertaDashboard[]) {
 
   const ocultarTipoAlerta = useCallback(
     (tipo: AlertaDashboard['tipo']) => {
-      const nextTipos = tiposOcultos.includes(tipo) ? tiposOcultos : [...tiposOcultos, tipo]
-      setTiposOcultos(nextTipos)
+      const nextTipos = chavesOcultas.includes(tipo) ? chavesOcultas : [...chavesOcultas, tipo]
+      const nextTiposValidos = nextTipos.filter((t): t is AlertaDashboard['tipo'] =>
+        ['urgente', 'atencao', 'especial', 'info', 'sucesso'].includes(t),
+      )
+      setChavesOcultas(nextTipos)
+      setTiposOcultos(nextTiposValidos)
       void persistNotificationState({ tipos: nextTipos })
     },
-    [tiposOcultos, persistNotificationState],
+    [chavesOcultas, persistNotificationState],
   )
 
   const mostrarTipoAlerta = useCallback(
     (tipo: AlertaDashboard['tipo']) => {
-      const nextTipos = tiposOcultos.filter((x) => x !== tipo)
-      setTiposOcultos(nextTipos)
+      const nextTipos = chavesOcultas.filter((x) => x !== tipo)
+      const nextTiposValidos = nextTipos.filter((t): t is AlertaDashboard['tipo'] =>
+        ['urgente', 'atencao', 'especial', 'info', 'sucesso'].includes(t),
+      )
+      setChavesOcultas(nextTipos)
+      setTiposOcultos(nextTiposValidos)
       void persistNotificationState({ tipos: nextTipos })
     },
-    [tiposOcultos, persistNotificationState],
+    [chavesOcultas, persistNotificationState],
   )
 
   return useMemo(

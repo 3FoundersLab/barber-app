@@ -10,6 +10,7 @@ export type DashboardNotificationStateRow = {
 export type DashboardNotificationState = {
   lidosIds: string[]
   arquivadosIds: string[]
+  chavesOcultas: string[]
   tiposOcultos: AlertaDashboard['tipo'][]
   lidosAt: Record<string, string>
 }
@@ -17,6 +18,7 @@ export type DashboardNotificationState = {
 export const EMPTY_DASHBOARD_NOTIFICATION_STATE: DashboardNotificationState = {
   lidosIds: [],
   arquivadosIds: [],
+  chavesOcultas: [],
   tiposOcultos: [],
   lidosAt: {},
 }
@@ -40,12 +42,14 @@ function normalizeReadAt(value: unknown): Record<string, string> {
 
 export function normalizeDashboardNotificationState(raw: DashboardNotificationStateRow | null | undefined): DashboardNotificationState {
   if (!raw) return EMPTY_DASHBOARD_NOTIFICATION_STATE
-  const tiposOcultos = toUniqueStringArray(raw.muted_types).filter((t): t is AlertaDashboard['tipo'] =>
+  const chavesOcultas = toUniqueStringArray(raw.muted_types)
+  const tiposOcultos = chavesOcultas.filter((t): t is AlertaDashboard['tipo'] =>
     TIPOS_VALIDOS.includes(t as AlertaDashboard['tipo']),
   )
   return {
     lidosIds: toUniqueStringArray(raw.read_ids),
     arquivadosIds: toUniqueStringArray(raw.archived_ids),
+    chavesOcultas,
     tiposOcultos,
     lidosAt: normalizeReadAt(raw.read_at),
   }
