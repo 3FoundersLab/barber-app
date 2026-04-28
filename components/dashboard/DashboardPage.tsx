@@ -43,6 +43,7 @@ export function DashboardPage(props: {
   operacaoLiberada: boolean
   statusHoje: AdminDashboardStatusHoje | null
   notificationsSlot: ReactNode
+  alertasDoDiaSlot: ReactNode
 }) {
   const reduceMotion = useReducedMotion()
   const parentVariants = reduceMotion
@@ -71,6 +72,7 @@ export function DashboardPage(props: {
     operacaoLiberada,
     statusHoje,
     notificationsSlot,
+    alertasDoDiaSlot,
   } = props
 
   return (
@@ -92,6 +94,7 @@ export function DashboardPage(props: {
         isLoading={isLoading}
         error={error}
         notificationsSlot={notificationsSlot}
+        alertasDoDiaSlot={alertasDoDiaSlot}
         pagamentoPendentePlano={pagamentoPendentePlano}
       />
       <KPICards hoje={operacaoKpisHoje} ontem={operacaoKpisOntem} isLoading={isLoading} error={error} />

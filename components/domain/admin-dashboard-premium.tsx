@@ -6,7 +6,6 @@ import type { AdminDashboardHomeStats } from '@/components/domain/admin-dashboar
 import { DashboardPage } from '@/components/dashboard/DashboardPage'
 import { Button } from '@/components/ui/button'
 import { DashboardAlertaRow } from '@/components/domain/admin-dashboard-alerta-row'
-import { cn } from '@/lib/utils'
 import type { AdminDashboardStatusHoje } from '@/lib/build-admin-dashboard-status-hoje'
 import type { Agendamento, Barbearia } from '@/types'
 import type {
@@ -87,57 +86,49 @@ export function AdminDashboardPremium(props: {
 
   const usarSheetAlertas = alertas.length > MAX_ALERTAS_PREVIEW
   const alertasPreview = usarSheetAlertas ? alertas.slice(0, MAX_ALERTAS_PREVIEW) : alertas
+  const alertasDoDiaSlot = !error ? (
+    <div role="region" aria-label="Alertas inteligentes">
+      {isLoading ? (
+        <div className="space-y-2">
+          <div className="bg-muted h-14 animate-pulse rounded-lg" />
+          <div className="bg-muted h-14 animate-pulse rounded-lg md:hidden" />
+        </div>
+      ) : (
+        <>
+          <div className="max-h-[min(40vh,220px)] space-y-2 overflow-y-auto pr-1">
+            {alertasPreview.map((a) => (
+              <DashboardAlertaRow
+                key={a.id}
+                alerta={a}
+                onMarkAsRead={onMarcarAlertaLido ? () => onMarcarAlertaLido(a.id) : undefined}
+                onMarkAsUnread={onDesmarcarAlertaLido ? () => onDesmarcarAlertaLido(a.id) : undefined}
+                onAction={onMarcarAlertaLido ? () => onMarcarAlertaLido(a.id) : undefined}
+                onArchive={onArquivarAlerta ? () => onArquivarAlerta(a.id) : undefined}
+                onMuteType={onOcultarTipoAlerta ? () => onOcultarTipoAlerta(a.tipo) : undefined}
+              />
+            ))}
+          </div>
+          {usarSheetAlertas && onVerMaisNotificacoes ? (
+            <div className="mt-2 flex justify-center">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground h-8 gap-1 text-xs"
+                onClick={onVerMaisNotificacoes}
+              >
+                Ver mais
+                <ArrowRight className="size-3.5" aria-hidden />
+              </Button>
+            </div>
+          ) : null}
+        </>
+      )}
+    </div>
+  ) : null
 
   return (
     <div className="space-y-6 md:space-y-8">
-      {!error && (
-        <div
-          className={cn('-mx-4 px-4 py-3 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8')}
-          role="region"
-          aria-label="Alertas inteligentes"
-        >
-          <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wider">
-            Alertas do dia
-          </p>
-          {isLoading ? (
-            <div className="space-y-2">
-              <div className="bg-muted h-14 animate-pulse rounded-lg" />
-              <div className="bg-muted h-14 animate-pulse rounded-lg md:hidden" />
-            </div>
-          ) : (
-            <>
-              <div className="max-h-[min(40vh,220px)] space-y-2 overflow-y-auto pr-1">
-                {alertasPreview.map((a) => (
-                  <DashboardAlertaRow
-                    key={a.id}
-                    alerta={a}
-                    onMarkAsRead={onMarcarAlertaLido ? () => onMarcarAlertaLido(a.id) : undefined}
-                    onMarkAsUnread={onDesmarcarAlertaLido ? () => onDesmarcarAlertaLido(a.id) : undefined}
-                    onAction={onMarcarAlertaLido ? () => onMarcarAlertaLido(a.id) : undefined}
-                    onArchive={onArquivarAlerta ? () => onArquivarAlerta(a.id) : undefined}
-                    onMuteType={onOcultarTipoAlerta ? () => onOcultarTipoAlerta(a.tipo) : undefined}
-                  />
-                ))}
-              </div>
-              {usarSheetAlertas && onVerMaisNotificacoes ? (
-                <div className="mt-2 flex justify-center">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-foreground h-8 gap-1 text-xs"
-                    onClick={onVerMaisNotificacoes}
-                  >
-                    Ver mais
-                    <ArrowRight className="size-3.5" aria-hidden />
-                  </Button>
-                </div>
-              ) : null}
-            </>
-          )}
-        </div>
-      )}
-
       <DashboardPage
         base={base}
         barbearia={barbearia}
@@ -160,6 +151,7 @@ export function AdminDashboardPremium(props: {
         operacaoLiberada={operacaoLiberada}
         statusHoje={statusHoje}
         notificationsSlot={notificationsSlot}
+        alertasDoDiaSlot={alertasDoDiaSlot}
       />
     </div>
   )

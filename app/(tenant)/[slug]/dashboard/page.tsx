@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { CalendarClock } from 'lucide-react'
 import { PageContent } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { AdminDashboardPremium } from '@/components/domain/admin-dashboard-premium'
@@ -11,6 +12,7 @@ import { notaEstimadaBarbeiro } from '@/lib/relatorios-barbeiros-analise'
 import { buildAdminDashboardAlerts } from '@/lib/build-admin-dashboard-alerts'
 import { listAniversariosEquipeNaJanela } from '@/lib/birthday-countdown'
 import { buildAdminDashboardStatusHoje, type AdminDashboardStatusHoje } from '@/lib/build-admin-dashboard-status-hoje'
+import { whatsappChatHref } from '@/lib/format-contato'
 import { mapApiNotificationStateToRow, type NotificationApiState } from '@/lib/notification-api-state'
 import { createClient } from '@/lib/supabase/client'
 import { getAuthUserSafe } from '@/lib/supabase/get-auth-user-safe'
@@ -52,6 +54,7 @@ interface DashboardExtra {
   resumoDia: DashboardResumoDia
   insightsDia: DashboardInsightsDia
   agendaStats: DashboardAgendaDiaStats
+  alertasConfirmacao24h: AlertaDashboard[]
 }
 
 function ymdFromDate(d: Date): string {
@@ -65,6 +68,12 @@ function addDaysYmd(ymd: string, deltaDays: number): string {
   const [y, m, d] = ymd.split('-').map(Number)
   const t = new Date(y, m - 1, d + deltaDays)
   return ymdFromDate(t)
+}
+
+function toAppointmentDateTime(dataYmd: string, horario: string): Date {
+  const [y, m, d] = dataYmd.split('-').map(Number)
+  const [hh, mm] = horario.slice(0, 5).split(':').map(Number)
+  return new Date(y, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0, 0, 0)
 }
 
 async function sumComandaServicosFechadasNoDia(
@@ -162,17 +171,20 @@ export default function AdminDashboardPage() {
 
   const alertas = useMemo(
     () =>
-      buildAdminDashboardAlerts({
-        base,
-        operacaoLiberada,
-        recebimentosPendentesHoje: extra?.recebimentosPendentesHoje ?? [],
-        estoqueCritico: extra?.estoqueCritico ?? [],
-        clientesNovosUltimos7Dias: extra?.clientesNovosUltimos7Dias ?? 0,
-        aniversariantesHoje: extra?.aniversariantesHoje ?? [],
-        aniversariosEquipeProximos: extra?.aniversariosEquipeProximos ?? [],
-        agendamentosHoje: stats?.agendamentosHoje ?? 0,
-        mediaAgendamentosRecente: extra?.mediaAgendamentosRecente ?? 0,
-      }),
+      [
+        ...(extra?.alertasConfirmacao24h ?? []),
+        ...buildAdminDashboardAlerts({
+          base,
+          operacaoLiberada,
+          recebimentosPendentesHoje: extra?.recebimentosPendentesHoje ?? [],
+          estoqueCritico: extra?.estoqueCritico ?? [],
+          clientesNovosUltimos7Dias: extra?.clientesNovosUltimos7Dias ?? 0,
+          aniversariantesHoje: extra?.aniversariantesHoje ?? [],
+          aniversariosEquipeProximos: extra?.aniversariosEquipeProximos ?? [],
+          agendamentosHoje: stats?.agendamentosHoje ?? 0,
+          mediaAgendamentosRecente: extra?.mediaAgendamentosRecente ?? 0,
+        }),
+      ],
     [
       base,
       operacaoLiberada,
@@ -182,6 +194,7 @@ export default function AdminDashboardPage() {
       extra?.aniversariantesHoje,
       extra?.aniversariosEquipeProximos,
       extra?.mediaAgendamentosRecente,
+      extra?.alertasConfirmacao24h,
       stats?.agendamentosHoje,
     ],
   )
@@ -281,6 +294,7 @@ export default function AdminDashboardPage() {
         { count: novosHojeCount },
         { data: ag30statusRows },
         { data: conc56Data },
+        { data: confirmacoes24hRows },
       ] = await Promise.all([
         supabase
           .from('agendamentos')
@@ -412,6 +426,25 @@ export default function AdminDashboardPage() {
           .eq('status', 'concluido')
           .gte('data', addDaysYmd(today, -55))
           .lte('data', today),
+        operacaoLiberada
+          ? supabase
+              .from('agendamentos')
+              .select('id, data, horario, status, confirmado_cliente_em, cliente:clientes(nome, telefone)')
+              .eq('barbearia_id', barbeariaData.id)
+              .gte('data', today)
+              .lte('data', addDaysYmd(today, 1))
+              .eq('status', 'agendado')
+              .is('confirmado_cliente_em', null)
+          : Promise.resolve({
+              data: null as {
+                id: string
+                data: string
+                horario: string
+                status: string
+                confirmado_cliente_em: string | null
+                cliente: { nome: string | null; telefone: string | null } | null
+              }[] | null,
+            }),
       ])
 
       const fHoje = todayRevenue?.reduce((acc, a) => acc + Number(a.valor), 0) || 0
@@ -601,6 +634,35 @@ export default function AdminDashboardPage() {
         diaMaisMovimentado,
       }
 
+      const now = new Date()
+      const next24h = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+      const confirmacoes24hPendentes = (confirmacoes24hRows ?? []).filter((row) => {
+        const dateTime = toAppointmentDateTime(row.data, row.horario)
+        return dateTime > now && dateTime <= next24h
+      })
+      const alertasConfirmacao24h: AlertaDashboard[] = operacaoLiberada
+        ? confirmacoes24hPendentes
+            .map((row) => {
+              const clienteNome = row.cliente?.nome?.trim() || 'Cliente'
+              const clienteTelefone = row.cliente?.telefone
+              const message = `Olá, ${clienteNome}! Tudo bem? Passando para confirmar seu agendamento de amanhã às ${row.horario.slice(0, 5)}. Você confirma presença?`
+              const whatsappLink = whatsappChatHref(clienteTelefone, message)
+              if (!whatsappLink) return null
+              return {
+                id: `agenda-confirmacao-24h-${row.id}`,
+                tipo: 'atencao',
+                titulo: `Confirmação pendente: ${clienteNome}`,
+                descricao: `Atendimento em ${row.data} às ${row.horario.slice(0, 5)}. Envie o WhatsApp para confirmar presença.`,
+                acao: 'Enviar WhatsApp',
+                link: whatsappLink,
+                linkTarget: '_blank' as const,
+                icone: CalendarClock,
+              }
+            })
+            .filter((alerta): alerta is AlertaDashboard => Boolean(alerta))
+            .slice(0, 8)
+        : []
+
       setExtra({
         fatDiario,
         fatAtend7d,
@@ -616,6 +678,7 @@ export default function AdminDashboardPage() {
         resumoDia,
         insightsDia,
         agendaStats,
+        alertasConfirmacao24h,
       })
 
       setIsLoading(false)

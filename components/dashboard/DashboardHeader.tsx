@@ -25,6 +25,7 @@ export function DashboardHeader(props: {
   isLoading: boolean
   error: string | null
   notificationsSlot: ReactNode
+  alertasDoDiaSlot: ReactNode
   pagamentoPendentePlano: boolean
 }) {
   const reduceMotion = useReducedMotion()
@@ -44,6 +45,7 @@ export function DashboardHeader(props: {
     isLoading,
     error,
     notificationsSlot,
+    alertasDoDiaSlot,
     pagamentoPendentePlano,
   } = props
 
@@ -63,18 +65,12 @@ export function DashboardHeader(props: {
         isLoading={isLoading}
         error={error}
         notificationsSlot={notificationsSlot}
+        alertasDoDiaSlot={alertasDoDiaSlot}
       />
       {!error && barbearia && pagamentoPendentePlano ? (
         <div className="mt-4 flex justify-end">
           <Button size="sm" variant="outline" asChild>
             <Link href={`${base}/assinatura`}>Concluir ativação</Link>
-          </Button>
-        </div>
-      ) : null}
-      {!error && barbearia && !pagamentoPendentePlano ? (
-        <div className="mt-4 hidden justify-end sm:flex">
-          <Button size="sm" variant="outline" asChild>
-            <Link href={`${base}/relatorios`}>Relatórios</Link>
           </Button>
         </div>
       ) : null}

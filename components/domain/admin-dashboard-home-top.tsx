@@ -146,6 +146,7 @@ export function AdminDashboardHomeTop(props: {
   isLoading: boolean
   error: string | null
   notificationsSlot: ReactNode
+  alertasDoDiaSlot: ReactNode
 }) {
   const {
     userPrimeiroNome,
@@ -158,6 +159,7 @@ export function AdminDashboardHomeTop(props: {
     isLoading,
     error,
     notificationsSlot,
+    alertasDoDiaSlot,
   } = props
 
   const hoje = useMemo(() => new Date(), [])
@@ -211,13 +213,14 @@ export function AdminDashboardHomeTop(props: {
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:flex-col sm:items-end md:flex-row md:items-center">
-          <div className="border-border/80 bg-card/60 text-muted-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium shadow-sm">
-            <Calendar className="text-accent size-4 shrink-0" aria-hidden />
+          <div className="text-muted-foreground inline-flex items-center gap-2 text-xs font-medium">
+            <Calendar className="text-muted-foreground size-4 shrink-0" aria-hidden />
             <span className="text-foreground tabular-nums">{dataFormatada}</span>
           </div>
           {notificationsSlot ? <div className="flex items-center gap-1">{notificationsSlot}</div> : null}
         </div>
       </div>
+      {alertasDoDiaSlot}
 
       {error ? (
         <p className="text-muted-foreground text-sm">Indicadores indisponíveis enquanto houver erro ao carregar dados.</p>
