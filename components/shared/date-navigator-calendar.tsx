@@ -759,11 +759,11 @@ export function DateNavigatorCalendar({
                         className="w-full rounded-md text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         title={chipTitleText(a, true)}
                         onClick={() => {
-                          setDayAgendaModal((prev) => {
-                            if (!prev) return null
-                            handlePickDate(prev.date)
-                            return { ...prev, selectedId: a.id }
-                          })
+                          if (!dayAgendaModal) return
+                          handlePickDate(dayAgendaModal.date)
+                          setDayAgendaModal((prev) =>
+                            prev ? { ...prev, selectedId: a.id } : null,
+                          )
                         }}
                       >
                         {inner}
