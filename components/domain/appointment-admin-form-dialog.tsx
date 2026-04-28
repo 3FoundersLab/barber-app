@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   buildAgendaSlotStrings,
   HORARIOS_PADRAO,
+  parseAgendaClockToMinutes,
   resolveBarbeariaAgendaTimeRange,
 } from '@/lib/constants'
 import { listAvailableStartSlots } from '@/lib/agenda-availability'
@@ -99,6 +100,11 @@ export function AppointmentAdminFormDialog({
   const [busyAppointments, setBusyAppointments] = useState<
     { id: string; horario: string; servico: { duracao: number } | null }[]
   >([])
+  const [jornadaDia, setJornadaDia] = useState<{
+    hora_inicio: string
+    hora_fim: string
+    pausas: { nome: string; pausa_inicio: string; pausa_fim: string }[]
+  } | null>(null)
 
   const [clienteId, setClienteId] = useState('')
   const [barbeiroId, setBarbeiroId] = useState('')
@@ -130,9 +136,30 @@ export function AppointmentAdminFormDialog({
               })),
           })
         : base
+    const comJornada = (() => {
+      if (!jornadaDia) return available
+      const inicioJornada = parseAgendaClockToMinutes(jornadaDia.hora_inicio)
+      const fimJornada = parseAgendaClockToMinutes(jornadaDia.hora_fim)
+      const pausas = jornadaDia.pausas
+        .map((p) => ({
+          inicio: parseAgendaClockToMinutes(p.pausa_inicio),
+          fim: parseAgendaClockToMinutes(p.pausa_fim),
+        }))
+        .filter((p): p is { inicio: number; fim: number } => p.inicio != null && p.fim != null && p.fim > p.inicio)
+      if (inicioJornada == null || fimJornada == null || fimJornada <= inicioJornada) return []
+      const duracaoServico = Math.max(selectedServico?.duracao ?? 30, 5)
+      return available.filter((slot) => {
+        const inicio = parseAgendaClockToMinutes(slot)
+        if (inicio == null) return false
+        const fim = inicio + duracaoServico
+        if (inicio < inicioJornada || fim > fimJornada) return false
+        if (pausas.some((p) => inicio < p.fim && fim > p.inicio)) return false
+        return true
+      })
+    })()
     const h = normalizeHorarioLabel(horario, horarioFallback)
-    if (h && !available.includes(h)) return [h, ...available].sort()
-    return available
+    if (h && !comJornada.includes(h)) return [h, ...comJornada].sort()
+    return comJornada
   }, [
     horario,
     agendaTimeRange.start,
@@ -141,6 +168,7 @@ export function AppointmentAdminFormDialog({
     selectedServico,
     busyAppointments,
     editing,
+    jornadaDia,
   ])
 
   useEffect(() => {
@@ -203,6 +231,7 @@ export function AppointmentAdminFormDialog({
   useEffect(() => {
     if (!open || !barbeariaId || !barbeiroId || !dataStr) {
       setBusyAppointments([])
+      setJornadaDia(null)
       return
     }
     let cancelled = false
@@ -217,12 +246,23 @@ export function AppointmentAdminFormDialog({
         .eq('data', dataStr)
         .in('status', ['agendado', 'em_atendimento', 'concluido'])
 
+      const [y, m, d] = dataStr.split('-').map(Number)
+      const dow = new Date(y, m - 1, d).getDay()
+      const { data: jornadaData } = await supabase
+        .from('horarios_trabalho')
+        .select('hora_inicio, hora_fim, pausas:horarios_trabalho_pausas(nome, pausa_inicio, pausa_fim)')
+        .eq('barbeiro_id', barbeiroId)
+        .eq('dia_semana', dow)
+        .eq('ativo', true)
+        .maybeSingle()
+
       if (cancelled) return
       if (error) {
         setBusyAppointments([])
       } else {
         setBusyAppointments(data ?? [])
       }
+      setJornadaDia(jornadaData ?? null)
       setIsLoadingAvailability(false)
     }
     void loadAvailability()
@@ -307,6 +347,46 @@ export function AppointmentAdminFormDialog({
       return
     }
 
+    const [y, m, d] = dataStr.split('-').map(Number)
+    const dow = new Date(y, m - 1, d).getDay()
+    const { data: jornadaAtual } = await supabase
+      .from('horarios_trabalho')
+      .select('hora_inicio, hora_fim, pausas:horarios_trabalho_pausas(nome, pausa_inicio, pausa_fim)')
+      .eq('barbeiro_id', barbeiroId)
+      .eq('dia_semana', dow)
+      .eq('ativo', true)
+      .maybeSingle()
+
+    if (!jornadaAtual) {
+      setIsSubmitting(false)
+      onError('O profissional não possui jornada ativa para este dia.')
+      return
+    }
+
+    const iniJornada = parseAgendaClockToMinutes(jornadaAtual.hora_inicio)
+    const fimJornada = parseAgendaClockToMinutes(jornadaAtual.hora_fim)
+    const iniAtend = parseAgendaClockToMinutes(horarioNorm)
+    const fimAtend = iniAtend != null ? iniAtend + Math.max(servico.duracao, 5) : null
+    const pausas = (jornadaAtual.pausas ?? [])
+      .map((p) => ({
+        inicio: parseAgendaClockToMinutes(p.pausa_inicio),
+        fim: parseAgendaClockToMinutes(p.pausa_fim),
+      }))
+      .filter((p): p is { inicio: number; fim: number } => p.inicio != null && p.fim != null && p.fim > p.inicio)
+    const foraJornada =
+      iniJornada == null ||
+      fimJornada == null ||
+      iniAtend == null ||
+      fimAtend == null ||
+      iniAtend < iniJornada ||
+      fimAtend > fimJornada
+    const conflitaPausa = !foraJornada && pausas.some((p) => iniAtend < p.fim && fimAtend > p.inicio)
+    if (foraJornada || conflitaPausa) {
+      setIsSubmitting(false)
+      onError('Este horário não está dentro da jornada do profissional.')
+      return
+    }
+
     if (editing) {
       const { error: upErr } = await supabase
         .from('agendamentos')
@@ -314,8 +394,13 @@ export function AppointmentAdminFormDialog({
         .eq('id', editing.id)
       setIsSubmitting(false)
       if (upErr) {
-        if (upErr.code === '23514' || upErr.message.includes('Conflito de horário')) {
-          onError('Este horário conflita com outro atendimento do profissional.')
+        if (
+          upErr.code === '23514' ||
+          upErr.message.includes('Conflito de horário') ||
+          upErr.message.includes('Fora da jornada') ||
+          upErr.message.includes('pausa')
+        ) {
+          onError('Este horário não está disponível na jornada do profissional.')
         } else {
           onError('Não foi possível atualizar o agendamento')
         }
@@ -333,8 +418,13 @@ export function AppointmentAdminFormDialog({
     })
     setIsSubmitting(false)
     if (insErr) {
-      if (insErr.code === '23514' || insErr.message.includes('Conflito de horário')) {
-        onError('Este horário conflita com outro atendimento do profissional.')
+      if (
+        insErr.code === '23514' ||
+        insErr.message.includes('Conflito de horário') ||
+        insErr.message.includes('Fora da jornada') ||
+        insErr.message.includes('pausa')
+      ) {
+        onError('Este horário não está disponível na jornada do profissional.')
       } else {
         onError('Não foi possível criar o agendamento')
       }

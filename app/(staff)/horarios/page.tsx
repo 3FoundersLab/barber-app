@@ -29,6 +29,7 @@ interface DiaHorario {
   ativo: boolean
   hora_inicio: string
   hora_fim: string
+  pausas: { nome: string; pausa_inicio: string; pausa_fim: string }[]
 }
 
 export default function BarbeiroHorariosPage() {
@@ -67,7 +68,7 @@ export default function BarbeiroHorariosPage() {
       
       const { data, error: queryError } = await supabase
         .from('horarios_trabalho')
-        .select('*')
+        .select('id, dia_semana, ativo, hora_inicio, hora_fim, pausas:horarios_trabalho_pausas(nome, pausa_inicio, pausa_fim)')
         .eq('barbeiro_id', barbeiro.id)
         .order('dia_semana')
       
@@ -79,6 +80,11 @@ export default function BarbeiroHorariosPage() {
           ativo: h.ativo,
           hora_inicio: h.hora_inicio,
           hora_fim: h.hora_fim,
+          pausas: (h.pausas ?? []).map((p) => ({
+            nome: p.nome,
+            pausa_inicio: p.pausa_inicio,
+            pausa_fim: p.pausa_fim,
+          })),
         })))
       } else {
         // Default schedule (Mon-Sat, 9-19)
@@ -88,6 +94,7 @@ export default function BarbeiroHorariosPage() {
             ativo: i !== 0, // Sunday off
             hora_inicio: '09:00',
             hora_fim: '19:00',
+            pausas: [{ nome: 'Almoço', pausa_inicio: '12:00', pausa_fim: '13:00' }],
           }))
         )
       }
@@ -114,8 +121,76 @@ export default function BarbeiroHorariosPage() {
     )
   }
 
+  const handlePausaChange = (
+    diaSemana: number,
+    idx: number,
+    field: 'nome' | 'pausa_inicio' | 'pausa_fim',
+    value: string,
+  ) => {
+    setHorarios((prev) =>
+      prev.map((h) =>
+        h.dia_semana === diaSemana
+          ? {
+              ...h,
+              pausas: h.pausas.map((p, i) => (i === idx ? { ...p, [field]: value } : p)),
+            }
+          : h,
+      ),
+    )
+  }
+
+  const handleAdicionarPausa = (diaSemana: number) => {
+    setHorarios((prev) =>
+      prev.map((h) => {
+        if (h.dia_semana !== diaSemana) return h
+        return {
+          ...h,
+          pausas: [...h.pausas, { nome: `Pausa ${h.pausas.length + 1}`, pausa_inicio: '12:00', pausa_fim: '13:00' }],
+        }
+      }),
+    )
+  }
+
+  const handleRemoverPausa = (diaSemana: number, idx: number) => {
+    setHorarios((prev) =>
+      prev.map((h) =>
+        h.dia_semana === diaSemana ? { ...h, pausas: h.pausas.filter((_, i) => i !== idx) } : h,
+      ),
+    )
+  }
+
   const handleSave = async () => {
     if (!barbeiroId) return
+    for (const h of horarios) {
+      if (!h.ativo) continue
+      if (h.hora_inicio >= h.hora_fim) {
+        setError(`Em ${DIAS_SEMANA[h.dia_semana]}, o início deve ser menor que o fim.`)
+        return
+      }
+      const sortedPausas = [...h.pausas].sort((a, b) => a.pausa_inicio.localeCompare(b.pausa_inicio))
+      for (let i = 0; i < sortedPausas.length; i++) {
+        const p = sortedPausas[i]!
+        if (p.nome.trim().length < 2) {
+          setError(`Em ${DIAS_SEMANA[h.dia_semana]}, dê um nome com pelo menos 2 caracteres para cada pausa.`)
+          return
+        }
+        if (!(p.pausa_inicio < p.pausa_fim)) {
+          setError(`Em ${DIAS_SEMANA[h.dia_semana]}, a pausa "${p.nome}" deve começar antes de terminar.`)
+          return
+        }
+        if (!(p.pausa_inicio > h.hora_inicio && p.pausa_fim < h.hora_fim)) {
+          setError(`Em ${DIAS_SEMANA[h.dia_semana]}, a pausa "${p.nome}" deve ficar dentro da jornada.`)
+          return
+        }
+        if (i > 0) {
+          const anterior = sortedPausas[i - 1]!
+          if (p.pausa_inicio < anterior.pausa_fim) {
+            setError(`Em ${DIAS_SEMANA[h.dia_semana]}, as pausas não podem se sobrepor.`)
+            return
+          }
+        }
+      }
+    }
     
     setIsSaving(true)
     setError(null)
@@ -134,19 +209,40 @@ export default function BarbeiroHorariosPage() {
     }
     
     // Insert new
-    const { error: insertError } = await supabase.from('horarios_trabalho').insert(
+    const { data: insertedRows, error: insertError } = await supabase.from('horarios_trabalho').insert(
       horarios.map((h) => ({
         barbeiro_id: barbeiroId,
         dia_semana: h.dia_semana,
         ativo: h.ativo,
         hora_inicio: h.hora_inicio,
         hora_fim: h.hora_fim,
+        pausa_inicio: null,
+        pausa_fim: null,
       }))
-    )
+    ).select('id, dia_semana')
     if (insertError) {
       setError('Não foi possível salvar os horários')
       setIsSaving(false)
       return
+    }
+    const pausesPayload =
+      insertedRows?.flatMap((row) => {
+        const day = horarios.find((h) => h.dia_semana === row.dia_semana)
+        if (!day || !day.ativo) return []
+        return day.pausas.map((p) => ({
+          horario_trabalho_id: row.id,
+          nome: p.nome.trim(),
+          pausa_inicio: p.pausa_inicio,
+          pausa_fim: p.pausa_fim,
+        }))
+      }) ?? []
+    if (pausesPayload.length > 0) {
+      const { error: pausesError } = await supabase.from('horarios_trabalho_pausas').insert(pausesPayload)
+      if (pausesError) {
+        setError('Horários salvos, mas não foi possível salvar as pausas.')
+        setIsSaving(false)
+        return
+      }
     }
     
     setIsSaving(false)
@@ -199,34 +295,94 @@ export default function BarbeiroHorariosPage() {
                 </div>
                 
                 {horario.ativo && (
-                  <div className="flex flex-1 items-center gap-2">
-                    <Select
-                      value={horario.hora_inicio}
-                      onValueChange={(v) => handleHorarioChange(horario.dia_semana, 'hora_inicio', v)}
-                    >
-                      <SelectTrigger className="w-[90px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {HORARIOS.map((h) => (
-                          <SelectItem key={h} value={h}>{h}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <span className="text-muted-foreground">-</span>
-                    <Select
-                      value={horario.hora_fim}
-                      onValueChange={(v) => handleHorarioChange(horario.dia_semana, 'hora_fim', v)}
-                    >
-                      <SelectTrigger className="w-[90px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {HORARIOS.map((h) => (
-                          <SelectItem key={h} value={h}>{h}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="flex flex-1 flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={horario.hora_inicio}
+                        onValueChange={(v) => handleHorarioChange(horario.dia_semana, 'hora_inicio', v)}
+                      >
+                        <SelectTrigger className="w-[90px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {HORARIOS.map((h) => (
+                            <SelectItem key={h} value={h}>{h}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-muted-foreground">-</span>
+                      <Select
+                        value={horario.hora_fim}
+                        onValueChange={(v) => handleHorarioChange(horario.dia_semana, 'hora_fim', v)}
+                      >
+                        <SelectTrigger className="w-[90px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {HORARIOS.map((h) => (
+                            <SelectItem key={h} value={h}>{h}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Pausas do dia</span>
+                        <Button type="button" variant="outline" size="sm" onClick={() => handleAdicionarPausa(horario.dia_semana)}>
+                          Adicionar pausa
+                        </Button>
+                      </div>
+                      {horario.pausas.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">Sem pausa configurada.</p>
+                      ) : (
+                        horario.pausas.map((p, idx) => (
+                          <div key={`${horario.dia_semana}-${idx}`} className="flex flex-wrap items-center gap-2">
+                            <Input
+                              value={p.nome}
+                              onChange={(e) => handlePausaChange(horario.dia_semana, idx, 'nome', e.target.value)}
+                              className="h-9 w-[140px]"
+                              placeholder="Nome da pausa"
+                            />
+                            <Select
+                              value={p.pausa_inicio}
+                              onValueChange={(v) => handlePausaChange(horario.dia_semana, idx, 'pausa_inicio', v)}
+                            >
+                              <SelectTrigger className="w-[90px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {HORARIOS.map((h) => (
+                                  <SelectItem key={h} value={h}>{h}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <span className="text-muted-foreground">-</span>
+                            <Select
+                              value={p.pausa_fim}
+                              onValueChange={(v) => handlePausaChange(horario.dia_semana, idx, 'pausa_fim', v)}
+                            >
+                              <SelectTrigger className="w-[90px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {HORARIOS.map((h) => (
+                                  <SelectItem key={h} value={h}>{h}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive"
+                              onClick={() => handleRemoverPausa(horario.dia_semana, idx)}
+                            >
+                              Remover
+                            </Button>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 )}
                 

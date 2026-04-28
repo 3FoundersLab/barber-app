@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Cake, Camera, Eye, EyeOff, Phone, UserCircle } from 'lucide-react'
+import { Cake, CalendarClock, Camera, Eye, EyeOff, Phone, UserCircle } from 'lucide-react'
 import { BarbeiroFotoUpload } from '@/components/shared/barbeiro-foto-upload'
 import { Alert, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import {
@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
+import { DIAS_SEMANA } from '@/lib/constants'
 import { EQUIPE_FUNCAO_OPTIONS, parseEquipeFuncao } from '@/lib/equipe-funcao'
 import { maskTelefoneBr, normalizeEmailInput } from '@/lib/format-contato'
 import { createClient } from '@/lib/supabase/client'
@@ -37,6 +38,32 @@ export type EquipeMembroFormProps = {
   /** `null` = novo membro */
   editingBarbeiro: Barbeiro | null
   equipeListHref: string
+}
+
+const HORARIOS = [
+  '07:00', '07:30', '08:00', '08:30', '09:00', '09:30',
+  '10:00', '10:30', '11:00', '11:30', '12:00', '12:30',
+  '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+  '16:00', '16:30', '17:00', '17:30', '18:00', '18:30',
+  '19:00', '19:30', '20:00', '20:30', '21:00',
+]
+
+type DiaHorarioForm = {
+  dia_semana: number
+  ativo: boolean
+  hora_inicio: string
+  hora_fim: string
+  pausas: { nome: string; pausa_inicio: string; pausa_fim: string }[]
+}
+
+function buildDefaultHorariosSemana(): DiaHorarioForm[] {
+  return Array.from({ length: 7 }, (_, i) => ({
+    dia_semana: i,
+    ativo: i !== 0,
+    hora_inicio: '09:00',
+    hora_fim: '19:00',
+    pausas: [{ nome: 'Almoço', pausa_inicio: '12:00', pausa_fim: '13:00' }],
+  }))
 }
 
 function emptyForm() {
@@ -79,6 +106,7 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
   const [error, setError] = useState<string | null>(null)
   const [showSenha, setShowSenha] = useState(false)
   const [showConfirmarSenha, setShowConfirmarSenha] = useState(false)
+  const [horariosSemana, setHorariosSemana] = useState<DiaHorarioForm[]>(buildDefaultHorariosSemana)
 
   useEffect(() => {
     setError(null)
@@ -88,6 +116,7 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
     const b = editingBarbeiro
     if (!b) {
       setFormData(emptyForm())
+      setHorariosSemana(buildDefaultHorariosSemana())
       return
     }
     setFormData({
@@ -101,7 +130,80 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
       senha: '',
       confirmarSenha: '',
     })
+    void (async () => {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('horarios_trabalho')
+        .select('dia_semana, ativo, hora_inicio, hora_fim, pausas:horarios_trabalho_pausas(nome, pausa_inicio, pausa_fim)')
+        .eq('barbeiro_id', b.id)
+        .order('dia_semana')
+      if (data && data.length > 0) {
+        const byDay = new Map<number, DiaHorarioForm>()
+        for (const row of data) {
+          byDay.set(row.dia_semana, {
+            dia_semana: row.dia_semana,
+            ativo: row.ativo,
+            hora_inicio: row.hora_inicio,
+            hora_fim: row.hora_fim,
+            pausas: (row.pausas ?? []).map((p) => ({
+              nome: p.nome,
+              pausa_inicio: p.pausa_inicio,
+              pausa_fim: p.pausa_fim,
+            })),
+          })
+        }
+        setHorariosSemana(
+          Array.from({ length: 7 }, (_, i) => byDay.get(i) ?? buildDefaultHorariosSemana()[i]!),
+        )
+      } else {
+        setHorariosSemana(buildDefaultHorariosSemana())
+      }
+    })()
   }, [editingBarbeiro?.id])
+
+  const handleToggleDiaHorario = (dia: number) => {
+    setHorariosSemana((prev) => prev.map((h) => (h.dia_semana === dia ? { ...h, ativo: !h.ativo } : h)))
+  }
+
+  const handleHorarioDiaChange = (dia: number, field: 'hora_inicio' | 'hora_fim', value: string) => {
+    setHorariosSemana((prev) => prev.map((h) => (h.dia_semana === dia ? { ...h, [field]: value } : h)))
+  }
+
+  const handleAdicionarPausaDia = (dia: number) => {
+    setHorariosSemana((prev) =>
+      prev.map((h) => {
+        if (h.dia_semana !== dia) return h
+        return {
+          ...h,
+          pausas: [...h.pausas, { nome: `Pausa ${h.pausas.length + 1}`, pausa_inicio: '12:00', pausa_fim: '13:00' }],
+        }
+      }),
+    )
+  }
+
+  const handlePausaDiaChange = (
+    dia: number,
+    idx: number,
+    field: 'nome' | 'pausa_inicio' | 'pausa_fim',
+    value: string,
+  ) => {
+    setHorariosSemana((prev) =>
+      prev.map((h) =>
+        h.dia_semana === dia
+          ? {
+              ...h,
+              pausas: h.pausas.map((p, i) => (i === idx ? { ...p, [field]: value } : p)),
+            }
+          : h,
+      ),
+    )
+  }
+
+  const handleRemoverPausaDia = (dia: number, idx: number) => {
+    setHorariosSemana((prev) =>
+      prev.map((h) => (h.dia_semana === dia ? { ...h, pausas: h.pausas.filter((_, i) => i !== idx) } : h)),
+    )
+  }
 
   const handleSave = async () => {
     const senha = formData.senha.trim()
@@ -165,6 +267,83 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
       return true
     }
 
+    const syncHorariosTrabalho = async (barbeiroId: string): Promise<boolean> => {
+      if (funcao === 'moderador') {
+        const { error: deleteErr } = await supabase.from('horarios_trabalho').delete().eq('barbeiro_id', barbeiroId)
+        if (deleteErr) {
+          setError('Não foi possível atualizar os horários do membro.')
+          return false
+        }
+        return true
+      }
+      for (const h of horariosSemana) {
+        if (!h.ativo) continue
+        if (h.hora_inicio >= h.hora_fim) {
+          setError(`Em ${DIAS_SEMANA[h.dia_semana]}, o início deve ser menor que o fim.`)
+          return false
+        }
+        const sortedPausas = [...h.pausas].sort((a, b) => a.pausa_inicio.localeCompare(b.pausa_inicio))
+        for (let i = 0; i < sortedPausas.length; i++) {
+          const p = sortedPausas[i]!
+          if (p.nome.trim().length < 2) {
+            setError(`Em ${DIAS_SEMANA[h.dia_semana]}, nomeie cada pausa com pelo menos 2 caracteres.`)
+            return false
+          }
+          if (!(p.pausa_inicio < p.pausa_fim)) {
+            setError(`Em ${DIAS_SEMANA[h.dia_semana]}, a pausa "${p.nome}" deve começar antes de terminar.`)
+            return false
+          }
+          if (!(p.pausa_inicio > h.hora_inicio && p.pausa_fim < h.hora_fim)) {
+            setError(`Em ${DIAS_SEMANA[h.dia_semana]}, a pausa "${p.nome}" deve ficar dentro da jornada.`)
+            return false
+          }
+          if (i > 0 && p.pausa_inicio < sortedPausas[i - 1]!.pausa_fim) {
+            setError(`Em ${DIAS_SEMANA[h.dia_semana]}, as pausas não podem se sobrepor.`)
+            return false
+          }
+        }
+      }
+      const { error: deleteErr } = await supabase.from('horarios_trabalho').delete().eq('barbeiro_id', barbeiroId)
+      if (deleteErr) {
+        setError('Não foi possível atualizar os horários do membro.')
+        return false
+      }
+      const payload = horariosSemana.map((h) => ({
+        barbeiro_id: barbeiroId,
+        dia_semana: h.dia_semana,
+        ativo: h.ativo,
+        hora_inicio: h.hora_inicio,
+        hora_fim: h.hora_fim,
+      }))
+      const { data: insertedRows, error: insertErr } = await supabase
+        .from('horarios_trabalho')
+        .insert(payload.map((h) => ({ ...h, pausa_inicio: null, pausa_fim: null })))
+        .select('id, dia_semana')
+      if (insertErr) {
+        setError('Não foi possível salvar os horários do membro.')
+        return false
+      }
+      const pausesPayload =
+        insertedRows?.flatMap((row) => {
+          const day = horariosSemana.find((h) => h.dia_semana === row.dia_semana)
+          if (!day || !day.ativo) return []
+          return day.pausas.map((p) => ({
+            horario_trabalho_id: row.id,
+            nome: p.nome.trim(),
+            pausa_inicio: p.pausa_inicio,
+            pausa_fim: p.pausa_fim,
+          }))
+        }) ?? []
+      if (pausesPayload.length > 0) {
+        const { error: pausesErr } = await supabase.from('horarios_trabalho_pausas').insert(pausesPayload)
+        if (pausesErr) {
+          setError('Horários salvos, mas não foi possível salvar as pausas do membro.')
+          return false
+        }
+      }
+      return true
+    }
+
     if (editingBarbeiro) {
       const { error: updateError } = await supabase
         .from('barbeiros')
@@ -180,6 +359,11 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
         setIsSaving(false)
         router.push(equipeListHref)
         router.refresh()
+        return
+      }
+      const horariosOk = await syncHorariosTrabalho(editingBarbeiro.id)
+      if (!horariosOk) {
+        setIsSaving(false)
         return
       }
 
@@ -236,6 +420,11 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
         setIsSaving(false)
         router.push(equipeListHref)
         router.refresh()
+        return
+      }
+      const horariosOk = await syncHorariosTrabalho(created.id)
+      if (!horariosOk) {
+        setIsSaving(false)
         return
       }
 
@@ -462,6 +651,152 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
                 </div>
               </AccordionContent>
             </AccordionItem>
+
+            {formData.funcao_equipe !== 'moderador' ? (
+              <AccordionItem value="horarios">
+                <AccordionTrigger className="items-center py-4 hover:no-underline">
+                  <span className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+                    <CalendarClock className="size-4 shrink-0 text-primary" aria-hidden />
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="text-sm font-semibold text-foreground">Jornada de trabalho</span>
+                      <span className="text-xs font-normal text-muted-foreground">
+                        Dias, horários e pausa (almoço) para o agendamento
+                      </span>
+                    </span>
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-3 pb-2">
+                  {horariosSemana.map((horario) => (
+                    <div key={horario.dia_semana} className="rounded-lg border p-3">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id={`equipe-dia-${horario.dia_semana}`}
+                          checked={horario.ativo}
+                          onCheckedChange={() => handleToggleDiaHorario(horario.dia_semana)}
+                        />
+                        <Label htmlFor={`equipe-dia-${horario.dia_semana}`} className="text-sm font-medium">
+                          {DIAS_SEMANA[horario.dia_semana]}
+                        </Label>
+                      </div>
+                      {horario.ativo ? (
+                        <div className="mt-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={horario.hora_inicio}
+                              onValueChange={(v) =>
+                                handleHorarioDiaChange(horario.dia_semana, 'hora_inicio', v)
+                              }
+                            >
+                              <SelectTrigger className="w-[95px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {HORARIOS.map((h) => (
+                                  <SelectItem key={h} value={h}>
+                                    {h}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <span className="text-muted-foreground">-</span>
+                            <Select
+                              value={horario.hora_fim}
+                              onValueChange={(v) => handleHorarioDiaChange(horario.dia_semana, 'hora_fim', v)}
+                            >
+                              <SelectTrigger className="w-[95px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {HORARIOS.map((h) => (
+                                  <SelectItem key={h} value={h}>
+                                    {h}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">Pausas do dia</span>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleAdicionarPausaDia(horario.dia_semana)}
+                              >
+                                Adicionar pausa
+                              </Button>
+                            </div>
+                            {horario.pausas.length === 0 ? (
+                              <p className="text-xs text-muted-foreground">Sem pausa configurada.</p>
+                            ) : (
+                              horario.pausas.map((p, idx) => (
+                                <div key={`${horario.dia_semana}-${idx}`} className="flex flex-wrap items-center gap-2">
+                                  <Input
+                                    value={p.nome}
+                                    onChange={(e) =>
+                                      handlePausaDiaChange(horario.dia_semana, idx, 'nome', e.target.value)
+                                    }
+                                    className="h-9 w-[140px]"
+                                    placeholder="Nome da pausa"
+                                  />
+                                  <Select
+                                    value={p.pausa_inicio}
+                                    onValueChange={(v) =>
+                                      handlePausaDiaChange(horario.dia_semana, idx, 'pausa_inicio', v)
+                                    }
+                                  >
+                                    <SelectTrigger className="w-[95px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {HORARIOS.map((h) => (
+                                        <SelectItem key={h} value={h}>
+                                          {h}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <span className="text-muted-foreground">-</span>
+                                  <Select
+                                    value={p.pausa_fim}
+                                    onValueChange={(v) =>
+                                      handlePausaDiaChange(horario.dia_semana, idx, 'pausa_fim', v)
+                                    }
+                                  >
+                                    <SelectTrigger className="w-[95px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {HORARIOS.map((h) => (
+                                        <SelectItem key={h} value={h}>
+                                          {h}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive"
+                                    onClick={() => handleRemoverPausaDia(horario.dia_semana, idx)}
+                                  >
+                                    Remover
+                                  </Button>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-xs text-muted-foreground">Sem atendimento neste dia.</p>
+                      )}
+                    </div>
+                  ))}
+                </AccordionContent>
+              </AccordionItem>
+            ) : null}
 
             {formData.funcao_equipe !== 'moderador' ? (
               <AccordionItem value="foto">

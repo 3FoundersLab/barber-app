@@ -18,6 +18,7 @@ import {
   DIAS_SEMANA_ABREV,
   formatCurrency,
   HORARIOS_PADRAO,
+  parseAgendaClockToMinutes,
   resolveBarbeariaAgendaTimeRange,
 } from '@/lib/constants'
 import { listAvailableStartSlots } from '@/lib/agenda-availability'
@@ -57,6 +58,34 @@ export default function AgendarPage() {
   const [diasFuncionamento, setDiasFuncionamento] = useState<number[]>(() =>
     normalizeDiasFuncionamento(null),
   )
+  const [jornadaDia, setJornadaDia] = useState<{
+    hora_inicio: string
+    hora_fim: string
+    pausas: { nome: string; pausa_inicio: string; pausa_fim: string }[]
+  } | null>(null)
+
+  const horariosPorJornada = useMemo(() => {
+    if (!jornadaDia) return horariosDisponiveis
+    const inicioJornada = parseAgendaClockToMinutes(jornadaDia.hora_inicio)
+    const fimJornada = parseAgendaClockToMinutes(jornadaDia.hora_fim)
+    const pausas = jornadaDia.pausas
+      .map((p) => ({
+        inicio: parseAgendaClockToMinutes(p.pausa_inicio),
+        fim: parseAgendaClockToMinutes(p.pausa_fim),
+      }))
+      .filter((p): p is { inicio: number; fim: number } => p.inicio != null && p.fim != null && p.fim > p.inicio)
+    if (inicioJornada == null || fimJornada == null || fimJornada <= inicioJornada) return []
+    const duracaoServico = Math.max(selectedServico?.duracao ?? 30, 5)
+
+    return horariosDisponiveis.filter((slot) => {
+      const inicio = parseAgendaClockToMinutes(slot)
+      if (inicio == null) return false
+      const fim = inicio + duracaoServico
+      if (inicio < inicioJornada || fim > fimJornada) return false
+      if (pausas.some((p) => inicio < p.fim && fim > p.inicio)) return false
+      return true
+    })
+  }, [jornadaDia, horariosDisponiveis, selectedServico])
 
   const horariosDisponiveis = useMemo(() => {
     const range = resolveBarbeariaAgendaTimeRange(barbeariaHorarioAbertura, barbeariaHorarioFechamento)
@@ -130,6 +159,7 @@ export default function AgendarPage() {
   useEffect(() => {
     if (!selectedBarbeiro || !selectedDate) {
       setBusyAppointments([])
+      setJornadaDia(null)
       return
     }
 
@@ -144,6 +174,14 @@ export default function AgendarPage() {
         .eq('data', selectedDate.toISOString().split('T')[0])
         .in('status', ['agendado', 'em_atendimento', 'concluido'])
 
+      const { data: jornadaData } = await supabase
+        .from('horarios_trabalho')
+        .select('hora_inicio, hora_fim, pausas:horarios_trabalho_pausas(nome, pausa_inicio, pausa_fim)')
+        .eq('barbeiro_id', selectedBarbeiro.id)
+        .eq('dia_semana', selectedDate.getDay())
+        .eq('ativo', true)
+        .maybeSingle()
+
       if (cancelled) return
       if (fetchError) {
         setBusyAppointments([])
@@ -155,6 +193,7 @@ export default function AgendarPage() {
           })),
         )
       }
+      setJornadaDia(jornadaData ?? null)
       setIsLoadingHorarios(false)
     }
 
@@ -166,9 +205,9 @@ export default function AgendarPage() {
 
   useEffect(() => {
     if (!selectedHorario) return
-    if (horariosDisponiveis.includes(selectedHorario)) return
+    if (horariosPorJornada.includes(selectedHorario)) return
     setSelectedHorario(null)
-  }, [selectedHorario, horariosDisponiveis])
+  }, [selectedHorario, horariosPorJornada])
 
   const handleBack = () => {
     if (step === 'barbeiro') setStep('servico')
@@ -222,6 +261,45 @@ export default function AgendarPage() {
       if (!stillAvailable) {
         setError('Este horário acabou de ficar indisponível. Escolha outro horário.')
         setStep('horario')
+        return
+      }
+
+      const { data: jornadaAtual } = await supabase
+        .from('horarios_trabalho')
+        .select('hora_inicio, hora_fim, pausas:horarios_trabalho_pausas(nome, pausa_inicio, pausa_fim)')
+        .eq('barbeiro_id', selectedBarbeiro.id)
+        .eq('dia_semana', selectedDate.getDay())
+        .eq('ativo', true)
+        .maybeSingle()
+
+      if (jornadaAtual) {
+        const iniJornada = parseAgendaClockToMinutes(jornadaAtual.hora_inicio)
+        const fimJornada = parseAgendaClockToMinutes(jornadaAtual.hora_fim)
+        const iniAtend = parseAgendaClockToMinutes(selectedHorario)
+        const fimAtend = iniAtend != null ? iniAtend + Math.max(selectedServico.duracao, 5) : null
+        const pausas = (jornadaAtual.pausas ?? [])
+          .map((p) => ({
+            inicio: parseAgendaClockToMinutes(p.pausa_inicio),
+            fim: parseAgendaClockToMinutes(p.pausa_fim),
+          }))
+          .filter((p): p is { inicio: number; fim: number } => p.inicio != null && p.fim != null && p.fim > p.inicio)
+
+        const foraJornada =
+          iniJornada == null ||
+          fimJornada == null ||
+          iniAtend == null ||
+          fimAtend == null ||
+          iniAtend < iniJornada ||
+          fimAtend > fimJornada
+        const conflitaPausa = !foraJornada && pausas.some((p) => iniAtend < p.fim && fimAtend > p.inicio)
+        if (foraJornada || conflitaPausa) {
+          setError('Este horário não está dentro da jornada do profissional. Escolha outro horário.')
+          setStep('horario')
+          return
+        }
+      } else {
+        setError('O profissional não possui jornada ativa para este dia. Escolha outra data.')
+        setStep('data')
         return
       }
       
@@ -290,9 +368,11 @@ export default function AgendarPage() {
         if (insertError) {
           if (
             insertError.code === '23514' ||
-            insertError.message.includes('Conflito de horário')
+            insertError.message.includes('Conflito de horário') ||
+            insertError.message.includes('Fora da jornada') ||
+            insertError.message.includes('pausa')
           ) {
-            setError('Este horário conflita com outro atendimento. Escolha outro horário.')
+            setError('Este horário não está disponível na jornada do profissional. Escolha outro horário.')
           } else {
             setError('Não foi possível concluir o agendamento')
           }
@@ -314,9 +394,11 @@ export default function AgendarPage() {
         if (insertError) {
           if (
             insertError.code === '23514' ||
-            insertError.message.includes('Conflito de horário')
+            insertError.message.includes('Conflito de horário') ||
+            insertError.message.includes('Fora da jornada') ||
+            insertError.message.includes('pausa')
           ) {
-            setError('Este horário conflita com outro atendimento. Escolha outro horário.')
+            setError('Este horário não está disponível na jornada do profissional. Escolha outro horário.')
           } else {
             setError('Não foi possível concluir o agendamento')
           }
@@ -489,15 +571,15 @@ export default function AgendarPage() {
               <div className="flex items-center justify-center py-8">
                 <Spinner className="h-5 w-5" />
               </div>
-            ) : horariosDisponiveis.length === 0 ? (
+            ) : horariosPorJornada.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                  Não há horários disponíveis para a duração deste serviço nesta data.
+                  Não há horários disponíveis para a duração deste serviço nesta data (considerando jornada e pausas).
                 </CardContent>
               </Card>
             ) : null}
             <div className="grid grid-cols-4 gap-2">
-              {horariosDisponiveis.map((h) => (
+              {horariosPorJornada.map((h) => (
                 <Button
                   key={h}
                   variant={selectedHorario === h ? 'default' : 'outline'}

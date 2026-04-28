@@ -147,7 +147,21 @@ export interface HorarioTrabalho {
   dia_semana: number // 0 = domingo, 6 = sábado
   hora_inicio: string
   hora_fim: string
+  /** Pausa opcional no dia (ex.: almoço). */
+  pausa_inicio?: string | null
+  /** Pausa opcional no dia (ex.: almoço). */
+  pausa_fim?: string | null
   ativo: boolean
+  created_at: string
+  pausas?: HorarioTrabalhoPausa[]
+}
+
+export interface HorarioTrabalhoPausa {
+  id: string
+  horario_trabalho_id: string
+  nome: string
+  pausa_inicio: string
+  pausa_fim: string
   created_at: string
 }
 
