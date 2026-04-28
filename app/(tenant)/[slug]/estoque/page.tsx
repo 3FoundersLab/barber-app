@@ -429,7 +429,7 @@ export default function TenantEstoquePage() {
             <CardContent className="py-12 text-center text-sm text-muted-foreground">Carregando estoque…</CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3.5 md:grid-cols-3 md:gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3.5 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
             {filtradosOrdenados.length > 0 ? (
               filtradosOrdenados.map((p) => (
                 <EstoqueProdutoCard
