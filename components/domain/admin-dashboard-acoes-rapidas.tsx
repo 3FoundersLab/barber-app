@@ -17,8 +17,35 @@ import { cn } from '@/lib/utils'
 const tileClass =
   'border-border/80 bg-card text-card-foreground flex min-h-[118px] flex-col items-center justify-center gap-2 rounded-xl border p-5 text-center shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-200 hover:bg-orange-50/90 hover:shadow-md dark:hover:border-orange-900/40 dark:hover:bg-orange-950/25'
 
-export function AdminDashboardAcoesRapidas(props: { base: string; operacaoLiberada: boolean }) {
-  const { base, operacaoLiberada } = props
+export function AdminDashboardAcoesRapidas(props: {
+  base: string
+  operacaoLiberada: boolean
+  /** Evita flash das 2 ações restritas enquanto a barbearia ainda não veio do servidor (ex.: volta ao dashboard). */
+  aguardandoBarbearia?: boolean
+}) {
+  const { base, operacaoLiberada, aguardandoBarbearia } = props
+
+  if (aguardandoBarbearia) {
+    return (
+      <Card className="border-border/80 rounded-xl shadow-sm" aria-busy="true" aria-label="Carregando ações rápidas">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold tracking-tight text-gray-900 dark:text-foreground">
+            Ações rápidas
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="border-border/60 bg-muted flex min-h-[118px] animate-pulse flex-col items-center justify-center gap-2 rounded-xl border p-5"
+              />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   const items = operacaoLiberada
     ? [

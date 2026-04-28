@@ -102,7 +102,11 @@ export function DashboardPage(props: {
         operacaoLiberada={operacaoLiberada}
       />
       <AgendaDoDia base={base} stats={agendaStats} agendamentos={agendaHoje} isLoading={isLoading} error={error} />
-      <AcoesRapidas base={base} operacaoLiberada={operacaoLiberada} />
+      <AcoesRapidas
+        base={base}
+        operacaoLiberada={operacaoLiberada}
+        aguardandoBarbearia={isLoading && barbearia == null}
+      />
     </motion.div>
   )
 }
