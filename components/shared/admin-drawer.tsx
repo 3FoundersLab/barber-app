@@ -45,7 +45,7 @@ export function AdminDrawer({
       <SheetContent
         side="left"
         className={cn(
-          'flex w-[280px] flex-col gap-0 p-0',
+          'flex h-dvh w-[280px] flex-col gap-0 overflow-hidden p-0',
           'border-zinc-200/80 bg-white/95 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95',
         )}
       >
@@ -54,7 +54,7 @@ export function AdminDrawer({
           {headerHint ? <div className="mt-2">{headerHint}</div> : null}
         </SheetHeader>
 
-        <nav className="flex flex-1 flex-col space-y-1 p-3">
+        <nav className="flex min-h-0 flex-1 flex-col space-y-1 overflow-y-auto p-3">
           {adminSections.map((section, sectionIndex) => (
             <div
               key={section.label}
