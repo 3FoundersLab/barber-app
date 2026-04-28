@@ -52,6 +52,11 @@ function normalizeHorarioLabel(h: string, fallback: string): string {
   return `${match[1]!.padStart(2, '0')}:${match[2]}`
 }
 
+function buildDiaSemanaCandidates(dayZeroBased: number): number[] {
+  const dayOneBased = dayZeroBased === 0 ? 7 : dayZeroBased
+  return Array.from(new Set([dayZeroBased, dayOneBased]))
+}
+
 export interface AppointmentAdminFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -122,21 +127,21 @@ export function AppointmentAdminFormDialog({
     )
     const duracaoServico = selectedServico?.duracao
     const available =
-      typeof duracaoServico === 'number'
-        ? listAvailableStartSlots({
-            slotStrings: base,
-            dayStart: agendaTimeRange.start,
-            dayEnd: agendaTimeRange.end,
-            targetDurationMinutes: duracaoServico,
-            appointments: busyAppointments
-              .filter((appointment) => !editing || appointment.id !== editing.id)
-              .map((appointment) => ({
-                horario: appointment.horario,
-                servico: appointment.servico,
-              })),
-          })
-        : base
+      listAvailableStartSlots({
+        slotStrings: base,
+        dayStart: agendaTimeRange.start,
+        dayEnd: agendaTimeRange.end,
+        targetDurationMinutes: duracaoServico ?? 30,
+        appointments: busyAppointments
+          .filter((appointment) => !editing || appointment.id !== editing.id)
+          .map((appointment) => ({
+            horario: appointment.horario,
+            servico: appointment.servico,
+          })),
+        enforceDurationOverlap: typeof duracaoServico === 'number',
+      })
     const comJornada = (() => {
+      if (barbeiroId && dataStr && !jornadaDia) return []
       if (!jornadaDia) return available
       const inicioJornada = parseAgendaClockToMinutes(jornadaDia.hora_inicio)
       const fimJornada = parseAgendaClockToMinutes(jornadaDia.hora_fim)
@@ -158,7 +163,10 @@ export function AppointmentAdminFormDialog({
       })
     })()
     const h = normalizeHorarioLabel(horario, horarioFallback)
-    if (h && !comJornada.includes(h)) return [h, ...comJornada].sort()
+    if (h && !comJornada.includes(h)) {
+      if (editing) return [h, ...comJornada].sort()
+      return comJornada
+    }
     return comJornada
   }, [
     horario,
@@ -169,6 +177,8 @@ export function AppointmentAdminFormDialog({
     busyAppointments,
     editing,
     jornadaDia,
+    barbeiroId,
+    dataStr,
   ])
 
   useEffect(() => {
@@ -248,13 +258,14 @@ export function AppointmentAdminFormDialog({
 
       const [y, m, d] = dataStr.split('-').map(Number)
       const dow = new Date(y, m - 1, d).getDay()
-      const { data: jornadaData } = await supabase
+      const { data: jornadasData } = await supabase
         .from('horarios_trabalho')
         .select('hora_inicio, hora_fim, pausas:horarios_trabalho_pausas(nome, pausa_inicio, pausa_fim)')
         .eq('barbeiro_id', barbeiroId)
-        .eq('dia_semana', dow)
+        .in('dia_semana', buildDiaSemanaCandidates(dow))
         .eq('ativo', true)
-        .maybeSingle()
+        .order('hora_inicio', { ascending: true })
+        .limit(1)
 
       if (cancelled) return
       if (error) {
@@ -262,7 +273,7 @@ export function AppointmentAdminFormDialog({
       } else {
         setBusyAppointments(data ?? [])
       }
-      setJornadaDia(jornadaData ?? null)
+      setJornadaDia((jornadasData ?? [])[0] ?? null)
       setIsLoadingAvailability(false)
     }
     void loadAvailability()
@@ -349,14 +360,16 @@ export function AppointmentAdminFormDialog({
 
     const [y, m, d] = dataStr.split('-').map(Number)
     const dow = new Date(y, m - 1, d).getDay()
-    const { data: jornadaAtual } = await supabase
+    const { data: jornadasAtuais } = await supabase
       .from('horarios_trabalho')
       .select('hora_inicio, hora_fim, pausas:horarios_trabalho_pausas(nome, pausa_inicio, pausa_fim)')
       .eq('barbeiro_id', barbeiroId)
-      .eq('dia_semana', dow)
+      .in('dia_semana', buildDiaSemanaCandidates(dow))
       .eq('ativo', true)
-      .maybeSingle()
+      .order('hora_inicio', { ascending: true })
+      .limit(1)
 
+    const jornadaAtual = (jornadasAtuais ?? [])[0] ?? null
     if (!jornadaAtual) {
       setIsSubmitting(false)
       onError('O profissional não possui jornada ativa para este dia.')

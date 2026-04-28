@@ -33,6 +33,25 @@ import type { Servico, Barbeiro } from '@/types'
 
 type Step = 'servico' | 'barbeiro' | 'data' | 'horario' | 'confirmar'
 
+function buildDiaSemanaCandidates(date: Date): number[] {
+  const dayZeroBased = date.getDay()
+  const dayOneBased = dayZeroBased === 0 ? 7 : dayZeroBased
+  return Array.from(new Set([dayZeroBased, dayOneBased]))
+}
+
+function normalizeDiaSemanaToZeroBased(day: number): number {
+  if (day >= 0 && day <= 6) return day
+  if (day === 7) return 0
+  return ((day % 7) + 7) % 7
+}
+
+function formatDateToYmdLocal(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 export default function AgendarPage() {
   const router = useRouter()
   const [step, setStep] = useState<Step>('servico')
@@ -55,16 +74,37 @@ export default function AgendarPage() {
   const [isLoadingHorarios, setIsLoadingHorarios] = useState(false)
   const [barbeariaHorarioAbertura, setBarbeariaHorarioAbertura] = useState<string | null>(null)
   const [barbeariaHorarioFechamento, setBarbeariaHorarioFechamento] = useState<string | null>(null)
+  const [barbeariaIdAtual, setBarbeariaIdAtual] = useState<string | null>(null)
   const [diasFuncionamento, setDiasFuncionamento] = useState<number[]>(() =>
     normalizeDiasFuncionamento(null),
   )
+  const [diasJornadaBarbeiro, setDiasJornadaBarbeiro] = useState<number[] | null>(null)
   const [jornadaDia, setJornadaDia] = useState<{
     hora_inicio: string
     hora_fim: string
     pausas: { nome: string; pausa_inicio: string; pausa_fim: string }[]
   } | null>(null)
 
+  const horariosDisponiveis = useMemo(() => {
+    const range = resolveBarbeariaAgendaTimeRange(barbeariaHorarioAbertura, barbeariaHorarioFechamento)
+    const slots = buildAgendaSlotStrings(range.start, range.end, HORARIOS_PADRAO.intervalo)
+    return listAvailableStartSlots({
+      slotStrings: slots,
+      dayStart: range.start,
+      dayEnd: range.end,
+      targetDurationMinutes: selectedServico?.duracao ?? 30,
+      appointments: busyAppointments,
+      enforceDurationOverlap: Boolean(selectedServico),
+    })
+  }, [
+    barbeariaHorarioAbertura,
+    barbeariaHorarioFechamento,
+    selectedServico,
+    busyAppointments,
+  ])
+
   const horariosPorJornada = useMemo(() => {
+    if (selectedBarbeiro && selectedDate && !jornadaDia) return []
     if (!jornadaDia) return horariosDisponiveis
     const inicioJornada = parseAgendaClockToMinutes(jornadaDia.hora_inicio)
     const fimJornada = parseAgendaClockToMinutes(jornadaDia.hora_fim)
@@ -85,25 +125,7 @@ export default function AgendarPage() {
       if (pausas.some((p) => inicio < p.fim && fim > p.inicio)) return false
       return true
     })
-  }, [jornadaDia, horariosDisponiveis, selectedServico])
-
-  const horariosDisponiveis = useMemo(() => {
-    const range = resolveBarbeariaAgendaTimeRange(barbeariaHorarioAbertura, barbeariaHorarioFechamento)
-    const slots = buildAgendaSlotStrings(range.start, range.end, HORARIOS_PADRAO.intervalo)
-    if (!selectedServico) return slots
-    return listAvailableStartSlots({
-      slotStrings: slots,
-      dayStart: range.start,
-      dayEnd: range.end,
-      targetDurationMinutes: selectedServico.duracao,
-      appointments: busyAppointments,
-    })
-  }, [
-    barbeariaHorarioAbertura,
-    barbeariaHorarioFechamento,
-    selectedServico,
-    busyAppointments,
-  ])
+  }, [selectedBarbeiro, selectedDate, jornadaDia, horariosDisponiveis, selectedServico])
 
   useEffect(() => {
     async function loadData() {
@@ -123,6 +145,7 @@ export default function AgendarPage() {
         return
       }
 
+      setBarbeariaIdAtual(barbearia.id)
       setBarbeariaHorarioAbertura(barbearia.horario_abertura ?? null)
       setBarbeariaHorarioFechamento(barbearia.horario_fechamento ?? null)
       setDiasFuncionamento(normalizeDiasFuncionamento(barbearia.dias_funcionamento))
@@ -157,6 +180,37 @@ export default function AgendarPage() {
   }, [])
 
   useEffect(() => {
+    if (!selectedBarbeiro) {
+      setDiasJornadaBarbeiro(null)
+      setSelectedDate(undefined)
+      setSelectedHorario(null)
+      return
+    }
+    let cancelled = false
+    async function loadDiasJornadaBarbeiro() {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('horarios_trabalho')
+        .select('dia_semana')
+        .eq('barbeiro_id', selectedBarbeiro.id)
+        .eq('ativo', true)
+      if (cancelled) return
+      const dias = Array.from(
+        new Set((data ?? []).flatMap((row) => [row.dia_semana, normalizeDiaSemanaToZeroBased(row.dia_semana)])),
+      ).sort((a, b) => a - b)
+      setDiasJornadaBarbeiro(dias)
+      if (selectedDate && !dias.includes(selectedDate.getDay())) {
+        setSelectedDate(undefined)
+        setSelectedHorario(null)
+      }
+    }
+    void loadDiasJornadaBarbeiro()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedBarbeiro, selectedDate])
+
+  useEffect(() => {
     if (!selectedBarbeiro || !selectedDate) {
       setBusyAppointments([])
       setJornadaDia(null)
@@ -170,17 +224,19 @@ export default function AgendarPage() {
       const { data, error: fetchError } = await supabase
         .from('agendamentos')
         .select('horario, status, servico:servicos(duracao)')
+        .eq('barbearia_id', barbeariaIdAtual ?? '')
         .eq('barbeiro_id', selectedBarbeiro.id)
-        .eq('data', selectedDate.toISOString().split('T')[0])
+        .eq('data', formatDateToYmdLocal(selectedDate))
         .in('status', ['agendado', 'em_atendimento', 'concluido'])
 
-      const { data: jornadaData } = await supabase
+      const { data: jornadasData } = await supabase
         .from('horarios_trabalho')
         .select('hora_inicio, hora_fim, pausas:horarios_trabalho_pausas(nome, pausa_inicio, pausa_fim)')
         .eq('barbeiro_id', selectedBarbeiro.id)
-        .eq('dia_semana', selectedDate.getDay())
+        .in('dia_semana', buildDiaSemanaCandidates(selectedDate))
         .eq('ativo', true)
-        .maybeSingle()
+        .order('hora_inicio', { ascending: true })
+        .limit(1)
 
       if (cancelled) return
       if (fetchError) {
@@ -193,7 +249,7 @@ export default function AgendarPage() {
           })),
         )
       }
-      setJornadaDia(jornadaData ?? null)
+      setJornadaDia((jornadasData ?? [])[0] ?? null)
       setIsLoadingHorarios(false)
     }
 
@@ -201,7 +257,7 @@ export default function AgendarPage() {
     return () => {
       cancelled = true
     }
-  }, [selectedBarbeiro, selectedDate])
+  }, [selectedBarbeiro, selectedDate, barbeariaIdAtual])
 
   useEffect(() => {
     if (!selectedHorario) return
@@ -232,12 +288,17 @@ export default function AgendarPage() {
     
     try {
       const supabase = createClient()
-      const selectedDateYmd = selectedDate.toISOString().split('T')[0]
+      const selectedDateYmd = formatDateToYmdLocal(selectedDate)
       const range = resolveBarbeariaAgendaTimeRange(barbeariaHorarioAbertura, barbeariaHorarioFechamento)
+      if (!barbeariaIdAtual) {
+        setError('Barbearia não encontrada')
+        return
+      }
 
       const { data: currentBusy, error: availabilityError } = await supabase
         .from('agendamentos')
         .select('horario, status, servico:servicos(duracao)')
+        .eq('barbearia_id', barbeariaIdAtual)
         .eq('barbeiro_id', selectedBarbeiro.id)
         .eq('data', selectedDateYmd)
         .in('status', ['agendado', 'em_atendimento', 'concluido'])
@@ -264,14 +325,16 @@ export default function AgendarPage() {
         return
       }
 
-      const { data: jornadaAtual } = await supabase
+      const { data: jornadasAtuais } = await supabase
         .from('horarios_trabalho')
         .select('hora_inicio, hora_fim, pausas:horarios_trabalho_pausas(nome, pausa_inicio, pausa_fim)')
         .eq('barbeiro_id', selectedBarbeiro.id)
-        .eq('dia_semana', selectedDate.getDay())
+        .in('dia_semana', buildDiaSemanaCandidates(selectedDate))
         .eq('ativo', true)
-        .maybeSingle()
+        .order('hora_inicio', { ascending: true })
+        .limit(1)
 
+      const jornadaAtual = (jornadasAtuais ?? [])[0] ?? null
       if (jornadaAtual) {
         const iniJornada = parseAgendaClockToMinutes(jornadaAtual.hora_inicio)
         const fimJornada = parseAgendaClockToMinutes(jornadaAtual.hora_fim)
@@ -315,21 +378,11 @@ export default function AgendarPage() {
         .from('clientes')
         .select('id, barbearia_id')
         .eq('user_id', user.id)
+        .eq('barbearia_id', barbeariaIdAtual)
         .single()
 
       if (!cliente) {
         // Create cliente if not exists
-        const { data: barbearia } = await supabase
-          .from('barbearias')
-          .select('id')
-          .limit(1)
-          .single()
-
-        if (!barbearia) {
-          setError('Barbearia não encontrada')
-          return
-        }
-
         const { data: profile } = await supabase
           .from('profiles')
           .select('nome, telefone, email')
@@ -339,7 +392,7 @@ export default function AgendarPage() {
         const { data: newCliente } = await supabase
           .from('clientes')
           .insert({
-            barbearia_id: barbearia.id,
+            barbearia_id: barbeariaIdAtual,
             user_id: user.id,
             nome: profile?.nome || 'Cliente',
             telefone: profile?.telefone || '',
@@ -355,7 +408,7 @@ export default function AgendarPage() {
 
         // Create agendamento
         const { error: insertError } = await supabase.from('agendamentos').insert({
-          barbearia_id: barbearia.id,
+          barbearia_id: barbeariaIdAtual,
           cliente_id: newCliente.id,
           barbeiro_id: selectedBarbeiro.id,
           servico_id: selectedServico.id,
@@ -381,7 +434,7 @@ export default function AgendarPage() {
       } else {
         // Create agendamento
         const { error: insertError } = await supabase.from('agendamentos').insert({
-          barbearia_id: cliente.barbearia_id,
+          barbearia_id: barbeariaIdAtual,
           cliente_id: cliente.id,
           barbeiro_id: selectedBarbeiro.id,
           servico_id: selectedServico.id,
@@ -543,7 +596,10 @@ export default function AgendarPage() {
                   const today = new Date()
                   today.setHours(0, 0, 0, 0)
                   if (date < today) return true
-                  return !isBarbeariaAbertaNoDia(date.getDay(), diasFuncionamento)
+                  const abertoBarbearia = isBarbeariaAbertaNoDia(date.getDay(), diasFuncionamento)
+                  if (!abertoBarbearia) return true
+                  if (!selectedBarbeiro || !diasJornadaBarbeiro) return false
+                  return !diasJornadaBarbeiro.includes(date.getDay())
                 }}
               />
               <p className="text-center text-xs text-muted-foreground">

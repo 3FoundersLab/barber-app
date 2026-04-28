@@ -59,7 +59,7 @@ export const DIAS_SEMANA_ABREV = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sá
  */
 export const HORARIOS_PADRAO = {
   inicio: '09:00',
-  fim: '19:00',
+  fim: '18:00',
   intervalo: 30,
   /** Valor inicial do seletor ao criar agendamento. */
   sugestaoNovoHorario: '09:00',
@@ -104,7 +104,7 @@ export function buildAgendaSlotStrings(inicio: string, fim: string, stepMinutes:
 /** Quando a barbearia não informa horário no banco, grade e slots usam este intervalo. */
 export const AGENDA_FUNCIONAMENTO_PADRAO = {
   inicio: '09:00',
-  fim: '19:00',
+  fim: '18:00',
 } as const
 
 /**

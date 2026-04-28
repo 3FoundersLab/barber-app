@@ -56,12 +56,17 @@ type DiaHorarioForm = {
   pausas: { nome: string; pausa_inicio: string; pausa_fim: string }[]
 }
 
+function timeFromDb(value: string | null | undefined): string {
+  if (!value) return ''
+  return value.slice(0, 5)
+}
+
 function buildDefaultHorariosSemana(): DiaHorarioForm[] {
   return Array.from({ length: 7 }, (_, i) => ({
     dia_semana: i,
     ativo: i !== 0,
     hora_inicio: '09:00',
-    hora_fim: '19:00',
+    hora_fim: '18:00',
     pausas: [{ nome: 'Almoço', pausa_inicio: '12:00', pausa_fim: '13:00' }],
   }))
 }
@@ -140,15 +145,17 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
       if (data && data.length > 0) {
         const byDay = new Map<number, DiaHorarioForm>()
         for (const row of data) {
+          const horaInicio = timeFromDb(row.hora_inicio)
+          const horaFim = timeFromDb(row.hora_fim)
           byDay.set(row.dia_semana, {
             dia_semana: row.dia_semana,
             ativo: row.ativo,
-            hora_inicio: row.hora_inicio,
-            hora_fim: row.hora_fim,
+            hora_inicio: horaInicio || '09:00',
+            hora_fim: horaFim || '18:00',
             pausas: (row.pausas ?? []).map((p) => ({
               nome: p.nome,
-              pausa_inicio: p.pausa_inicio,
-              pausa_fim: p.pausa_fim,
+              pausa_inicio: timeFromDb(p.pausa_inicio) || '12:00',
+              pausa_fim: timeFromDb(p.pausa_fim) || '13:00',
             })),
           })
         }
@@ -467,7 +474,7 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
     formData.confirmarSenha.trim().length > 0
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-24">
       {error ? (
         <Alert
           variant="danger"
@@ -852,16 +859,17 @@ export function EquipeMembroForm({ barbeariaId, tenantSlug, editingBarbeiro, equ
         </CardContent>
       </Card>
 
-      <div className="flex flex-col-reverse gap-3 border-t border-border/60 bg-muted/10 pt-4 sm:flex-row sm:justify-end sm:gap-3">
+      <div className="sticky bottom-16 z-20 -mx-1 flex flex-col-reverse gap-2 border-t border-border/60 bg-background/95 px-1 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:bottom-0 sm:flex-row sm:justify-end sm:gap-3">
         <Button
           variant="outline"
           type="button"
           disabled={isSaving}
           onClick={() => router.push(equipeListHref)}
+          className="w-full sm:w-auto"
         >
           Cancelar
         </Button>
-        <Button onClick={() => void handleSave()} disabled={isSaving || !canSubmit}>
+        <Button onClick={() => void handleSave()} disabled={isSaving || !canSubmit} className="w-full sm:w-auto">
           {isSaving ? <Spinner className="mr-2" /> : null}
           {isSaving ? 'Salvando...' : 'Salvar'}
         </Button>

@@ -32,6 +32,11 @@ interface DiaHorario {
   pausas: { nome: string; pausa_inicio: string; pausa_fim: string }[]
 }
 
+function timeFromDb(value: string | null | undefined): string {
+  if (!value) return ''
+  return value.slice(0, 5)
+}
+
 export default function BarbeiroHorariosPage() {
   const [horarios, setHorarios] = useState<DiaHorario[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -78,22 +83,22 @@ export default function BarbeiroHorariosPage() {
         setHorarios(data.map((h) => ({
           dia_semana: h.dia_semana,
           ativo: h.ativo,
-          hora_inicio: h.hora_inicio,
-          hora_fim: h.hora_fim,
+          hora_inicio: timeFromDb(h.hora_inicio) || '09:00',
+          hora_fim: timeFromDb(h.hora_fim) || '18:00',
           pausas: (h.pausas ?? []).map((p) => ({
             nome: p.nome,
-            pausa_inicio: p.pausa_inicio,
-            pausa_fim: p.pausa_fim,
+            pausa_inicio: timeFromDb(p.pausa_inicio) || '12:00',
+            pausa_fim: timeFromDb(p.pausa_fim) || '13:00',
           })),
         })))
       } else {
-        // Default schedule (Mon-Sat, 9-19)
+        // Default schedule (Mon-Sat, 9-18)
         setHorarios(
           Array.from({ length: 7 }, (_, i) => ({
             dia_semana: i,
             ativo: i !== 0, // Sunday off
             hora_inicio: '09:00',
-            hora_fim: '19:00',
+            hora_fim: '18:00',
             pausas: [{ nome: 'Almoço', pausa_inicio: '12:00', pausa_fim: '13:00' }],
           }))
         )
