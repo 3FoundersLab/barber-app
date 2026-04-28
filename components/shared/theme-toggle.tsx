@@ -48,17 +48,17 @@ export function ThemeToggle({ inline = false, className, variant = 'default' }: 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="outline"
+            variant={variant === 'landing' ? 'outline' : 'ghost'}
             size="icon"
             className={cn(
-              'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
+              'transition-none',
               variant === 'landing'
                 ? cn(
                     'h-10 w-10 shrink-0 rounded-full border-2 border-zinc-900 bg-white text-zinc-900 shadow-sm',
                     'hover:border-primary hover:text-primary hover:shadow-md',
                     'dark:border-zinc-100 dark:bg-zinc-950 dark:text-white dark:hover:border-primary dark:hover:text-primary',
                   )
-                : 'h-9 w-9 shadow-sm hover:bg-muted hover:text-foreground dark:hover:bg-muted/70',
+                : 'h-9 w-9 shrink-0 rounded-full border-0 bg-transparent p-0 shadow-none hover:bg-transparent hover:text-foreground dark:hover:bg-transparent focus-visible:border-transparent focus-visible:ring-0',
             )}
           >
             <Icon className="h-4 w-4" />

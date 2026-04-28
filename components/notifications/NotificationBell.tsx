@@ -19,7 +19,7 @@ const NotificationBellInner = forwardRef<HTMLButtonElement, NotificationBellProp
         type="button"
         variant="ghost"
         size="icon"
-        className={cn('relative h-9 w-9 shrink-0 rounded-full', className)}
+        className={cn('relative h-9 w-9 shrink-0 rounded-full transition-none', className)}
         aria-label={`Notificações${unreadCount > 0 ? `, ${unreadCount} não lida(s)` : totalCount > 0 ? ', todas lidas' : ''}`}
         {...triggerProps}
       >

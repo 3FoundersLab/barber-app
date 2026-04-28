@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { TenantHeaderNotifications } from '@/components/tenant/tenant-header-notifications'
 import { createClient } from '@/lib/supabase/client'
 import { clearProfileCache } from '@/lib/profile-cache'
 import { signOutWithPersistenceClear } from '@/lib/supabase/sign-out-client'
@@ -24,8 +25,10 @@ interface UserHeaderMenuProps {
 }
 
 export function UserHeaderMenu({ avatarSrc, fallback, profileHref }: UserHeaderMenuProps) {
+  const params = useParams()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  const slug = typeof params.slug === 'string' ? params.slug : null
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -35,13 +38,14 @@ export function UserHeaderMenu({ avatarSrc, fallback, profileHref }: UserHeaderM
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-4">
       <ThemeToggle inline />
+      {slug ? <TenantHeaderNotifications /> : null}
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="flex items-center gap-2 rounded-md p-1 transition-colors hover:bg-muted/70 cursor-pointer"
+            className="flex items-center gap-2 rounded-md p-1 transition-none hover:bg-muted/70 cursor-pointer"
             aria-label="Abrir menu do usuário"
           >
             <Avatar className="h-10 w-10">
@@ -50,8 +54,7 @@ export function UserHeaderMenu({ avatarSrc, fallback, profileHref }: UserHeaderM
             </Avatar>
             <ChevronDown
               className={cn(
-                'h-4 w-4 text-muted-foreground transition-transform duration-200',
-                isOpen && 'rotate-180'
+                'h-4 w-4 text-muted-foreground',
               )}
             />
           </button>

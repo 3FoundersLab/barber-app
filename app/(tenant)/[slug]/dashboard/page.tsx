@@ -1,10 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PageContent } from '@/components/shared/page-container'
 import { TenantPanelPageContainer, TenantPanelPageHeader } from '@/components/shared/tenant-panel-shell'
 import { AdminDashboardPremium } from '@/components/domain/admin-dashboard-premium'
-import { NotificationPanel } from '@/components/notifications/NotificationPanel'
 import { Alert, AlertDescription, AlertTitle, ALERT_DEFAULT_AUTO_CLOSE_MS } from '@/components/ui/alert'
 import { DIAS_SEMANA, formatDateShort } from '@/lib/constants'
 import { estimarSlotsVagosHoje } from '@/lib/dashboard-operacao-helpers'
@@ -630,58 +629,9 @@ export default function AdminDashboardPage() {
     return notif.alertasVisiveis.filter((a) => !lidos.has(a.id))
   }, [notif.alertasVisiveis, notif.alertasLidosIds])
 
-  const [notificacoesAbrirChave, setNotificacoesAbrirChave] = useState(0)
-  const solicitarAbrirNotificacoes = useCallback(() => {
-    setNotificacoesAbrirChave((k) => k + 1)
-  }, [])
-
-  const headerNotificacoes = useMemo(
-    () => (
-      <NotificationPanel
-        alertas={notif.alertasVisiveis}
-        alertasArquivados={notif.alertasArquivados}
-        tiposOcultos={notif.tiposOcultos}
-        lidosIds={notif.alertasLidosIds}
-        lidosAt={notif.alertasLidosAt}
-        isLoading={isLoading}
-        onMarkAsRead={notif.marcarAlertaLido}
-        onMarkAsUnread={notif.desmarcarAlertaLido}
-        onArchive={notif.arquivarAlerta}
-        onUnarchive={notif.desarquivarAlerta}
-        onMuteType={notif.ocultarTipoAlerta}
-        onUnmuteType={notif.mostrarTipoAlerta}
-        onMarkAllAsRead={notif.limparTodasNotificacoes}
-        openRequestKey={notificacoesAbrirChave}
-        unreadBadgeClassName="bg-destructive text-destructive-foreground shadow-sm"
-      />
-    ),
-    [
-      notif.alertasVisiveis,
-      notif.alertasArquivados,
-      notif.alertasLidosIds,
-      notif.alertasLidosAt,
-      notif.tiposOcultos,
-      isLoading,
-      notif.limparTodasNotificacoes,
-      notif.marcarAlertaLido,
-      notificacoesAbrirChave,
-      notif.desmarcarAlertaLido,
-      notif.arquivarAlerta,
-      notif.desarquivarAlerta,
-      notif.ocultarTipoAlerta,
-      notif.mostrarTipoAlerta,
-    ],
-  )
-
   return (
     <TenantPanelPageContainer>
-      <TenantPanelPageHeader
-        greetingOnly
-        hideGreeting
-        actions={headerNotificacoes}
-        profileHref={`${base}/configuracoes`}
-        avatarFallback="A"
-      />
+      <TenantPanelPageHeader greetingOnly hideGreeting profileHref={`${base}/configuracoes`} avatarFallback="A" />
 
       <PageContent className="space-y-6 md:space-y-8">
         {barbearia?.status_cadastro === 'pagamento_pendente' && (
@@ -727,7 +677,7 @@ export default function AdminDashboardPage() {
           operacaoLiberada={operacaoLiberada}
           statusHoje={extra?.statusHoje ?? null}
           notificationsSlot={null}
-          onVerMaisNotificacoes={!error ? solicitarAbrirNotificacoes : undefined}
+          onVerMaisNotificacoes={undefined}
           onMarcarAlertaLido={!error ? notif.marcarAlertaLido : undefined}
           onArquivarAlerta={!error ? notif.arquivarAlerta : undefined}
           onOcultarTipoAlerta={!error ? notif.ocultarTipoAlerta : undefined}
