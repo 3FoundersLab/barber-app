@@ -289,7 +289,7 @@ export function LandingCta() {
                 delay={0.24}
                 floatDuration={5.8}
                 floatRange={3}
-                tier="md"
+                tier="all"
                 slideFrom="left"
                 onDarkSurface
                 className="bottom-[6%] left-[-2%] sm:bottom-[8%] sm:left-[-6%]"

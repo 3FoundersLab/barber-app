@@ -300,7 +300,7 @@ export function LandingHero() {
               delay={0.34}
               floatDuration={5.3}
               floatRange={4}
-              tier="sm"
+              tier="all"
               slideFrom="left"
               onDarkSurface
               premiumHero
@@ -313,7 +313,7 @@ export function LandingHero() {
               delay={0.44}
               floatDuration={5.8}
               floatRange={6}
-              tier="md"
+              tier="all"
               slideFrom="right"
               onDarkSurface
               premiumHero
@@ -326,7 +326,7 @@ export function LandingHero() {
               delay={0.54}
               floatDuration={6.5}
               floatRange={4}
-              tier="lg"
+              tier="all"
               slideFrom="right"
               onDarkSurface
               premiumHero

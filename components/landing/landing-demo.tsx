@@ -258,7 +258,7 @@ export function LandingDemo() {
               delay={0.22}
               floatDuration={5.9}
               floatRange={3}
-              tier="md"
+              tier="all"
               slideFrom="left"
               onDarkSurface
               className="bottom-[8%] left-[-2%] sm:bottom-[10%] sm:left-[-6%]"
@@ -270,7 +270,7 @@ export function LandingDemo() {
               delay={0.3}
               floatDuration={6.1}
               floatRange={3}
-              tier="lg"
+              tier="all"
               slideFrom="right"
               onDarkSurface
               className="bottom-[10%] right-[-2%] sm:bottom-[12%] sm:right-[-6%]"
