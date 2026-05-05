@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from 'recharts'
+import type { LucideIcon } from 'lucide-react'
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -70,7 +71,7 @@ const PRESET_OPTIONS: { id: RelatorioPeriodoPreset; label: string }[] = [
 ]
 
 const chartConfig = {
-  fat: { label: 'Faturamento', color: '#0ea5e9' },
+  fat: { label: 'Faturamento', color: 'var(--accent-faturamento)' },
 } satisfies ChartConfig
 
 const pieConfig = {
@@ -89,7 +90,7 @@ function DeltaBadge({
 }) {
   if (!comparar || pct == null || !Number.isFinite(pct)) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-muted/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+      <span className="vg-small inline-flex items-center gap-1 rounded-full bg-muted/80 px-2 py-0.5 font-medium text-muted-foreground">
         <Minus className="size-3" aria-hidden />
         estável
       </span>
@@ -97,7 +98,7 @@ function DeltaBadge({
   }
   if (Math.abs(pct) < 0.05) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-muted/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+      <span className="vg-small inline-flex items-center gap-1 rounded-full bg-muted/80 px-2 py-0.5 font-medium text-muted-foreground">
         <Minus className="size-3" aria-hidden />
         estável
       </span>
@@ -113,7 +114,7 @@ function DeltaBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums',
+        'vg-small inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 font-semibold tabular-nums',
         cls,
       )}
     >
@@ -135,7 +136,7 @@ function MergedMetricRow(props: {
 }) {
   const { icon, iconClass, label, value, delta, invertDelta, loading } = props
   return (
-    <div className="flex gap-4 bg-card/80 px-4 py-4 first:rounded-t-2xl last:rounded-b-2xl">
+    <div className="flex gap-4 bg-[var(--bg-card)] px-4 py-4 first:rounded-t-2xl last:rounded-b-2xl">
       <div
         className={cn(
           'flex size-11 shrink-0 items-center justify-center rounded-xl [&>svg]:size-5',
@@ -145,12 +146,12 @@ function MergedMetricRow(props: {
         {icon}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+        <p className="vg-small font-medium text-[var(--text-tertiary)]">{label}</p>
         {loading ? (
           <Skeleton className="mt-2 h-8 w-32" />
         ) : (
           <div className="mt-1 flex flex-wrap items-baseline gap-2">
-            <span className="text-xl font-semibold tabular-nums tracking-tight text-foreground sm:text-2xl">
+            <span className="vg-section tabular-nums text-[var(--text-primary)]">
               {value}
             </span>
             <DeltaBadge pct={delta} comparar invert={invertDelta} />
@@ -161,13 +162,47 @@ function MergedMetricRow(props: {
   )
 }
 
+function AnaliseCard(props: {
+  icon: LucideIcon
+  iconWrapperClass: string
+  title: string
+  children: React.ReactNode
+}) {
+  const { icon: Icon, iconWrapperClass, title, children } = props
+  return (
+    <article
+      className={cn(
+        'w-full rounded-2xl bg-[var(--bg-card)] p-6 md:p-7',
+        'shadow-[var(--vg-card-shadow)]',
+      )}
+    >
+      <div className="flex items-start gap-4">
+        <div
+          className={cn(
+            'flex size-11 shrink-0 items-center justify-center rounded-xl [&>svg]:size-5',
+            iconWrapperClass,
+          )}
+        >
+          <Icon aria-hidden />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="vg-section text-[var(--text-primary)]">{title}</h3>
+          <div className="mt-3 space-y-3 vg-body text-[var(--text-secondary)] [&_strong]:font-semibold [&_strong]:text-[var(--text-primary)] [&_strong]:tabular-nums">
+            {children}
+          </div>
+        </div>
+      </div>
+    </article>
+  )
+}
+
 function MixDonut({ mix }: { mix: VisaoGeralMixSlice[] }) {
   const data = mix.map((m) => ({ name: m.nome, value: m.valor, fill: m.fill }))
   const total = data.reduce((s, d) => s + d.value, 0)
 
   if (!data.length) {
     return (
-      <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
+      <div className="vg-body flex h-[200px] items-center justify-center text-[var(--text-secondary)]">
         Sem dados de serviços no período
       </div>
     )
@@ -179,7 +214,7 @@ function MixDonut({ mix }: { mix: VisaoGeralMixSlice[] }) {
         <ChartTooltip
           content={({ active, payload }) =>
             active && payload?.[0] ? (
-              <div className="rounded-lg border bg-popover px-2 py-1.5 text-xs shadow-md">
+              <div className="vg-small rounded-lg border bg-popover px-2 py-1.5 shadow-md">
                 <span className="font-medium">{String(payload[0].name)}</span>
                 <span className="ml-2 tabular-nums text-muted-foreground">
                   {((Number(payload[0].value) / Math.max(1, total)) * 100).toFixed(1).replace('.', ',')}%
@@ -437,49 +472,15 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
     )
   }
 
-  const textoCrescimento =
-    pctFat != null && pctFat > 0.05
-      ? `Seu faturamento subiu ${pctFat.toFixed(1).replace('.', ',')}% ${textoCmp}.`
-      : pctFat != null && pctFat < -0.05
-        ? `Seu faturamento recuou ${Math.abs(pctFat).toFixed(1).replace('.', ',')}% ${textoCmp}.`
-        : `O faturamento permanece estável ${textoCmp}.`
-
-  const textoMotorLucro =
-    pctLucro != null && Math.abs(pctLucro) >= 0.05
-      ? pctLucro > 0
-        ? ` O volume com pagamento confirmado variou ${pctLucro > 0 ? '+' : ''}${pctLucro.toFixed(1).replace('.', ',')}%, o que ajuda o fluxo de caixa.`
-        : ` O recebido confirmado variou ${pctLucro.toFixed(1).replace('.', ',')}%; vale alinhar cobranças pendentes.`
-      : ''
-
-  const textoServico =
-    topMix && atual && atual.faturamentoTotal > 0
-      ? `${topMix.nome} responde por ${topMix.pct.toFixed(1).replace('.', ',')}% do faturamento (${formatCurrency(topMix.valor)}). Taxa de retorno de clientes em ${retornoAtual.toFixed(1).replace('.', ',')}% — programas de fidelidade podem amplificar recorrências neste mix.`
-      : 'Cadastre serviços e conclua atendimentos para ver o mix aqui.'
-
-  const textoSazonal =
-    melhorDia && melhorDia.mediaDiaria > 0
-      ? `${melhorDia.label} concentra média diária de ${formatCurrency(melhorDia.mediaDiaria)}${
-          melhorDia.vsMedia > 5
-            ? ` — cerca de ${melhorDia.vsMedia.toFixed(0).replace('.', ',')}% acima da média dos demais dias do período.`
-            : '.'
-        } A taxa de no-show está em ${noShowAtual.toFixed(1).replace('.', ',')}% (${
-          pctNoShow != null && pctNoShow < -0.05
-            ? `melhorou ${Math.abs(pctNoShow).toFixed(1).replace('.', ',')} p.p. ${textoCmp}`
-            : pctNoShow != null && pctNoShow > 0.05
-              ? `piorou ${pctNoShow.toFixed(1).replace('.', ',')} p.p. ${textoCmp}`
-              : `estável ${textoCmp}`
-        }).`
-      : 'Com mais dados no período, o padrão por dia da semana aparece aqui.'
-
   return (
-    <PageContent className="space-y-10 pb-14 pt-2">
+    <PageContent className="visao-geral-premium space-y-10 bg-[var(--bg-page)] pb-14 pt-2">
       <header className="space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-[2rem] md:leading-tight">
+            <h1 className="text-[2rem] font-semibold tracking-[-0.025em] text-[var(--text-primary)] md:text-[2.125rem] md:leading-tight">
               Visão Geral
             </h1>
-            <p className="max-w-2xl text-sm text-muted-foreground">
+            <p className="vg-body max-w-2xl text-[var(--text-secondary)]">
               {periodLabel}
               <span className="mx-1.5 text-border">·</span>
               {barberLabel}
@@ -493,14 +494,14 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
                 <button
                   type="button"
                   className={cn(
-                    'group inline-flex items-center gap-1 rounded-full border border-transparent bg-muted/40 px-3 py-1.5 text-sm font-medium text-foreground shadow-sm transition-colors',
-                    'hover:bg-muted/70 hover:shadow',
+                    'group vg-body inline-flex items-center gap-1 rounded-full border border-transparent bg-[var(--bg-elevated)] px-3 py-1.5 font-medium text-[var(--text-primary)] shadow-sm transition-colors',
+                    'hover:brightness-[0.98] dark:hover:brightness-110',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   )}
                 >
-                  <CalendarRange className="size-3.5 text-muted-foreground" aria-hidden />
+                  <CalendarRange className="size-3.5 text-[var(--text-tertiary)]" aria-hidden />
                   {periodLabel}
-                  <ChevronRight className="size-3.5 text-muted-foreground transition group-data-[state=open]:rotate-90" />
+                  <ChevronRight className="size-3.5 text-[var(--text-tertiary)] transition group-data-[state=open]:rotate-90" />
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-56 p-1" align="end">
@@ -514,7 +515,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
                         setPeriodOpen(false)
                       }}
                       className={cn(
-                        'flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm transition-colors',
+                        'vg-body flex w-full items-center justify-between rounded-md px-2 py-2 text-left transition-colors',
                         preset === o.id ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/80',
                       )}
                     >
@@ -531,14 +532,14 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
                 <button
                   type="button"
                   className={cn(
-                    'group inline-flex items-center gap-1 rounded-full border border-transparent bg-muted/40 px-3 py-1.5 text-sm font-medium text-foreground shadow-sm transition-colors',
-                    'hover:bg-muted/70 hover:shadow',
+                    'group vg-body inline-flex items-center gap-1 rounded-full border border-transparent bg-[var(--bg-elevated)] px-3 py-1.5 font-medium text-[var(--text-primary)] shadow-sm transition-colors',
+                    'hover:brightness-[0.98] dark:hover:brightness-110',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   )}
                 >
-                  <UserRound className="size-3.5 text-muted-foreground" aria-hidden />
+                  <UserRound className="size-3.5 text-[var(--text-tertiary)]" aria-hidden />
                   {barberLabel}
-                  <ChevronRight className="size-3.5 text-muted-foreground transition group-data-[state=open]:rotate-90" />
+                  <ChevronRight className="size-3.5 text-[var(--text-tertiary)] transition group-data-[state=open]:rotate-90" />
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-64 p-1" align="end">
@@ -550,7 +551,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
                       setBarberOpen(false)
                     }}
                     className={cn(
-                      'flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm transition-colors',
+                      'vg-body flex w-full items-center justify-between rounded-md px-2 py-2 text-left transition-colors',
                       barbeiroId === null ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/80',
                     )}
                   >
@@ -566,7 +567,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
                         setBarberOpen(false)
                       }}
                       className={cn(
-                        'flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm transition-colors',
+                        'vg-body flex w-full items-center justify-between rounded-md px-2 py-2 text-left transition-colors',
                         barbeiroId === b.id ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/80',
                       )}
                     >
@@ -579,7 +580,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
             </Popover>
 
             <span
-              className="inline-flex items-center gap-1 rounded-full bg-muted/30 px-3 py-1.5 text-sm text-muted-foreground"
+              className="vg-body inline-flex items-center gap-1 rounded-full bg-[var(--bg-elevated)] px-3 py-1.5 text-[var(--text-secondary)]"
               title={unidadeNome ? `Unidade: ${unidadeNome}` : undefined}
             >
               <Building2 className="size-3.5 shrink-0 opacity-70" aria-hidden />
@@ -604,8 +605,8 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
       {/* Hero faturamento — largura total */}
       <section
         className={cn(
-          'rounded-3xl bg-card/40 p-6 sm:p-8',
-          'shadow-sm shadow-black/5 dark:shadow-black/20',
+          'rounded-3xl bg-[var(--bg-card)] p-6 sm:p-8',
+          'shadow-[var(--vg-card-shadow)]',
         )}
       >
         {loading && !atual ? (
@@ -617,31 +618,31 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
           <>
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="vg-small font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
                   Faturamento total
                 </p>
                 <div className="mt-2 flex flex-wrap items-baseline gap-3">
-                  <span className="text-5xl font-semibold leading-none tracking-tight text-foreground sm:text-[3rem]">
+                  <span className="vg-display tabular-nums text-[var(--text-primary)]">
                     {formatCurrency(atual.faturamentoTotal)}
                   </span>
                   <DeltaBadge pct={pctFat} comparar={comparar} />
                 </div>
               </div>
               <div className="text-left lg:max-w-sm lg:shrink-0 lg:text-right">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="vg-small font-medium uppercase tracking-wider text-[var(--accent-lucro)]">
                   Lucro líquido
                 </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">Pagamentos confirmados</p>
+                <p className="vg-small mt-0.5 text-[var(--text-tertiary)]">Pagamentos confirmados</p>
                 <div className="mt-2 flex flex-wrap items-baseline justify-start gap-2 lg:justify-end">
-                  <span className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">
+                  <span className="vg-section tabular-nums text-[var(--text-primary)]">
                     {formatCurrency(atual.lucroLiquidoRecebido)}
                   </span>
                   <DeltaBadge pct={pctLucro} comparar={comparar} />
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">
+                <p className="vg-small mt-2 text-[var(--text-secondary)]">
                   {sharePago >= 0.01 ? (
                     <>
-                      <span className="font-medium text-foreground/85">
+                      <span className="font-medium text-[var(--text-primary)]">
                         {sharePago.toFixed(0).replace('.', ',')}%
                       </span>{' '}
                       do faturamento · {formatCurrency(anterior?.faturamentoTotal ?? 0)} no período anterior
@@ -653,7 +654,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
               </div>
             </div>
 
-            <div className="my-6 h-px w-full bg-border/60" />
+            <div className="my-6 h-px w-full bg-stone-200/90 dark:bg-stone-600/60" />
 
             <div className="h-[220px] w-full sm:h-[280px]">
               <ChartContainer config={chartConfig} className="h-full w-full aspect-auto">
@@ -663,9 +664,9 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
                 >
                   <defs>
                     <linearGradient id={`fat-fill-${chartGradId}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#7dd3fc" stopOpacity={0.5} />
-                      <stop offset="55%" stopColor="#bae6fd" stopOpacity={0.15} />
-                      <stop offset="100%" stopColor="#e0f2fe" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#86efac" stopOpacity={0.55} />
+                      <stop offset="45%" stopColor="#bbf7d0" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="#bbf7d0" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/35" />
@@ -676,7 +677,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
                     tickMargin={10}
                     interval="preserveStartEnd"
                     minTickGap={28}
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                    tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }}
                   />
                   <YAxis hide domain={[0, 'auto']} />
                   <ChartTooltip
@@ -695,11 +696,16 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
                   <Area
                     type="monotone"
                     dataKey="faturamento"
-                    stroke="#0ea5e9"
+                    stroke="var(--accent-faturamento)"
                     strokeWidth={2}
                     fill={`url(#fat-fill-${chartGradId})`}
                     dot={false}
-                    activeDot={{ r: 4, fill: '#0ea5e9', stroke: 'var(--background)', strokeWidth: 2 }}
+                    activeDot={{
+                      r: 4,
+                      fill: 'var(--accent-faturamento)',
+                      stroke: 'var(--bg-card)',
+                      strokeWidth: 2,
+                    }}
                   />
                 </AreaChart>
               </ChartContainer>
@@ -711,35 +717,35 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
       {/* Bicolumna: métricas + mix */}
       <div className="grid gap-6 lg:grid-cols-2">
         <div>
-          <h2 className="mb-3 text-sm font-semibold tracking-tight text-foreground">Métricas chave</h2>
-          <div className="overflow-hidden rounded-2xl ring-1 ring-border/50 divide-y divide-border/60 shadow-sm">
+          <h2 className="vg-section mb-3 text-[var(--text-primary)]">Métricas chave</h2>
+          <div className="overflow-hidden rounded-2xl shadow-[var(--vg-card-shadow)] ring-1 ring-stone-200/80 divide-y divide-stone-200/80 dark:ring-stone-600/60 dark:divide-stone-600/60">
             <MergedMetricRow
-              icon={<Ticket className="text-sky-600 dark:text-sky-400" />}
-              iconClass="bg-sky-500/15 text-sky-700 dark:text-sky-300"
+              icon={<Ticket />}
+              iconClass="bg-[var(--accent-ticket)]/15 text-[var(--accent-ticket)]"
               label="Ticket médio"
               value={atual ? formatCurrency(atual.ticketMedio) : '—'}
               delta={pctTicket}
               loading={loading && !atual}
             />
             <MergedMetricRow
-              icon={<Users className="text-emerald-600 dark:text-emerald-400" />}
-              iconClass="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+              icon={<Users />}
+              iconClass="bg-[var(--accent-atendidos)]/15 text-[var(--accent-atendidos)]"
               label="Clientes atendidos"
               value={atual ? String(atual.clientesUnicos) : '—'}
               delta={pctCli}
               loading={loading && !atual}
             />
             <MergedMetricRow
-              icon={<RefreshCw className="text-amber-600 dark:text-amber-400" />}
-              iconClass="bg-amber-500/15 text-amber-800 dark:text-amber-200"
+              icon={<RefreshCw />}
+              iconClass="bg-[var(--accent-retorno)]/15 text-[var(--accent-retorno)]"
               label="Taxa de retorno"
               value={loading && !atual ? '—' : `${retornoAtual.toFixed(1).replace('.', ',')}%`}
               delta={pctRetorno}
               loading={loading && !atual}
             />
             <MergedMetricRow
-              icon={<UserX className="text-red-600 dark:text-red-400" />}
-              iconClass="bg-red-500/15 text-red-700 dark:text-red-300"
+              icon={<UserX />}
+              iconClass="bg-[var(--accent-noshow)]/15 text-[var(--accent-noshow)]"
               label="Taxa de no-show"
               value={loading && !atual ? '—' : `${noShowAtual.toFixed(1).replace('.', ',')}%`}
               delta={pctNoShow}
@@ -750,31 +756,31 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
         </div>
 
         <div>
-          <h2 className="mb-3 text-sm font-semibold tracking-tight text-foreground">Mix de serviços</h2>
+          <h2 className="vg-section mb-3 text-[var(--text-primary)]">Mix de serviços</h2>
           <div
             className={cn(
-              'rounded-2xl bg-card/50 p-5 shadow-sm ring-1 ring-border/40',
+              'rounded-2xl bg-[var(--bg-card)] p-5 shadow-[var(--vg-card-shadow)] ring-1 ring-stone-200/80 dark:ring-stone-600/60',
             )}
           >
             <MixDonut mix={mix} />
             <div className="mt-4 space-y-4">
               {mix.map((m) => (
                 <div key={m.id} className="grid grid-cols-[2.5rem_1fr_auto] items-center gap-x-3 gap-y-1">
-                  <span className="text-sm font-semibold tabular-nums text-foreground">
+                  <span className="vg-body font-semibold tabular-nums text-[var(--text-primary)]">
                     {m.pct.toFixed(1).replace('.', ',')}%
                   </span>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted/80">
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--bg-elevated)]">
                         <div
                           className="h-full rounded-full transition-all"
                           style={{ width: `${Math.min(100, m.pct)}%`, backgroundColor: m.fill }}
                         />
                       </div>
                     </div>
-                    <p className="mt-1 truncate text-sm text-muted-foreground">{m.nome}</p>
+                    <p className="vg-body mt-1 truncate text-[var(--text-secondary)]">{m.nome}</p>
                   </div>
-                  <span className="text-sm font-medium tabular-nums text-foreground">
+                  <span className="vg-body font-medium tabular-nums text-[var(--text-primary)]">
                     {formatCurrency(m.valor)}
                   </span>
                 </div>
@@ -786,8 +792,8 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
 
       {/* Top barbeiros */}
       <section>
-        <div className="mb-4 flex items-end justify-between gap-4 border-b border-border/50 pb-3">
-          <h2 className="text-base font-semibold tracking-tight text-foreground">Top barbeiros</h2>
+        <div className="mb-4 flex items-end justify-between gap-4 border-b border-stone-200/80 pb-3 dark:border-stone-600/60">
+          <h2 className="vg-section text-[var(--text-primary)]">Top barbeiros</h2>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {loading && ranking.length === 0 ? (
@@ -795,7 +801,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
               <Skeleton key={i} className="h-48 w-[140px] shrink-0 rounded-2xl" />
             ))
           ) : ranking.length === 0 ? (
-            <p className="py-8 text-sm text-muted-foreground">Nenhum faturamento por profissional neste período.</p>
+            <p className="vg-body py-8 text-muted-foreground">Nenhum faturamento por profissional neste período.</p>
           ) : (
             ranking.map((r) => {
               const iniciais = r.nome
@@ -810,24 +816,24 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
                 <div
                   key={r.barbeiroId}
                   className={cn(
-                    'flex w-[148px] shrink-0 flex-col items-center rounded-2xl bg-card/60 px-3 py-4 text-center',
-                    'ring-1 ring-border/35 shadow-sm transition-all duration-200',
-                    'hover:-translate-y-0.5 hover:shadow-md hover:ring-border/55',
+                    'flex w-[148px] shrink-0 flex-col items-center rounded-2xl bg-[var(--bg-card)] px-3 py-4 text-center',
+                    'shadow-[var(--vg-card-shadow)] ring-1 ring-stone-200/70 transition-all duration-200 dark:ring-stone-600/50',
+                    'hover:-translate-y-0.5 hover:shadow-md hover:ring-stone-300/90 dark:hover:ring-stone-500/70',
                   )}
                 >
                   <Avatar className="size-12 border border-border/50">
-                    <AvatarFallback className="text-sm font-medium">{iniciais || '?'}</AvatarFallback>
+                    <AvatarFallback className="vg-small font-medium">{iniciais || '?'}</AvatarFallback>
                   </Avatar>
-                  <p className="mt-3 line-clamp-2 min-h-[2.5rem] text-sm font-medium leading-tight text-foreground">
+                  <p className="vg-body mt-3 line-clamp-2 min-h-[2.5rem] font-medium text-[var(--text-primary)]">
                     {r.nome}
                   </p>
-                  <p className="mt-2 text-base font-semibold tabular-nums text-foreground">
+                  <p className="vg-section mt-2 tabular-nums text-[var(--text-primary)]">
                     {formatCurrency(r.faturamento)}
                   </p>
                   <DeltaBadge pct={r.pctVsAnterior} comparar={comparar} />
-                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-elevated)]">
                     <div
-                      className="h-full rounded-full bg-primary/80 transition-all"
+                      className="h-full rounded-full bg-[var(--brand-primary)] transition-all"
                       style={{ width: `${barW}%` }}
                     />
                   </div>
@@ -839,43 +845,133 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
         <div className="mt-3">
           <Link
             href={`${base}/equipe`}
-            className="text-sm font-medium text-primary hover:underline"
+            className="vg-body font-medium text-[var(--brand-primary)] hover:underline"
           >
             Ver ranking completo →
           </Link>
         </div>
       </section>
 
-      {/* Análises integradas */}
-      <section>
-        <h2 className="mb-4 border-b border-border/50 pb-3 text-base font-semibold tracking-tight text-foreground">
+      {/* Análises integradas — texto corrido, tom consultivo */}
+      <section className="space-y-4">
+        <h2 className="vg-section border-b border-stone-200/80 pb-3 text-[var(--text-primary)] dark:border-stone-600/60">
           Análises do período
         </h2>
-        <div className="grid gap-4 md:grid-cols-1">
-          <div className="rounded-2xl bg-muted/30 px-5 py-5 ring-1 ring-border/30">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <TrendingUp className="size-4 text-emerald-600" aria-hidden />
-              Crescimento
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              {textoCrescimento}
-              {textoMotorLucro}
+        <div className="flex flex-col gap-4">
+          <AnaliseCard
+            icon={TrendingUp}
+            iconWrapperClass="bg-[var(--accent-faturamento)]/15 text-[var(--accent-faturamento)]"
+            title="Crescimento"
+          >
+            <p>
+              {atual ? (
+                <>
+                  Neste recorte ({periodLabel.toLowerCase()}), o faturamento consolidado ficou em{' '}
+                  <strong>{formatCurrency(atual.faturamentoTotal)}</strong>
+                  {pctFat != null && Math.abs(pctFat) >= 0.05 ? (
+                    <>
+                      , ou seja, uma variação de{' '}
+                      <strong>
+                        {pctFat > 0 ? '+' : ''}
+                        {pctFat.toFixed(1).replace('.', ',')}%
+                      </strong>{' '}
+                      {textoCmp} frente ao intervalo imediatamente anterior — útil para calibrar metas e campanhas
+                      {pctFat > 0 ? ' enquanto o ritmo está favorável' : ' antes que o desvio se prolongue'}.
+                    </>
+                  ) : (
+                    <>
+                      , praticamente alinhado ao que você vinha vendo {textoCmp}, o que sugere estabilidade na base de
+                      serviços.
+                    </>
+                  )}{' '}
+                  O que já entrou com pagamento confirmado foi <strong>{formatCurrency(atual.lucroLiquidoRecebido)}</strong>
+                  {pctLucro != null && Math.abs(pctLucro) >= 0.05 ? (
+                    <>
+                      {' '}
+                      (<strong>
+                        {pctLucro > 0 ? '+' : ''}
+                        {pctLucro.toFixed(1).replace('.', ',')}%
+                      </strong>{' '}
+                      {textoCmp})
+                    </>
+                  ) : null}
+                  {sharePago >= 0.01 ? (
+                    <>
+                      , representando cerca de <strong>{sharePago.toFixed(0).replace('.', ',')}%</strong> do total
+                      faturado
+                      {pctLucro != null && pctLucro > 0.05 && pctFat != null && pctFat > -0.05
+                        ? '. Esse encaixe entre execução e caixa costuma indicar operação redonda; manter o olho nas pendências evita perder o ritmo.'
+                        : pctLucro != null && pctLucro < -0.05
+                          ? '. Se a diferença entre vendido e recebido continuar, uma revisão das cobranças costuma destravar caixa sem mexer na oferta.'
+                          : '.'}
+                    </>
+                  ) : (
+                    <>
+                      . Neste recorte, quase nada entrou ainda como pagamento confirmado — vale cruzar com o financeiro
+                      para entender se é timing ou inadimplência pontual.
+                    </>
+                  )}
+                </>
+              ) : (
+                <>Assim que os números carregarem, esta leitura resume o pulso de receita e caixa do período.</>
+              )}
             </p>
-          </div>
-          <div className="rounded-2xl bg-muted/30 px-5 py-5 ring-1 ring-border/30">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Scissors className="size-4 text-sky-600" aria-hidden />
-              Serviço em destaque
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{textoServico}</p>
-          </div>
-          <div className="rounded-2xl bg-muted/30 px-5 py-5 ring-1 ring-border/30">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <CalendarRange className="size-4 text-violet-600" aria-hidden />
-              Padrão sazonal
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{textoSazonal}</p>
-          </div>
+          </AnaliseCard>
+
+          <AnaliseCard
+            icon={Scissors}
+            iconWrapperClass="bg-[var(--accent-ticket)]/15 text-[var(--accent-ticket)]"
+            title="Serviço em destaque"
+          >
+            <p>
+              {topMix && atual && atual.faturamentoTotal > 0 ? (
+                <>
+                  O <strong>{topMix.nome}</strong> aparece como o principal motor do mix, respondendo por cerca de{' '}
+                  <strong>{topMix.pct.toFixed(1).replace('.', ',')}%</strong> do faturamento — algo em torno de{' '}
+                  <strong>{formatCurrency(topMix.valor)}</strong> no período. Com uma taxa de retorno de clientes na casa
+                  dos <strong>{retornoAtual.toFixed(1).replace('.', ',')}%</strong>, o cenário convida a reforçar
+                  lembretes pós-atendimento e benefícios para quem volta: pequenos gestos costumam transformar picos de
+                  demanda em hábito, sem depender só de promoção agressiva.
+                </>
+              ) : (
+                <>
+                  Quando houver volume suficiente de serviços distintos, este bloco destaca naturalmente onde a equipe mais
+                  vende — e onde vale investir narrativa, tempo de cadeira ou combos complementares.
+                </>
+              )}
+            </p>
+          </AnaliseCard>
+
+          <AnaliseCard
+            icon={CalendarRange}
+            iconWrapperClass="bg-[var(--accent-retorno)]/15 text-[var(--accent-retorno)]"
+            title="Padrão sazonal"
+          >
+            <p>
+              {melhorDia && melhorDia.mediaDiaria > 0 ? (
+                <>
+                  Os <strong>{melhorDia.label}s</strong> concentram uma média diária próxima de{' '}
+                  <strong>{formatCurrency(melhorDia.mediaDiaria)}</strong>
+                  {melhorDia.vsMedia > 5
+                    ? `, perceptivelmente acima do ritmo médio dos outros dias da semana neste mesmo intervalo — um bom dia para priorizar a escala e evitar gargalos na recepção.`
+                    : ', em linha com o restante da semana, o que ajuda a planejar escala com previsibilidade.'}{' '}
+                  No comparecimento, a taxa de faltas ficou em <strong>
+                    {noShowAtual.toFixed(1).replace('.', ',')}%
+                  </strong>
+                  {pctNoShow != null && pctNoShow < -0.05
+                    ? `, com leve melhora de ${Math.abs(pctNoShow).toFixed(1).replace('.', ',')} p.p. ${textoCmp}; isso libera horário para aproveitar melhor os dias mais fortes sem sobrecarregar a agenda.`
+                    : pctNoShow != null && pctNoShow > 0.05
+                      ? `; o movimento piorou ${pctNoShow.toFixed(1).replace('.', ',')} p.p. ${textoCmp}, então reforçar confirmação — especialmente nesses picos — tende a pagar o esforço.`
+                      : `, estável ${textoCmp}, o que mantém o foco na ocupação em si.`}
+                </>
+              ) : (
+                <>
+                  Com alguns ciclos completos de agenda, este trecho contrasta o ritmo por dia da semana e a disciplina de
+                  comparecimento — útil para ajustar escala e comunicação com o cliente antes da próxima onda de demanda.
+                </>
+              )}
+            </p>
+          </AnaliseCard>
         </div>
       </section>
     </PageContent>

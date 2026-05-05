@@ -31,8 +31,8 @@ export type VisaoGeralBarbeiroRank = {
   pctVsAnterior: number | null
 }
 
-/** Azul, âmbar, verde, vermelho, violeta — alinhado à referência visual. */
-const MIX_FILLS = ['#3b82f6', '#f59e0b', '#22c55e', '#ef4444', '#8b5cf6'] as const
+/** Paleta premium: faturamento, ticket, atendidos, retorno, novos, no-show. */
+const MIX_FILLS = ['#22c55e', '#3b82f6', '#f59e0b', '#7c3aed', '#10b981', '#ef4444'] as const
 
 export type VisaoGeralDailyPoint = {
   data: string
