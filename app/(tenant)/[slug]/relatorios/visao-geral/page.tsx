@@ -5,11 +5,11 @@ import { TenantPanelPageContainer } from '@/components/shared/tenant-panel-shell
 import { useTenantAdminBase } from '@/hooks/use-tenant-admin-base'
 
 export default function TenantRelatoriosVisaoGeralPage() {
-  const { slug } = useTenantAdminBase()
+  const { slug, base } = useTenantAdminBase()
 
   return (
     <TenantPanelPageContainer>
-      <RelatoriosVisaoGeralPainel slug={slug} />
+      <RelatoriosVisaoGeralPainel slug={slug} base={base} />
     </TenantPanelPageContainer>
   )
 }

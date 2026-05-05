@@ -1,13 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import Link from 'next/link'
+import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from 'recharts'
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -16,8 +11,15 @@ import {
   Check,
   ChevronRight,
   Download,
+  Lock,
   Minus,
+  RefreshCw,
+  Scissors,
+  Ticket,
+  TrendingUp,
   UserRound,
+  Users,
+  UserX,
 } from 'lucide-react'
 import { addDays, format, startOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -25,6 +27,7 @@ import { PageContent } from '@/components/shared/page-container'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
@@ -38,10 +41,18 @@ import {
   type RelatorioPeriodoPreset,
 } from '@/lib/relatorios-range'
 import {
+  computeMixServicos,
+  computeRankingBarbeiros,
   computeVisaoGeralMetrics,
   fetchNovosClientesNoPeriodo,
-  fetchVisaoGeralAgendamentos,
+  fetchVisaoGeralAgendamentosDetalhe,
+  fetchVisaoGeralAgendaStatuses,
+  mediaFaturamentoPorDiaSemana,
   pctChange,
+  taxaNoShowPct,
+  taxaRetornoClientes,
+  type VisaoGeralAgendamentoDetalhe,
+  type VisaoGeralMixSlice,
 } from '@/lib/relatorios-visao-geral-data'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -51,8 +62,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
-import { Lock } from 'lucide-react'
-
 const PRESET_OPTIONS: { id: RelatorioPeriodoPreset; label: string }[] = [
   { id: '7d', label: 'Últimos 7 dias' },
   { id: '30d', label: 'Últimos 30 dias' },
@@ -61,13 +70,23 @@ const PRESET_OPTIONS: { id: RelatorioPeriodoPreset; label: string }[] = [
 ]
 
 const chartConfig = {
-  fat: {
-    label: 'Faturamento',
-    color: 'var(--chart-1)',
-  },
+  fat: { label: 'Faturamento', color: '#0ea5e9' },
 } satisfies ChartConfig
 
-function DeltaBadge({ pct, comparar }: { pct: number | null; comparar: boolean }) {
+const pieConfig = {
+  valor: { label: 'Faturamento' },
+} satisfies ChartConfig
+
+/** Delta percentual; `invert` = queda no valor é positivo (ex.: no-show). */
+function DeltaBadge({
+  pct,
+  comparar,
+  invert = false,
+}: {
+  pct: number | null
+  comparar: boolean
+  invert?: boolean
+}) {
   if (!comparar || pct == null || !Number.isFinite(pct)) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-muted/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
@@ -84,11 +103,13 @@ function DeltaBadge({ pct, comparar }: { pct: number | null; comparar: boolean }
       </span>
     )
   }
-  const up = pct > 0
-  const Icon = up ? ArrowUpRight : ArrowDownRight
-  const cls = up
+  const rawPositive = pct > 0
+  const good = invert ? !rawPositive : rawPositive
+  const Icon = rawPositive ? ArrowUpRight : ArrowDownRight
+  const cls = good
     ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
     : 'bg-amber-500/15 text-amber-800 dark:text-amber-400'
+
   return (
     <span
       className={cn(
@@ -97,22 +118,96 @@ function DeltaBadge({ pct, comparar }: { pct: number | null; comparar: boolean }
       )}
     >
       <Icon className="size-3.5 shrink-0" aria-hidden />
-      {up ? '+' : ''}
+      {rawPositive ? '+' : ''}
       {pct.toFixed(1).replace('.', ',')}%
     </span>
   )
 }
 
-function InsightLine({ children }: { children: React.ReactNode }) {
+function MergedMetricRow(props: {
+  icon: React.ReactNode
+  iconClass: string
+  label: string
+  value: string
+  delta: number | null
+  invertDelta?: boolean
+  loading: boolean
+}) {
+  const { icon, iconClass, label, value, delta, invertDelta, loading } = props
   return (
-    <p className="text-sm leading-relaxed text-muted-foreground">
-      <span className="text-foreground/90">{children}</span>
-    </p>
+    <div className="flex gap-4 bg-card/80 px-4 py-4 first:rounded-t-2xl last:rounded-b-2xl">
+      <div
+        className={cn(
+          'flex size-11 shrink-0 items-center justify-center rounded-xl [&>svg]:size-5',
+          iconClass,
+        )}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+        {loading ? (
+          <Skeleton className="mt-2 h-8 w-32" />
+        ) : (
+          <div className="mt-1 flex flex-wrap items-baseline gap-2">
+            <span className="text-xl font-semibold tabular-nums tracking-tight text-foreground sm:text-2xl">
+              {value}
+            </span>
+            <DeltaBadge pct={delta} comparar invert={invertDelta} />
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
-export function RelatoriosVisaoGeralPainel(props: { slug: string }) {
-  const { slug } = props
+function MixDonut({ mix }: { mix: VisaoGeralMixSlice[] }) {
+  const data = mix.map((m) => ({ name: m.nome, value: m.valor, fill: m.fill }))
+  const total = data.reduce((s, d) => s + d.value, 0)
+
+  if (!data.length) {
+    return (
+      <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
+        Sem dados de serviços no período
+      </div>
+    )
+  }
+
+  return (
+    <ChartContainer config={pieConfig} className="mx-auto aspect-square h-[200px] max-w-[220px]">
+      <PieChart>
+        <ChartTooltip
+          content={({ active, payload }) =>
+            active && payload?.[0] ? (
+              <div className="rounded-lg border bg-popover px-2 py-1.5 text-xs shadow-md">
+                <span className="font-medium">{String(payload[0].name)}</span>
+                <span className="ml-2 tabular-nums text-muted-foreground">
+                  {((Number(payload[0].value) / Math.max(1, total)) * 100).toFixed(1).replace('.', ',')}%
+                </span>
+              </div>
+            ) : null
+          }
+        />
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="name"
+          innerRadius={58}
+          outerRadius={88}
+          paddingAngle={2}
+          strokeWidth={0}
+        >
+          {data.map((entry, i) => (
+            <Cell key={entry.name} fill={mix[i]?.fill ?? entry.fill} />
+          ))}
+        </Pie>
+      </PieChart>
+    </ChartContainer>
+  )
+}
+
+export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }) {
+  const { slug, base } = props
   const chartGradId = useId().replace(/:/g, '')
 
   const [preset, setPreset] = useState<RelatorioPeriodoPreset>('30d')
@@ -120,7 +215,6 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string }) {
   const [periodOpen, setPeriodOpen] = useState(false)
   const [barberOpen, setBarberOpen] = useState(false)
 
-  const [barbeariaId, setBarbeariaId] = useState<string | null>(null)
   const [unidadeNome, setUnidadeNome] = useState<string | null>(null)
   const [operacaoLiberada, setOperacaoLiberada] = useState(true)
   const [barbeiros, setBarbeiros] = useState<{ id: string; nome: string }[]>([])
@@ -128,20 +222,16 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const [detAtual, setDetAtual] = useState<VisaoGeralAgendamentoDetalhe[]>([])
+  const [detAnterior, setDetAnterior] = useState<VisaoGeralAgendamentoDetalhe[]>([])
+  const [statusAtual, setStatusAtual] = useState<string[]>([])
+  const [statusAnterior, setStatusAnterior] = useState<string[]>([])
   const [atual, setAtual] = useState<ReturnType<typeof computeVisaoGeralMetrics> | null>(null)
   const [anterior, setAnterior] = useState<ReturnType<typeof computeVisaoGeralMetrics> | null>(null)
   const [novosAtual, setNovosAtual] = useState(0)
   const [novosAnterior, setNovosAnterior] = useState(0)
 
-  const intervaloAtual = useMemo(
-    () => intervaloPorPreset(preset, null, null),
-    [preset],
-  )
-
-  const intervaloPrev = useMemo(
-    () => intervaloAnteriorComparacao(intervaloAtual.inicio, intervaloAtual.fim),
-    [intervaloAtual.inicio, intervaloAtual.fim],
-  )
+  const intervaloAtual = useMemo(() => intervaloPorPreset(preset, null, null), [preset])
 
   const load = useCallback(async () => {
     const supabase = createClient()
@@ -174,7 +264,6 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string }) {
       return
     }
 
-    setBarbeariaId(barRow.id)
     setUnidadeNome(typeof barRow.nome === 'string' ? barRow.nome : null)
     const liberada = barRow.status_cadastro !== 'pagamento_pendente'
     setOperacaoLiberada(liberada)
@@ -193,6 +282,8 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string }) {
     )
 
     if (!liberada) {
+      setDetAtual([])
+      setDetAnterior([])
       setAtual(null)
       setAnterior(null)
       setNovosAtual(0)
@@ -210,24 +301,31 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string }) {
 
     const iniIso = startOfDay(ini.inicio).toISOString()
     const fimExcIso = addDays(startOfDay(ini.fim), 1).toISOString()
-
     const prevIniIso = startOfDay(prev.inicio).toISOString()
     const prevFimExcIso = addDays(startOfDay(prev.fim), 1).toISOString()
 
     try {
-      const [rowsA, rowsP, nA, nP] = await Promise.all([
-        fetchVisaoGeralAgendamentos(supabase, barRow.id, i0, i1, barbeiroId),
-        fetchVisaoGeralAgendamentos(supabase, barRow.id, p0, p1, barbeiroId),
+      const [rowsA, rowsP, stA, stP, nA, nP] = await Promise.all([
+        fetchVisaoGeralAgendamentosDetalhe(supabase, barRow.id, i0, i1, barbeiroId),
+        fetchVisaoGeralAgendamentosDetalhe(supabase, barRow.id, p0, p1, barbeiroId),
+        fetchVisaoGeralAgendaStatuses(supabase, barRow.id, i0, i1, barbeiroId),
+        fetchVisaoGeralAgendaStatuses(supabase, barRow.id, p0, p1, barbeiroId),
         fetchNovosClientesNoPeriodo(supabase, barRow.id, iniIso, fimExcIso),
         fetchNovosClientesNoPeriodo(supabase, barRow.id, prevIniIso, prevFimExcIso),
       ])
 
+      setDetAtual(rowsA)
+      setDetAnterior(rowsP)
+      setStatusAtual(stA)
+      setStatusAnterior(stP)
       setAtual(computeVisaoGeralMetrics(rowsA, ini.inicio, ini.fim))
       setAnterior(computeVisaoGeralMetrics(rowsP, prev.inicio, prev.fim))
       setNovosAtual(nA)
       setNovosAnterior(nP)
     } catch {
       setError('Não foi possível carregar os relatórios')
+      setDetAtual([])
+      setDetAnterior([])
       setAtual(null)
       setAnterior(null)
     } finally {
@@ -246,12 +344,45 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string }) {
   const pctLucro = pctChange(atual?.lucroLiquidoRecebido ?? 0, anterior?.lucroLiquidoRecebido ?? 0)
   const pctTicket = pctChange(atual?.ticketMedio ?? 0, anterior?.ticketMedio ?? 0)
   const pctCli = pctChange(atual?.clientesUnicos ?? 0, anterior?.clientesUnicos ?? 0)
-  const pctNovos = pctChange(novosAtual, novosAnterior)
+
+  const retornoAtual = useMemo(() => taxaRetornoClientes(detAtual), [detAtual])
+  const retornoAnt = useMemo(() => taxaRetornoClientes(detAnterior), [detAnterior])
+  const pctRetorno = pctChange(retornoAtual, retornoAnt)
+
+  const noShowAtual = useMemo(() => taxaNoShowPct(statusAtual), [statusAtual])
+  const noShowAnt = useMemo(() => taxaNoShowPct(statusAnterior), [statusAnterior])
+  const pctNoShow = pctChange(noShowAtual, noShowAnt)
+
+  const mix = useMemo(() => computeMixServicos(detAtual), [detAtual])
+  const ranking = useMemo(
+    () => computeRankingBarbeiros(detAtual, detAnterior, 5),
+    [detAtual, detAnterior],
+  )
+
+  const weekdayStats = useMemo(
+    () => mediaFaturamentoPorDiaSemana(detAtual, intervaloAtual.inicio, intervaloAtual.fim),
+    [detAtual, intervaloAtual.inicio, intervaloAtual.fim],
+  )
+
+  const melhorDia = useMemo(() => {
+    if (!weekdayStats.length) return null
+    const withData = weekdayStats.filter((w) => w.total > 0)
+    const mediaGeral =
+      withData.length > 0
+        ? withData.reduce((s, w) => s + w.mediaDiaria, 0) / withData.length
+        : 0
+    const best = [...weekdayStats].sort((a, b) => b.mediaDiaria - a.mediaDiaria)[0]
+    if (!best || best.mediaDiaria <= 0) return null
+    const vs = mediaGeral > 0 ? ((best.mediaDiaria - mediaGeral) / mediaGeral) * 100 : 0
+    return { ...best, vsMedia: vs, mediaGeral }
+  }, [weekdayStats])
 
   const sharePago =
     atual && atual.faturamentoTotal > 0
       ? (atual.lucroLiquidoRecebido / atual.faturamentoTotal) * 100
       : 0
+
+  const topMix = mix[0]
 
   const periodLabel = PRESET_OPTIONS.find((o) => o.id === preset)?.label ?? 'Período'
   const barberLabel = barbeiroId
@@ -272,6 +403,8 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string }) {
     a.click()
     URL.revokeObjectURL(a.href)
   }
+
+  const maxRankFat = ranking[0]?.faturamento ?? 1
 
   if (error) {
     return (
@@ -304,9 +437,42 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string }) {
     )
   }
 
+  const textoCrescimento =
+    pctFat != null && pctFat > 0.05
+      ? `Seu faturamento subiu ${pctFat.toFixed(1).replace('.', ',')}% ${textoCmp}.`
+      : pctFat != null && pctFat < -0.05
+        ? `Seu faturamento recuou ${Math.abs(pctFat).toFixed(1).replace('.', ',')}% ${textoCmp}.`
+        : `O faturamento permanece estável ${textoCmp}.`
+
+  const textoMotorLucro =
+    pctLucro != null && Math.abs(pctLucro) >= 0.05
+      ? pctLucro > 0
+        ? ` O volume com pagamento confirmado variou ${pctLucro > 0 ? '+' : ''}${pctLucro.toFixed(1).replace('.', ',')}%, o que ajuda o fluxo de caixa.`
+        : ` O recebido confirmado variou ${pctLucro.toFixed(1).replace('.', ',')}%; vale alinhar cobranças pendentes.`
+      : ''
+
+  const textoServico =
+    topMix && atual && atual.faturamentoTotal > 0
+      ? `${topMix.nome} responde por ${topMix.pct.toFixed(1).replace('.', ',')}% do faturamento (${formatCurrency(topMix.valor)}). Taxa de retorno de clientes em ${retornoAtual.toFixed(1).replace('.', ',')}% — programas de fidelidade podem amplificar recorrências neste mix.`
+      : 'Cadastre serviços e conclua atendimentos para ver o mix aqui.'
+
+  const textoSazonal =
+    melhorDia && melhorDia.mediaDiaria > 0
+      ? `${melhorDia.label} concentra média diária de ${formatCurrency(melhorDia.mediaDiaria)}${
+          melhorDia.vsMedia > 5
+            ? ` — cerca de ${melhorDia.vsMedia.toFixed(0).replace('.', ',')}% acima da média dos demais dias do período.`
+            : '.'
+        } A taxa de no-show está em ${noShowAtual.toFixed(1).replace('.', ',')}% (${
+          pctNoShow != null && pctNoShow < -0.05
+            ? `melhorou ${Math.abs(pctNoShow).toFixed(1).replace('.', ',')} p.p. ${textoCmp}`
+            : pctNoShow != null && pctNoShow > 0.05
+              ? `piorou ${pctNoShow.toFixed(1).replace('.', ',')} p.p. ${textoCmp}`
+              : `estável ${textoCmp}`
+        }).`
+      : 'Com mais dados no período, o padrão por dia da semana aparece aqui.'
+
   return (
-    <PageContent className="space-y-8 pb-12 pt-2">
-      {/* Header */}
+    <PageContent className="space-y-10 pb-14 pt-2">
       <header className="space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 space-y-2">
@@ -435,116 +601,39 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string }) {
         </div>
       </header>
 
-      {/* Asymmetric grid */}
-      <div className="grid gap-5 lg:grid-cols-12 lg:gap-6">
-        {/* Hero faturamento */}
-        <section
-          className={cn(
-            'relative overflow-hidden rounded-3xl bg-gradient-to-br from-card via-card to-muted/30 p-6 shadow-sm ring-1 ring-border/40',
-            'transition-shadow hover:shadow-md lg:col-span-8',
-          )}
-        >
-          {loading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-12 w-2/3" />
-              <Skeleton className="h-[200px] w-full rounded-2xl" />
-            </div>
-          ) : atual ? (
-            <>
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Faturamento total
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-baseline gap-2">
-                    <span className="text-3xl font-semibold tabular-nums tracking-tight text-foreground sm:text-4xl">
-                      {formatCurrency(atual.faturamentoTotal)}
-                    </span>
-                    <DeltaBadge pct={pctFat} comparar={comparar} />
-                  </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {formatCurrency(anterior?.faturamentoTotal ?? 0)} no período anterior
-                    {pctFat != null && Math.abs(pctFat) >= 0.05 ? (
-                      <span className="ml-1.5 tabular-nums">
-                        ({pctFat >= 0 ? '+' : ''}
-                        {pctFat.toFixed(1).replace('.', ',')}%)
-                      </span>
-                    ) : null}
-                  </p>
+      {/* Hero faturamento — largura total */}
+      <section
+        className={cn(
+          'rounded-3xl bg-card/40 p-6 sm:p-8',
+          'shadow-sm shadow-black/5 dark:shadow-black/20',
+        )}
+      >
+        {loading && !atual ? (
+          <div className="space-y-4">
+            <Skeleton className="h-10 w-full max-w-xl" />
+            <Skeleton className="h-[240px] w-full rounded-2xl" />
+          </div>
+        ) : atual ? (
+          <>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Faturamento total
+                </p>
+                <div className="mt-2 flex flex-wrap items-baseline gap-3">
+                  <span className="text-5xl font-semibold leading-none tracking-tight text-foreground sm:text-[3rem]">
+                    {formatCurrency(atual.faturamentoTotal)}
+                  </span>
+                  <DeltaBadge pct={pctFat} comparar={comparar} />
                 </div>
               </div>
-
-              <div className="mt-6 h-[220px] w-full sm:h-[260px]">
-                <ChartContainer config={chartConfig} className="h-full w-full aspect-auto">
-                  <AreaChart data={atual.serieDiaria} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id={`fat-fill-${chartGradId}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.35} />
-                        <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/40" />
-                    <XAxis
-                      dataKey="label"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      interval="preserveStartEnd"
-                      minTickGap={24}
-                    />
-                    <YAxis hide domain={[0, 'auto']} />
-                    <ChartTooltip
-                      cursor={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }}
-                      content={
-                        <ChartTooltipContent
-                          formatter={(value) => formatCurrency(Number(value))}
-                          labelFormatter={(_, payload) => {
-                            const p = payload?.[0]?.payload as { data?: string } | undefined
-                            if (!p?.data) return ''
-                            return format(new Date(`${p.data}T12:00:00`), "d 'de' MMM", { locale: ptBR })
-                          }}
-                        />
-                      }
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="faturamento"
-                      stroke="var(--chart-1)"
-                      strokeWidth={2}
-                      fill={`url(#fat-fill-${chartGradId})`}
-                      dot={false}
-                      activeDot={{ r: 4, fill: 'var(--chart-1)', stroke: 'var(--background)', strokeWidth: 2 }}
-                    />
-                  </AreaChart>
-                </ChartContainer>
-              </div>
-
-              <InsightLine>
-                {atual.faturamentoTotal >= (anterior?.faturamentoTotal ?? 0)
-                  ? 'O ritmo de faturamento está alinhado ou acima do período de comparação — mantenha o foco em ocupação e ticket.'
-                  : 'Faturamento abaixo do período anterior — vale revisar promoções, horários ociosos ou mix de serviços.'}
-              </InsightLine>
-            </>
-          ) : null}
-        </section>
-
-        {/* Side stack */}
-        <div className="flex flex-col gap-4 lg:col-span-4">
-          <section
-            className={cn(
-              'rounded-2xl bg-card/80 p-5 shadow-sm ring-1 ring-border/35 transition-all hover:ring-border/55',
-              'lg:min-h-[140px]',
-            )}
-          >
-            {loading ? (
-              <Skeleton className="h-24 w-full" />
-            ) : atual ? (
-              <>
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Lucro líquido</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground/90">Pagamentos confirmados no período</p>
-                <div className="mt-2 flex flex-wrap items-baseline gap-2">
-                  <span className="text-2xl font-semibold tabular-nums tracking-tight">
+              <div className="text-left lg:max-w-sm lg:shrink-0 lg:text-right">
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Lucro líquido
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">Pagamentos confirmados</p>
+                <div className="mt-2 flex flex-wrap items-baseline justify-start gap-2 lg:justify-end">
+                  <span className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">
                     {formatCurrency(atual.lucroLiquidoRecebido)}
                   </span>
                   <DeltaBadge pct={pctLucro} comparar={comparar} />
@@ -552,124 +641,243 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string }) {
                 <p className="mt-2 text-xs text-muted-foreground">
                   {sharePago >= 0.01 ? (
                     <>
-                      <span className="font-medium text-foreground/80">
+                      <span className="font-medium text-foreground/85">
                         {sharePago.toFixed(0).replace('.', ',')}%
                       </span>{' '}
-                      do faturamento já entrou na conta ({textoCmp}).
+                      do faturamento · {formatCurrency(anterior?.faturamentoTotal ?? 0)} no período anterior
                     </>
                   ) : (
-                    <>Nenhum pagamento confirmado neste recorte — acompanhe o financeiro.</>
+                    <>Sem pagamentos confirmados neste recorte.</>
                   )}
                 </p>
-              </>
-            ) : null}
-          </section>
+              </div>
+            </div>
 
-          <section
-            className={cn(
-              'rounded-2xl bg-muted/25 p-5 shadow-sm ring-1 ring-border/25 transition-all hover:bg-muted/35',
-            )}
-          >
-            {loading ? (
-              <Skeleton className="h-20 w-full" />
-            ) : atual ? (
-              <>
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Ticket médio</p>
-                <div className="mt-2 flex flex-wrap items-baseline gap-2">
-                  <span className="text-2xl font-semibold tabular-nums">{formatCurrency(atual.ticketMedio)}</span>
-                  <DeltaBadge pct={pctTicket} comparar={comparar} />
-                </div>
-                <InsightLine>
-                  Média por atendimento concluído — subir ticket costuma refletir upsell ou serviços premium.
-                </InsightLine>
-              </>
-            ) : null}
-          </section>
+            <div className="my-6 h-px w-full bg-border/60" />
+
+            <div className="h-[220px] w-full sm:h-[280px]">
+              <ChartContainer config={chartConfig} className="h-full w-full aspect-auto">
+                <AreaChart
+                  data={atual.serieDiaria}
+                  margin={{ left: 0, right: 8, top: 12, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id={`fat-fill-${chartGradId}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#7dd3fc" stopOpacity={0.5} />
+                      <stop offset="55%" stopColor="#bae6fd" stopOpacity={0.15} />
+                      <stop offset="100%" stopColor="#e0f2fe" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/35" />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                    interval="preserveStartEnd"
+                    minTickGap={28}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                  />
+                  <YAxis hide domain={[0, 'auto']} />
+                  <ChartTooltip
+                    cursor={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }}
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value) => formatCurrency(Number(value))}
+                        labelFormatter={(_, payload) => {
+                          const p = payload?.[0]?.payload as { data?: string } | undefined
+                          if (!p?.data) return ''
+                          return format(new Date(`${p.data}T12:00:00`), "d 'de' MMM", { locale: ptBR })
+                        }}
+                      />
+                    }
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="faturamento"
+                    stroke="#0ea5e9"
+                    strokeWidth={2}
+                    fill={`url(#fat-fill-${chartGradId})`}
+                    dot={false}
+                    activeDot={{ r: 4, fill: '#0ea5e9', stroke: 'var(--background)', strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ChartContainer>
+            </div>
+          </>
+        ) : null}
+      </section>
+
+      {/* Bicolumna: métricas + mix */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div>
+          <h2 className="mb-3 text-sm font-semibold tracking-tight text-foreground">Métricas chave</h2>
+          <div className="overflow-hidden rounded-2xl ring-1 ring-border/50 divide-y divide-border/60 shadow-sm">
+            <MergedMetricRow
+              icon={<Ticket className="text-sky-600 dark:text-sky-400" />}
+              iconClass="bg-sky-500/15 text-sky-700 dark:text-sky-300"
+              label="Ticket médio"
+              value={atual ? formatCurrency(atual.ticketMedio) : '—'}
+              delta={pctTicket}
+              loading={loading && !atual}
+            />
+            <MergedMetricRow
+              icon={<Users className="text-emerald-600 dark:text-emerald-400" />}
+              iconClass="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+              label="Clientes atendidos"
+              value={atual ? String(atual.clientesUnicos) : '—'}
+              delta={pctCli}
+              loading={loading && !atual}
+            />
+            <MergedMetricRow
+              icon={<RefreshCw className="text-amber-600 dark:text-amber-400" />}
+              iconClass="bg-amber-500/15 text-amber-800 dark:text-amber-200"
+              label="Taxa de retorno"
+              value={loading && !atual ? '—' : `${retornoAtual.toFixed(1).replace('.', ',')}%`}
+              delta={pctRetorno}
+              loading={loading && !atual}
+            />
+            <MergedMetricRow
+              icon={<UserX className="text-red-600 dark:text-red-400" />}
+              iconClass="bg-red-500/15 text-red-700 dark:text-red-300"
+              label="Taxa de no-show"
+              value={loading && !atual ? '—' : `${noShowAtual.toFixed(1).replace('.', ',')}%`}
+              delta={pctNoShow}
+              invertDelta
+              loading={loading && !atual}
+            />
+          </div>
         </div>
 
-        {/* Bottom row — asymmetric */}
-        <section
-          className={cn(
-            'rounded-2xl bg-card/60 p-5 shadow-sm ring-1 ring-border/30 lg:col-span-5',
-            'hover:shadow-sm',
-          )}
-        >
-          {loading ? (
-            <Skeleton className="h-28 w-full" />
-          ) : atual ? (
-            <>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Clientes</p>
-              <div className="mt-2 flex flex-wrap items-baseline gap-2">
-                <span className="text-3xl font-semibold tabular-nums">{atual.clientesUnicos}</span>
-                <span className="text-sm text-muted-foreground">únicos no período</span>
-                <DeltaBadge pct={pctCli} comparar={comparar} />
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {atual.atendimentos} atendimentos concluídos
-                {atual.atendimentos > 0 && atual.clientesUnicos > 0 ? (
-                  <>
-                    {' '}
-                    · recorrência média{' '}
-                    <span className="font-medium text-foreground/90">
-                      {(atual.atendimentos / atual.clientesUnicos).toFixed(1).replace('.', ',')}
-                    </span>
-                  </>
-                ) : null}
-              </p>
-            </>
-          ) : null}
-        </section>
-
-        <section
-          className={cn(
-            'rounded-2xl bg-gradient-to-b from-muted/20 to-transparent p-5 ring-1 ring-border/25 lg:col-span-4',
-          )}
-        >
-          {loading ? (
-            <Skeleton className="h-28 w-full" />
-          ) : (
-            <>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Novos clientes</p>
-              <div className="mt-2 flex flex-wrap items-baseline gap-2">
-                <span className="text-3xl font-semibold tabular-nums">{novosAtual}</span>
-                <DeltaBadge pct={pctNovos} comparar={comparar} />
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Cadastros no período · {novosAnterior} no período anterior
-              </p>
-            </>
-          )}
-        </section>
-
-        <section
-          className={cn(
-            'flex flex-col justify-center rounded-2xl border border-dashed border-border/50 bg-muted/10 p-5 lg:col-span-3',
-          )}
-        >
-          {loading ? (
-            <Skeleton className="h-16 w-full" />
-          ) : atual ? (
-            <>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Resumo rápido</p>
-              <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <span className="text-foreground/90">{atual.atendimentos}</span> concluídos
-                </li>
-                <li>
-                  Ticket{' '}
-                  <span className="font-medium text-foreground/90">{formatCurrency(atual.ticketMedio)}</span>
-                </li>
-                <li>
-                  Confirmação financeira{' '}
-                  <span className="font-medium text-foreground/90">
-                    {sharePago.toFixed(0).replace('.', ',')}%
+        <div>
+          <h2 className="mb-3 text-sm font-semibold tracking-tight text-foreground">Mix de serviços</h2>
+          <div
+            className={cn(
+              'rounded-2xl bg-card/50 p-5 shadow-sm ring-1 ring-border/40',
+            )}
+          >
+            <MixDonut mix={mix} />
+            <div className="mt-4 space-y-4">
+              {mix.map((m) => (
+                <div key={m.id} className="grid grid-cols-[2.5rem_1fr_auto] items-center gap-x-3 gap-y-1">
+                  <span className="text-sm font-semibold tabular-nums text-foreground">
+                    {m.pct.toFixed(1).replace('.', ',')}%
                   </span>
-                </li>
-              </ul>
-            </>
-          ) : null}
-        </section>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted/80">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${Math.min(100, m.pct)}%`, backgroundColor: m.fill }}
+                        />
+                      </div>
+                    </div>
+                    <p className="mt-1 truncate text-sm text-muted-foreground">{m.nome}</p>
+                  </div>
+                  <span className="text-sm font-medium tabular-nums text-foreground">
+                    {formatCurrency(m.valor)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Top barbeiros */}
+      <section>
+        <div className="mb-4 flex items-end justify-between gap-4 border-b border-border/50 pb-3">
+          <h2 className="text-base font-semibold tracking-tight text-foreground">Top barbeiros</h2>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {loading && ranking.length === 0 ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-48 w-[140px] shrink-0 rounded-2xl" />
+            ))
+          ) : ranking.length === 0 ? (
+            <p className="py-8 text-sm text-muted-foreground">Nenhum faturamento por profissional neste período.</p>
+          ) : (
+            ranking.map((r) => {
+              const iniciais = r.nome
+                .split(/\s+/)
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((p) => p[0])
+                .join('')
+                .toUpperCase()
+              const barW = maxRankFat > 0 ? (r.faturamento / maxRankFat) * 100 : 0
+              return (
+                <div
+                  key={r.barbeiroId}
+                  className={cn(
+                    'flex w-[148px] shrink-0 flex-col items-center rounded-2xl bg-card/60 px-3 py-4 text-center',
+                    'ring-1 ring-border/35 shadow-sm transition-all duration-200',
+                    'hover:-translate-y-0.5 hover:shadow-md hover:ring-border/55',
+                  )}
+                >
+                  <Avatar className="size-12 border border-border/50">
+                    <AvatarFallback className="text-sm font-medium">{iniciais || '?'}</AvatarFallback>
+                  </Avatar>
+                  <p className="mt-3 line-clamp-2 min-h-[2.5rem] text-sm font-medium leading-tight text-foreground">
+                    {r.nome}
+                  </p>
+                  <p className="mt-2 text-base font-semibold tabular-nums text-foreground">
+                    {formatCurrency(r.faturamento)}
+                  </p>
+                  <DeltaBadge pct={r.pctVsAnterior} comparar={comparar} />
+                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary/80 transition-all"
+                      style={{ width: `${barW}%` }}
+                    />
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+        <div className="mt-3">
+          <Link
+            href={`${base}/equipe`}
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            Ver ranking completo →
+          </Link>
+        </div>
+      </section>
+
+      {/* Análises integradas */}
+      <section>
+        <h2 className="mb-4 border-b border-border/50 pb-3 text-base font-semibold tracking-tight text-foreground">
+          Análises do período
+        </h2>
+        <div className="grid gap-4 md:grid-cols-1">
+          <div className="rounded-2xl bg-muted/30 px-5 py-5 ring-1 ring-border/30">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <TrendingUp className="size-4 text-emerald-600" aria-hidden />
+              Crescimento
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {textoCrescimento}
+              {textoMotorLucro}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-muted/30 px-5 py-5 ring-1 ring-border/30">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Scissors className="size-4 text-sky-600" aria-hidden />
+              Serviço em destaque
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{textoServico}</p>
+          </div>
+          <div className="rounded-2xl bg-muted/30 px-5 py-5 ring-1 ring-border/30">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <CalendarRange className="size-4 text-violet-600" aria-hidden />
+              Padrão sazonal
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{textoSazonal}</p>
+          </div>
+        </div>
+      </section>
     </PageContent>
   )
 }
