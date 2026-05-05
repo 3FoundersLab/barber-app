@@ -81,6 +81,34 @@
     0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
+/* Sombras sutis */
+.shadow-premium {
+  box-shadow:
+    0 1px 2px 0 rgb(0 0 0 / 0.04),
+    0 1px 3px 0 rgb(0 0 0 / 0.08);
+}
+
+/* Hover elegante */
+.hover-lift {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 12px 0 rgb(0 0 0 / 0.08),
+    0 2px 4px 0 rgb(0 0 0 / 0.04);
+}
+
+/* Dividers refinados (centro segue --ds-color-border no claro/escuro) */
+.divider {
+  border: none;
+  height: 1px;
+  margin: 0;
+  background: linear-gradient(to right, transparent, var(--ds-color-border), transparent);
+}
+
 /**
  * Relatórios — Visão Geral (premium stone + laranja).
  * Escopo: envolver o conteúdo da página em `.visao-geral-premium`.
@@ -99,6 +127,12 @@
   --line-body: 1.6;
 
   --font-small: 0.8125rem;
+
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1.25rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
 
   --bg-page: #fafaf9;
   --bg-card: #ffffff;
@@ -141,6 +175,16 @@
 .visao-geral-premium .vg-small {
   font-size: var(--font-small);
   line-height: 1.45;
+}
+
+/* Ritmo vertical entre blocos principais da página */
+.visao-geral-premium > *:not(:last-child) {
+  margin-bottom: var(--space-xl);
+}
+
+/* Padding padrão de superfícies tipo card */
+.visao-geral-premium .vg-card {
+  padding: var(--space-md);
 }
 
 @media (max-width: 640px) {

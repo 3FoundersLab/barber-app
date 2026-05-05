@@ -136,7 +136,7 @@ function MergedMetricRow(props: {
 }) {
   const { icon, iconClass, label, value, delta, invertDelta, loading } = props
   return (
-    <div className="flex gap-4 bg-[var(--bg-card)] px-4 py-4 first:rounded-t-2xl last:rounded-b-2xl">
+    <div className="flex gap-[var(--space-md)] bg-[var(--bg-card)] px-[var(--space-md)] py-[var(--space-sm)] first:rounded-t-2xl last:rounded-b-2xl">
       <div
         className={cn(
           'flex size-11 shrink-0 items-center justify-center rounded-xl [&>svg]:size-5',
@@ -172,11 +172,11 @@ function AnaliseCard(props: {
   return (
     <article
       className={cn(
-        'w-full rounded-2xl bg-[var(--bg-card)] p-6 md:p-7',
+        'vg-card w-full rounded-2xl bg-[var(--bg-card)]',
         'shadow-[var(--vg-card-shadow)]',
       )}
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-[var(--space-md)]">
         <div
           className={cn(
             'flex size-11 shrink-0 items-center justify-center rounded-xl [&>svg]:size-5',
@@ -187,7 +187,7 @@ function AnaliseCard(props: {
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="vg-section text-[var(--text-primary)]">{title}</h3>
-          <div className="mt-3 space-y-3 vg-body text-[var(--text-secondary)] [&_strong]:font-semibold [&_strong]:text-[var(--text-primary)] [&_strong]:tabular-nums">
+          <div className="mt-[var(--space-sm)] space-y-[var(--space-sm)] vg-body text-[var(--text-secondary)] [&_strong]:font-semibold [&_strong]:text-[var(--text-primary)] [&_strong]:tabular-nums">
             {children}
           </div>
         </div>
@@ -473,10 +473,10 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
   }
 
   return (
-    <PageContent className="visao-geral-premium space-y-10 bg-[var(--bg-page)] pb-14 pt-2">
-      <header className="space-y-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0 space-y-2">
+    <PageContent className="visao-geral-premium bg-[var(--bg-page)] pb-14 pt-[var(--space-md)]">
+      <header className="space-y-[var(--space-lg)]">
+        <div className="flex flex-col gap-[var(--space-md)] lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0 space-y-[var(--space-xs)]">
             <h1 className="text-[2rem] font-semibold tracking-[-0.025em] text-[var(--text-primary)] md:text-[2.125rem] md:leading-tight">
               Visão Geral
             </h1>
@@ -488,7 +488,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
               Todas as unidades
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-[var(--space-xs)]">
             <Popover open={periodOpen} onOpenChange={setPeriodOpen}>
               <PopoverTrigger asChild>
                 <button
@@ -605,7 +605,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
       {/* Hero faturamento — largura total */}
       <section
         className={cn(
-          'rounded-3xl bg-[var(--bg-card)] p-6 sm:p-8',
+          'vg-card rounded-3xl bg-[var(--bg-card)]',
           'shadow-[var(--vg-card-shadow)]',
         )}
       >
@@ -616,12 +616,12 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
           </div>
         ) : atual ? (
           <>
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex flex-col gap-[var(--space-md)] lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0 flex-1">
                 <p className="vg-small font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
                   Faturamento total
                 </p>
-                <div className="mt-2 flex flex-wrap items-baseline gap-3">
+                <div className="mt-[var(--space-sm)] flex flex-wrap items-baseline gap-[var(--space-sm)]">
                   <span className="vg-display tabular-nums text-[var(--text-primary)]">
                     {formatCurrency(atual.faturamentoTotal)}
                   </span>
@@ -633,7 +633,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
                   Lucro líquido
                 </p>
                 <p className="vg-small mt-0.5 text-[var(--text-tertiary)]">Pagamentos confirmados</p>
-                <div className="mt-2 flex flex-wrap items-baseline justify-start gap-2 lg:justify-end">
+                <div className="mt-[var(--space-sm)] flex flex-wrap items-baseline justify-start gap-[var(--space-xs)] lg:justify-end">
                   <span className="vg-section tabular-nums text-[var(--text-primary)]">
                     {formatCurrency(atual.lucroLiquidoRecebido)}
                   </span>
@@ -654,7 +654,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
               </div>
             </div>
 
-            <div className="my-6 h-px w-full bg-stone-200/90 dark:bg-stone-600/60" />
+            <div className="my-[var(--space-lg)] h-px w-full bg-stone-200/90 dark:bg-stone-600/60" />
 
             <div className="h-[220px] w-full sm:h-[280px]">
               <ChartContainer config={chartConfig} className="h-full w-full aspect-auto">
@@ -715,9 +715,9 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
       </section>
 
       {/* Bicolumna: métricas + mix */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-[var(--space-lg)] lg:grid-cols-2">
         <div>
-          <h2 className="vg-section mb-3 text-[var(--text-primary)]">Métricas chave</h2>
+          <h2 className="vg-section mb-[var(--space-sm)] text-[var(--text-primary)]">Métricas chave</h2>
           <div className="overflow-hidden rounded-2xl shadow-[var(--vg-card-shadow)] ring-1 ring-stone-200/80 divide-y divide-stone-200/80 dark:ring-stone-600/60 dark:divide-stone-600/60">
             <MergedMetricRow
               icon={<Ticket />}
@@ -756,14 +756,14 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
         </div>
 
         <div>
-          <h2 className="vg-section mb-3 text-[var(--text-primary)]">Mix de serviços</h2>
+          <h2 className="vg-section mb-[var(--space-sm)] text-[var(--text-primary)]">Mix de serviços</h2>
           <div
             className={cn(
-              'rounded-2xl bg-[var(--bg-card)] p-5 shadow-[var(--vg-card-shadow)] ring-1 ring-stone-200/80 dark:ring-stone-600/60',
+              'vg-card rounded-2xl bg-[var(--bg-card)] shadow-[var(--vg-card-shadow)] ring-1 ring-stone-200/80 dark:ring-stone-600/60',
             )}
           >
             <MixDonut mix={mix} />
-            <div className="mt-4 space-y-4">
+            <div className="mt-[var(--space-md)] space-y-[var(--space-md)]">
               {mix.map((m) => (
                 <div key={m.id} className="grid grid-cols-[2.5rem_1fr_auto] items-center gap-x-3 gap-y-1">
                   <span className="vg-body font-semibold tabular-nums text-[var(--text-primary)]">
@@ -792,10 +792,10 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
 
       {/* Top barbeiros */}
       <section>
-        <div className="mb-4 flex items-end justify-between gap-4 border-b border-stone-200/80 pb-3 dark:border-stone-600/60">
+        <div className="mb-[var(--space-md)] flex items-end justify-between gap-[var(--space-md)] border-b border-stone-200/80 pb-[var(--space-sm)] dark:border-stone-600/60">
           <h2 className="vg-section text-[var(--text-primary)]">Top barbeiros</h2>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-[var(--space-sm)] overflow-x-auto pb-[var(--space-xs)] pt-[var(--space-xs)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {loading && ranking.length === 0 ? (
             Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-48 w-[140px] shrink-0 rounded-2xl" />
@@ -816,7 +816,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
                 <div
                   key={r.barbeiroId}
                   className={cn(
-                    'flex w-[148px] shrink-0 flex-col items-center rounded-2xl bg-[var(--bg-card)] px-3 py-4 text-center',
+                    'flex w-[148px] shrink-0 flex-col items-center rounded-2xl bg-[var(--bg-card)] px-[var(--space-sm)] py-[var(--space-md)] text-center',
                     'shadow-[var(--vg-card-shadow)] ring-1 ring-stone-200/70 transition-all duration-200 dark:ring-stone-600/50',
                     'hover:-translate-y-0.5 hover:shadow-md hover:ring-stone-300/90 dark:hover:ring-stone-500/70',
                   )}
@@ -824,14 +824,14 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
                   <Avatar className="size-12 border border-border/50">
                     <AvatarFallback className="vg-small font-medium">{iniciais || '?'}</AvatarFallback>
                   </Avatar>
-                  <p className="vg-body mt-3 line-clamp-2 min-h-[2.5rem] font-medium text-[var(--text-primary)]">
+                  <p className="vg-body mt-[var(--space-sm)] line-clamp-2 min-h-[2.5rem] font-medium text-[var(--text-primary)]">
                     {r.nome}
                   </p>
-                  <p className="vg-section mt-2 tabular-nums text-[var(--text-primary)]">
+                  <p className="vg-section mt-[var(--space-sm)] tabular-nums text-[var(--text-primary)]">
                     {formatCurrency(r.faturamento)}
                   </p>
                   <DeltaBadge pct={r.pctVsAnterior} comparar={comparar} />
-                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-elevated)]">
+                  <div className="mt-[var(--space-sm)] h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-elevated)]">
                     <div
                       className="h-full rounded-full bg-[var(--brand-primary)] transition-all"
                       style={{ width: `${barW}%` }}
@@ -842,7 +842,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
             })
           )}
         </div>
-        <div className="mt-3">
+        <div className="mt-[var(--space-sm)]">
           <Link
             href={`${base}/equipe`}
             className="vg-body font-medium text-[var(--brand-primary)] hover:underline"
@@ -853,11 +853,11 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
       </section>
 
       {/* Análises integradas — texto corrido, tom consultivo */}
-      <section className="space-y-4">
-        <h2 className="vg-section border-b border-stone-200/80 pb-3 text-[var(--text-primary)] dark:border-stone-600/60">
+      <section className="space-y-[var(--space-md)]">
+        <h2 className="vg-section border-b border-stone-200/80 pb-[var(--space-sm)] text-[var(--text-primary)] dark:border-stone-600/60">
           Análises do período
         </h2>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-[var(--space-md)]">
           <AnaliseCard
             icon={TrendingUp}
             iconWrapperClass="bg-[var(--accent-faturamento)]/15 text-[var(--accent-faturamento)]"
