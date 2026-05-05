@@ -6,5 +6,5 @@ type TenantRelatoriosPageProps = {
 
 export default async function TenantRelatoriosPage({ params }: TenantRelatoriosPageProps) {
   const { slug } = await params
-  redirect(`/${slug}/relatorios/relatorio-geral`)
+  redirect(`/${slug}/relatorios/visao-geral`)
 }

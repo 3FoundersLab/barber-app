@@ -264,24 +264,6 @@ export interface ListState<T> {
   isEmpty: boolean
 }
 
-export type {
-  AlertaInteligente,
-  AlertaInteligenteTipo,
-  DadoGrafico,
-  FiltrosRelatorio,
-  KPI,
-  KPICor,
-  KPIFormato,
-  KPITendencia,
-  Periodo,
-  RankingBarbeiro,
-  RelatorioCompleto,
-  SegmentacaoCliente,
-  SegmentoClienteRelatorio,
-} from './relatorios'
-
-export { PERIODO_PARA_PRESET_UI } from './relatorios'
-
 export type { EstoqueNivel, EstoqueProduto, EstoqueStatusFiltro } from './estoque-produto'
 
 export type {
