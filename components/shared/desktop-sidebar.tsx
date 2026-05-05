@@ -185,8 +185,18 @@ export function DesktopSidebar({
             <DropdownMenuContent side="right" align="start" className="min-w-[11rem]">
               {item.children.map((child) => {
                 const active = pathActive(pathname, child.href)
+                const brand = Boolean(child.relatoriosBrandActive)
                 return (
-                  <DropdownMenuItem key={child.href} asChild className={cn(active && 'bg-accent')}>
+                  <DropdownMenuItem
+                    key={child.href}
+                    asChild
+                    className={cn(
+                      active &&
+                        (brand
+                          ? 'bg-[var(--relatorios-visao-ativo)] text-[var(--relatorios-visao-ativo-foreground)] focus:bg-[var(--relatorios-visao-ativo)]'
+                          : 'bg-accent'),
+                    )}
+                  >
                     <Link href={child.href} className="cursor-pointer">
                       {child.label}
                     </Link>
@@ -224,19 +234,22 @@ export function DesktopSidebar({
           <CollapsibleContent className="space-y-px pl-1.5 md:space-y-0.5 md:pl-2">
             {item.children.map((child) => {
               const active = pathActive(pathname, child.href)
+              const brand = Boolean(child.relatoriosBrandActive)
               return (
                 <Link
                   key={child.href}
                   href={child.href}
                   className={cn(
                     'block truncate rounded-md py-1.5 pl-6 pr-2 text-sm transition-all duration-200 md:py-2 md:pl-7 md:pr-3',
-                    active
-                      ? isSuper
-                        ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
-                        : 'bg-primary text-primary-foreground'
-                      : isSuper
-                        ? 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    active && brand
+                      ? 'bg-[var(--relatorios-visao-ativo)] text-[var(--relatorios-visao-ativo-foreground)] shadow-sm'
+                      : active
+                        ? isSuper
+                          ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                          : 'bg-primary text-primary-foreground'
+                        : isSuper
+                          ? 'text-muted-foreground hover:bg-zinc-100/85 hover:text-foreground dark:hover:bg-white/[0.06]'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                   )}
                 >
                   {child.label}

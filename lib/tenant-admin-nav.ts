@@ -149,7 +149,11 @@ export function tenantAdminNavEntriesFull(base: string): NavEntry[] {
           label: 'Relatórios',
           icon: link.icon,
           children: [
-            { label: 'Visão Geral', href: path(base, 'relatorios/visao-geral') },
+            {
+              label: 'Visão Geral',
+              href: path(base, 'relatorios/visao-geral'),
+              relatoriosBrandActive: true,
+            },
             { label: 'Operacional', href: path(base, 'relatorios/operacao') },
             { label: 'Tendências', href: path(base, 'relatorios/tendencias') },
           ],

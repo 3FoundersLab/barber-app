@@ -18,6 +18,7 @@ import {
   Scissors,
   Ticket,
   TrendingUp,
+  UserPlus,
   UserRound,
   Users,
   UserX,
@@ -133,10 +134,16 @@ function MergedMetricRow(props: {
   delta: number | null
   invertDelta?: boolean
   loading: boolean
+  animDelayMs?: number
 }) {
-  const { icon, iconClass, label, value, delta, invertDelta, loading } = props
+  const { icon, iconClass, label, value, delta, invertDelta, loading, animDelayMs = 0 } = props
   return (
-    <div className="flex gap-[var(--space-md)] bg-[var(--bg-card)] px-[var(--space-md)] py-[var(--space-sm)] first:rounded-t-2xl last:rounded-b-2xl">
+    <div
+      className={cn(
+        'vg-card vg-enter flex gap-[var(--space-md)] rounded-2xl bg-[var(--bg-card)] shadow-premium hover-lift',
+      )}
+      style={animDelayMs ? { animationDelay: `${animDelayMs}ms` } : undefined}
+    >
       <div
         className={cn(
           'flex size-11 shrink-0 items-center justify-center rounded-xl [&>svg]:size-5',
@@ -167,14 +174,13 @@ function AnaliseCard(props: {
   iconWrapperClass: string
   title: string
   children: React.ReactNode
+  animDelayMs?: number
 }) {
-  const { icon: Icon, iconWrapperClass, title, children } = props
+  const { icon: Icon, iconWrapperClass, title, children, animDelayMs = 0 } = props
   return (
     <article
-      className={cn(
-        'vg-card w-full rounded-2xl bg-[var(--bg-card)]',
-        'shadow-[var(--vg-card-shadow)]',
-      )}
+      className={cn('vg-card vg-enter w-full rounded-2xl bg-[var(--bg-card)] shadow-premium hover-lift')}
+      style={animDelayMs ? { animationDelay: `${animDelayMs}ms` } : undefined}
     >
       <div className="flex items-start gap-[var(--space-md)]">
         <div
@@ -379,6 +385,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
   const pctLucro = pctChange(atual?.lucroLiquidoRecebido ?? 0, anterior?.lucroLiquidoRecebido ?? 0)
   const pctTicket = pctChange(atual?.ticketMedio ?? 0, anterior?.ticketMedio ?? 0)
   const pctCli = pctChange(atual?.clientesUnicos ?? 0, anterior?.clientesUnicos ?? 0)
+  const pctNovos = pctChange(novosAtual, novosAnterior)
 
   const retornoAtual = useMemo(() => taxaRetornoClientes(detAtual), [detAtual])
   const retornoAnt = useMemo(() => taxaRetornoClientes(detAnterior), [detAnterior])
@@ -474,18 +481,37 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
 
   return (
     <PageContent className="visao-geral-premium bg-[var(--bg-page)] pb-14 pt-[var(--space-md)]">
-      <header className="space-y-[var(--space-lg)]">
-        <div className="flex flex-col gap-[var(--space-md)] lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0 space-y-[var(--space-xs)]">
-            <h1 className="text-[2rem] font-semibold tracking-[-0.025em] text-[var(--text-primary)] md:text-[2.125rem] md:leading-tight">
+      <header className="vg-enter space-y-[var(--space-lg)]" style={{ animationDelay: '0ms' }}>
+        <nav aria-label="Hierarquia da página" className="vg-small">
+          <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[var(--text-tertiary)]">
+            <li>
+              <Link
+                href={`${base}/relatorios`}
+                className="transition-colors hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+              >
+                Relatórios
+              </Link>
+            </li>
+            <li aria-hidden className="select-none opacity-50">
+              <ChevronRight className="size-3.5" />
+            </li>
+            <li className="font-medium text-[var(--text-primary)]" aria-current="page">
               Visão Geral
-            </h1>
+            </li>
+          </ol>
+        </nav>
+        <div className="flex flex-col gap-[var(--space-md)] lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0 space-y-[var(--space-sm)]">
+            <h1 className="vg-display text-[var(--text-primary)]">Visão geral</h1>
             <p className="vg-body max-w-2xl text-[var(--text-secondary)]">
-              {periodLabel}
-              <span className="mx-1.5 text-border">·</span>
-              {barberLabel}
-              <span className="mx-1.5 text-border">·</span>
-              Todas as unidades
+              Leitura integrada de faturamento, mix e ritmo da equipe — ajuste o recorte abaixo.
+            </p>
+            <p className="vg-small flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[var(--text-tertiary)]">
+              <span>{periodLabel}</span>
+              <ChevronRight className="size-3 shrink-0 opacity-50" aria-hidden />
+              <span>{barberLabel}</span>
+              <ChevronRight className="size-3 shrink-0 opacity-50" aria-hidden />
+              <span>Todas as unidades</span>
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-[var(--space-xs)]">
@@ -494,7 +520,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
                 <button
                   type="button"
                   className={cn(
-                    'group vg-body inline-flex items-center gap-1 rounded-full border border-transparent bg-[var(--bg-elevated)] px-3 py-1.5 font-medium text-[var(--text-primary)] shadow-sm transition-colors',
+                    'group vg-body inline-flex items-center gap-1 rounded-full bg-[var(--bg-elevated)] px-3 py-1.5 font-medium text-[var(--text-primary)] shadow-premium transition-colors',
                     'hover:brightness-[0.98] dark:hover:brightness-110',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   )}
@@ -532,7 +558,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
                 <button
                   type="button"
                   className={cn(
-                    'group vg-body inline-flex items-center gap-1 rounded-full border border-transparent bg-[var(--bg-elevated)] px-3 py-1.5 font-medium text-[var(--text-primary)] shadow-sm transition-colors',
+                    'group vg-body inline-flex items-center gap-1 rounded-full bg-[var(--bg-elevated)] px-3 py-1.5 font-medium text-[var(--text-primary)] shadow-premium transition-colors',
                     'hover:brightness-[0.98] dark:hover:brightness-110',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   )}
@@ -580,7 +606,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
             </Popover>
 
             <span
-              className="vg-body inline-flex items-center gap-1 rounded-full bg-[var(--bg-elevated)] px-3 py-1.5 text-[var(--text-secondary)]"
+              className="vg-body inline-flex items-center gap-1 rounded-full bg-[var(--bg-elevated)] px-3 py-1.5 text-[var(--text-secondary)] shadow-premium"
               title={unidadeNome ? `Unidade: ${unidadeNome}` : undefined}
             >
               <Building2 className="size-3.5 shrink-0 opacity-70" aria-hidden />
@@ -604,10 +630,8 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
 
       {/* Hero faturamento — largura total */}
       <section
-        className={cn(
-          'vg-card rounded-3xl bg-[var(--bg-card)]',
-          'shadow-[var(--vg-card-shadow)]',
-        )}
+        className={cn('vg-card vg-enter rounded-3xl bg-[var(--bg-card)] shadow-premium')}
+        style={{ animationDelay: '60ms' }}
       >
         {loading && !atual ? (
           <div className="space-y-4">
@@ -654,7 +678,9 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
               </div>
             </div>
 
-            <div className="my-[var(--space-lg)] h-px w-full bg-stone-200/90 dark:bg-stone-600/60" />
+            <div className="my-[var(--space-lg)] w-full">
+              <hr className="divider" />
+            </div>
 
             <div className="h-[220px] w-full sm:h-[280px]">
               <ChartContainer config={chartConfig} className="h-full w-full aspect-auto">
@@ -714,11 +740,14 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
         ) : null}
       </section>
 
-      {/* Bicolumna: métricas + mix */}
-      <div className="grid gap-[var(--space-lg)] lg:grid-cols-2">
+      {/* Bicolumna: métricas + mix (tablet em 2 colunas) */}
+      <div className="grid gap-[var(--space-lg)] md:grid-cols-2">
         <div>
-          <h2 className="vg-section mb-[var(--space-sm)] text-[var(--text-primary)]">Métricas chave</h2>
-          <div className="overflow-hidden rounded-2xl shadow-[var(--vg-card-shadow)] ring-1 ring-stone-200/80 divide-y divide-stone-200/80 dark:ring-stone-600/60 dark:divide-stone-600/60">
+          <div className="mb-[var(--space-md)] space-y-[var(--space-sm)]">
+            <h2 className="vg-section text-[var(--text-primary)]">Métricas chave</h2>
+            <hr className="divider" />
+          </div>
+          <div className="flex flex-col gap-[var(--space-sm)]">
             <MergedMetricRow
               icon={<Ticket />}
               iconClass="bg-[var(--accent-ticket)]/15 text-[var(--accent-ticket)]"
@@ -726,6 +755,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
               value={atual ? formatCurrency(atual.ticketMedio) : '—'}
               delta={pctTicket}
               loading={loading && !atual}
+              animDelayMs={140}
             />
             <MergedMetricRow
               icon={<Users />}
@@ -734,6 +764,16 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
               value={atual ? String(atual.clientesUnicos) : '—'}
               delta={pctCli}
               loading={loading && !atual}
+              animDelayMs={195}
+            />
+            <MergedMetricRow
+              icon={<UserPlus />}
+              iconClass="bg-[var(--accent-novos)]/15 text-[var(--accent-novos)]"
+              label="Novos clientes"
+              value={atual ? String(novosAtual) : '—'}
+              delta={pctNovos}
+              loading={loading && !atual}
+              animDelayMs={250}
             />
             <MergedMetricRow
               icon={<RefreshCw />}
@@ -742,6 +782,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
               value={loading && !atual ? '—' : `${retornoAtual.toFixed(1).replace('.', ',')}%`}
               delta={pctRetorno}
               loading={loading && !atual}
+              animDelayMs={305}
             />
             <MergedMetricRow
               icon={<UserX />}
@@ -751,16 +792,19 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
               delta={pctNoShow}
               invertDelta
               loading={loading && !atual}
+              animDelayMs={360}
             />
           </div>
         </div>
 
         <div>
-          <h2 className="vg-section mb-[var(--space-sm)] text-[var(--text-primary)]">Mix de serviços</h2>
+          <div className="mb-[var(--space-md)] space-y-[var(--space-sm)]">
+            <h2 className="vg-section text-[var(--text-primary)]">Mix de serviços</h2>
+            <hr className="divider" />
+          </div>
           <div
-            className={cn(
-              'vg-card rounded-2xl bg-[var(--bg-card)] shadow-[var(--vg-card-shadow)] ring-1 ring-stone-200/80 dark:ring-stone-600/60',
-            )}
+            className={cn('vg-card vg-enter rounded-2xl bg-[var(--bg-card)] shadow-premium')}
+            style={{ animationDelay: '90ms' }}
           >
             <MixDonut mix={mix} />
             <div className="mt-[var(--space-md)] space-y-[var(--space-md)]">
@@ -792,18 +836,19 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
 
       {/* Top barbeiros */}
       <section>
-        <div className="mb-[var(--space-md)] flex items-end justify-between gap-[var(--space-md)] border-b border-stone-200/80 pb-[var(--space-sm)] dark:border-stone-600/60">
+        <div className="mb-[var(--space-md)] space-y-[var(--space-sm)]">
           <h2 className="vg-section text-[var(--text-primary)]">Top barbeiros</h2>
+          <hr className="divider" />
         </div>
-        <div className="flex gap-[var(--space-sm)] overflow-x-auto pb-[var(--space-xs)] pt-[var(--space-xs)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex flex-col gap-[var(--space-sm)] sm:flex-row sm:flex-wrap lg:gap-[var(--space-md)]">
           {loading && ranking.length === 0 ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-48 w-[140px] shrink-0 rounded-2xl" />
+              <Skeleton key={i} className="h-[5.5rem] min-w-0 flex-1 rounded-2xl sm:min-w-[280px]" />
             ))
           ) : ranking.length === 0 ? (
             <p className="vg-body py-8 text-muted-foreground">Nenhum faturamento por profissional neste período.</p>
           ) : (
-            ranking.map((r) => {
+            ranking.map((r, i) => {
               const iniciais = r.nome
                 .split(/\s+/)
                 .filter(Boolean)
@@ -816,26 +861,28 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
                 <div
                   key={r.barbeiroId}
                   className={cn(
-                    'flex w-[148px] shrink-0 flex-col items-center rounded-2xl bg-[var(--bg-card)] px-[var(--space-sm)] py-[var(--space-md)] text-center',
-                    'shadow-[var(--vg-card-shadow)] ring-1 ring-stone-200/70 transition-all duration-200 dark:ring-stone-600/50',
-                    'hover:-translate-y-0.5 hover:shadow-md hover:ring-stone-300/90 dark:hover:ring-stone-500/70',
+                    'vg-enter flex min-w-0 flex-1 flex-row items-center gap-[var(--space-md)] rounded-2xl bg-[var(--bg-card)] p-[var(--space-md)] sm:min-w-[280px] sm:max-w-[400px] sm:flex-none',
+                    'shadow-premium hover-lift',
                   )}
+                  style={{ animationDelay: `${200 + i * 45}ms` }}
                 >
-                  <Avatar className="size-12 border border-border/50">
-                    <AvatarFallback className="vg-small font-medium">{iniciais || '?'}</AvatarFallback>
+                  <Avatar className="size-14 shrink-0 border border-transparent shadow-premium">
+                    <AvatarFallback className="vg-small font-semibold">{iniciais || '?'}</AvatarFallback>
                   </Avatar>
-                  <p className="vg-body mt-[var(--space-sm)] line-clamp-2 min-h-[2.5rem] font-medium text-[var(--text-primary)]">
-                    {r.nome}
-                  </p>
-                  <p className="vg-section mt-[var(--space-sm)] tabular-nums text-[var(--text-primary)]">
-                    {formatCurrency(r.faturamento)}
-                  </p>
-                  <DeltaBadge pct={r.pctVsAnterior} comparar={comparar} />
-                  <div className="mt-[var(--space-sm)] h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-elevated)]">
-                    <div
-                      className="h-full rounded-full bg-[var(--brand-primary)] transition-all"
-                      style={{ width: `${barW}%` }}
-                    />
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="vg-body line-clamp-2 font-semibold text-[var(--text-primary)]">{r.nome}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="vg-section tabular-nums text-[var(--text-primary)]">
+                        {formatCurrency(r.faturamento)}
+                      </span>
+                      <DeltaBadge pct={r.pctVsAnterior} comparar={comparar} />
+                    </div>
+                    <div className="mt-[var(--space-sm)] h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-elevated)]">
+                      <div
+                        className="h-full rounded-full bg-[var(--brand-primary)] transition-all"
+                        style={{ width: `${barW}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
               )
@@ -854,14 +901,16 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
 
       {/* Análises integradas — texto corrido, tom consultivo */}
       <section className="space-y-[var(--space-md)]">
-        <h2 className="vg-section border-b border-stone-200/80 pb-[var(--space-sm)] text-[var(--text-primary)] dark:border-stone-600/60">
-          Análises do período
-        </h2>
+        <div className="space-y-[var(--space-sm)]">
+          <h2 className="vg-section text-[var(--text-primary)]">Análises do período</h2>
+          <hr className="divider" />
+        </div>
         <div className="flex flex-col gap-[var(--space-md)]">
           <AnaliseCard
             icon={TrendingUp}
             iconWrapperClass="bg-[var(--accent-faturamento)]/15 text-[var(--accent-faturamento)]"
             title="Crescimento"
+            animDelayMs={260}
           >
             <p>
               {atual ? (
@@ -922,6 +971,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
             icon={Scissors}
             iconWrapperClass="bg-[var(--accent-ticket)]/15 text-[var(--accent-ticket)]"
             title="Serviço em destaque"
+            animDelayMs={320}
           >
             <p>
               {topMix && atual && atual.faturamentoTotal > 0 ? (
@@ -946,6 +996,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
             icon={CalendarRange}
             iconWrapperClass="bg-[var(--accent-retorno)]/15 text-[var(--accent-retorno)]"
             title="Padrão sazonal"
+            animDelayMs={380}
           >
             <p>
               {melhorDia && melhorDia.mediaDiaria > 0 ? (

@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils'
 export interface TabSubItem {
   label: string
   href: string
+  /** Destaque laranja quando ativo — ex.: Visão Geral em Relatórios. */
+  relatoriosBrandActive?: boolean
 }
 
 export interface TabItemLeaf {
@@ -155,8 +157,18 @@ export function BottomTabs({
                   {tab.children.map((child) => {
                     const fullHref = basePath + child.href
                     const active = childPathActive(pathname, basePath, child.href)
+                    const brand = Boolean(child.relatoriosBrandActive)
                     return (
-                      <DropdownMenuItem key={child.href} asChild className={cn(active && 'bg-accent')}>
+                      <DropdownMenuItem
+                        key={child.href}
+                        asChild
+                        className={cn(
+                          active &&
+                            (brand
+                              ? 'bg-[var(--relatorios-visao-ativo)] text-[var(--relatorios-visao-ativo-foreground)] focus:bg-[var(--relatorios-visao-ativo)]'
+                              : 'bg-accent'),
+                        )}
+                      >
                         <Link href={fullHref} className="cursor-pointer">
                           {child.label}
                         </Link>
