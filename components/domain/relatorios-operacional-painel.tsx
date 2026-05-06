@@ -11,7 +11,6 @@ import {
   CalendarRange,
   Check,
   ChevronRight,
-  Download,
   Lock,
   Minus,
   LineChart,
@@ -24,7 +23,7 @@ import {
 import { addDays, format, startOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PageContent } from '@/components/shared/page-container'
-import { Button } from '@/components/ui/button'
+import { ExportarPDFButton } from '@/components/ui/exportar-pdf-button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -377,26 +376,6 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
   const deltaMinVsMeta =
     atual?.tempoMedioAtendMin != null ? Math.round(atual.tempoMedioAtendMin - META_TEMPO_MEDIO_MIN) : null
 
-  const exportCsv = () => {
-    if (!atual) return
-    const lines = [
-      'metrica;valor',
-      `taxa_ocupacao_pct;${atual.taxaOcupacaoPct?.toFixed(2) ?? ''}`,
-      `tempo_medio_min;${atual.tempoMedioAtendMin?.toFixed(1) ?? ''}`,
-      `tempo_ocioso_pct;${atual.tempoOciosoPct?.toFixed(2) ?? ''}`,
-      `produtividade_hora;${atual.produtividadeHora?.toFixed(2) ?? ''}`,
-      `taxa_cancelamento_pct;${atual.taxaCancelamentoPct.toFixed(2)}`,
-      `taxa_noshow_pct;${atual.taxaNoShowPct.toFixed(2)}`,
-      `servicos_realizados;${atual.servicosRealizados}`,
-    ].join('\n')
-    const blob = new Blob([`\ufeff${lines}`], { type: 'text/csv;charset=utf-8' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `operacional-${format(new Date(), 'yyyy-MM-dd-HHmm')}.csv`
-    a.click()
-    URL.revokeObjectURL(a.href)
-  }
-
   const analiseOcupacao =
     atual?.taxaOcupacaoPct != null
       ? atual.taxaOcupacaoPct >= 70
@@ -446,6 +425,7 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
 
   return (
     <PageContent className="visao-geral-premium relatorio-operacional-premium bg-[var(--bg-page)] pb-14 pt-[var(--space-md)]">
+      <div id="relatorio-operacional-export" className="min-w-0">
       {/* Header */}
       <header className="vg-enter space-y-[var(--space-lg)]" style={{ animationDelay: '0ms' }}>
         <nav aria-label="Hierarquia da página" className="vg-small">
@@ -572,17 +552,13 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
               {unitLabel}
             </span>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="rounded-full text-muted-foreground hover:text-foreground"
+            <ExportarPDFButton
+              conteudoId="relatorio-operacional-export"
+              nomeArquivo={`operacional-${format(new Date(), 'yyyy-MM-dd-HHmm')}`}
+              titulo="Exportar PDF"
               disabled={!atual || loading}
-              onClick={exportCsv}
-              aria-label="Exportar CSV"
-            >
-              <Download className="size-4" />
-            </Button>
+              className="rounded-full px-4"
+            />
           </div>
         </div>
       </header>
@@ -1208,6 +1184,7 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
           estimada pelos horários da equipe ou expediente da unidade.
         </p>
       </footer>
+      </div>
     </PageContent>
   )
 }

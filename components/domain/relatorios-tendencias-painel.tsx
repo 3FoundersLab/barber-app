@@ -22,7 +22,6 @@ import {
   CalendarRange,
   Check,
   ChevronRight,
-  Download,
   Lock,
   Minus,
   PiggyBank,
@@ -33,7 +32,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { PageContent } from '@/components/shared/page-container'
-import { Button } from '@/components/ui/button'
+import { ExportarPDFButton } from '@/components/ui/exportar-pdf-button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/constants'
@@ -330,6 +329,10 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
 
   return (
     <PageContent className="visao-geral-premium relatorio-tendencias-premium bg-[var(--bg-page)] pb-14 pt-[var(--space-md)]">
+      <div
+        id="relatorio-tendencias-export"
+        className="flex min-w-0 flex-col gap-[var(--space-xl)]"
+      >
       <header className="vg-enter space-y-[var(--space-lg)]" style={{ animationDelay: '0ms' }}>
         <nav aria-label="Hierarquia da página" className="vg-small">
           <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[var(--text-tertiary)]">
@@ -349,7 +352,7 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
             </li>
           </ol>
         </nav>
-        <div className="flex flex-col gap-[var(--space-md)] xl:flex-row xl:items-end xl:justify-between">
+        <div className="flex flex-col gap-[var(--space-md)] lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 space-y-[var(--space-sm)]">
             <h1 className="vg-display text-[var(--text-primary)]">Tendências</h1>
             <p className="vg-body max-w-2xl text-[var(--text-secondary)]">
@@ -357,13 +360,19 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
               clientes.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-[var(--space-xs)]">
+          <div className="flex w-full min-w-0 items-center gap-2 lg:w-auto lg:flex-1 lg:justify-end">
+            <div
+              className={cn(
+                'flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-x-auto py-0.5',
+                '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+              )}
+            >
             <Popover open={periodOpen} onOpenChange={setPeriodOpen}>
               <PopoverTrigger asChild>
                 <button
                   type="button"
                   className={cn(
-                    'group vg-body inline-flex items-center gap-1 rounded-full bg-[var(--bg-elevated)] px-3 py-1.5 font-medium text-[var(--text-primary)] shadow-premium transition-colors',
+                    'group vg-body inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--bg-elevated)] px-3 py-1.5 font-medium text-[var(--text-primary)] shadow-premium transition-colors',
                     'hover:brightness-[0.98] dark:hover:brightness-110',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   )}
@@ -401,7 +410,7 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
                 <button
                   type="button"
                   className={cn(
-                    'group vg-body inline-flex items-center gap-1 rounded-full bg-[var(--bg-elevated)] px-3 py-1.5 font-medium text-[var(--text-primary)] shadow-premium transition-colors',
+                    'group vg-body inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--bg-elevated)] px-3 py-1.5 font-medium text-[var(--text-primary)] shadow-premium transition-colors',
                     'hover:brightness-[0.98] dark:hover:brightness-110',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   )}
@@ -448,22 +457,18 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
               </PopoverContent>
             </Popover>
 
-            <span className="vg-body inline-flex items-center gap-1 rounded-full bg-[var(--bg-elevated)] px-3 py-1.5 text-[var(--text-secondary)] shadow-premium">
+            <span className="vg-body inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--bg-elevated)] px-3 py-1.5 text-[var(--text-secondary)] shadow-premium">
               <Building2 className="size-3.5 shrink-0 opacity-70" aria-hidden />
               Todas as unidades
             </span>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="rounded-full text-muted-foreground hover:text-foreground"
+            </div>
+            <ExportarPDFButton
+              conteudoId="relatorio-tendencias-export"
+              nomeArquivo={`tendencias-${format(new Date(), 'yyyy-MM-dd-HHmm')}`}
+              titulo="Exportar PDF"
               disabled={loading || rows.length === 0}
-              onClick={exportCsv}
-              aria-label="Exportar CSV"
-            >
-              <Download className="size-4" />
-            </Button>
+              className="shrink-0 rounded-full px-4"
+            />
           </div>
         </div>
       </header>
@@ -514,7 +519,7 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
       </section>
 
       {/* Bicolumn */}
-      <section className="grid gap-[var(--space-lg)] lg:grid-cols-2">
+      <section className="grid gap-[var(--space-xl)] lg:grid-cols-2 lg:items-start">
         <div className="vg-card vg-enter rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
           <p className="vg-section text-[var(--text-primary)]">Faturamento comparativo</p>
           <p className="vg-small mt-1 text-[var(--text-secondary)]">
@@ -722,9 +727,9 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
       </section>
 
       {/* Gráficos principais — tricolumna */}
-      <section className="vg-enter space-y-[var(--space-md)]" style={{ animationDelay: '90ms' }}>
-        <div className="grid gap-[var(--space-lg)] xl:grid-cols-3">
-          <div className="flex flex-col rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
+      <section className="vg-enter space-y-[var(--space-lg)]" style={{ animationDelay: '90ms' }}>
+        <div className="grid gap-x-[var(--space-xl)] gap-y-[var(--space-xl)] xl:grid-cols-3 xl:items-stretch">
+          <div className="flex h-full min-h-0 flex-col rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-stone-500 dark:text-stone-400">
                 <span className="size-2 rounded-full bg-[var(--faturamento)]" aria-hidden />
@@ -790,7 +795,7 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
                 </ComposedChart>
               </ChartContainer>
             )}
-            <p className="vg-body mt-3 leading-relaxed text-stone-500 dark:text-stone-400">
+            <p className="vg-body mt-auto pt-3 leading-relaxed text-stone-500 dark:text-stone-400">
               O faturamento mensal acompanha o ritmo de atendimentos concluídos; o ticket médio, quando sobe junto,
               indica retenção de valor por cadeira. No período exibido, o último ponto soma{' '}
               <span className="font-medium tabular-nums text-stone-600 dark:text-stone-300">
@@ -804,7 +809,7 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
             </p>
           </div>
 
-          <div className="flex flex-col rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
+          <div className="flex h-full min-h-0 flex-col rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-stone-500 dark:text-stone-400">
                 <span className="size-2 rounded-full bg-[var(--faturamento)]" aria-hidden />
@@ -858,14 +863,14 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
                 </BarChart>
               </ChartContainer>
             )}
-            <p className="vg-body mt-3 leading-relaxed text-stone-500 dark:text-stone-400">
+            <p className="vg-body mt-auto pt-3 leading-relaxed text-stone-500 dark:text-stone-400">
               Cada par de barras contrasta o faturamento do mês com o mesmo mês do ano anterior. O recorte ajuda a
               separar sazonalidade de mudança estrutural: quando o azul permanece acima do cinza em sequência, o
               crescimento tende a ser consistente ano contra ano.
             </p>
           </div>
 
-          <div className="flex flex-col rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
+          <div className="flex h-full min-h-0 flex-col rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-stone-500 dark:text-stone-400">
                 <span className="size-2 rounded-full bg-[var(--faturamento)]" aria-hidden />
@@ -922,7 +927,7 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
                 </LineChart>
               </ChartContainer>
             )}
-            <p className="vg-body mt-3 leading-relaxed text-stone-500 dark:text-stone-400">
+            <p className="vg-body mt-auto pt-3 leading-relaxed text-stone-500 dark:text-stone-400">
               A linha pontilhada extrapola o ritmo recente (últimos meses e variação mês a mês) para uma janela de ~30
               dias. Valor indicativo:{' '}
               <span className="font-medium tabular-nums text-stone-600 dark:text-stone-300">
@@ -937,12 +942,12 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
       </section>
 
       {/* Análises e previsões — wide */}
-      <section className="vg-enter space-y-[var(--space-md)]" style={{ animationDelay: '120ms' }}>
+      <section className="vg-enter space-y-[var(--space-lg)]" style={{ animationDelay: '120ms' }}>
         <div>
           <p className="vg-section text-[var(--text-primary)]">Análises e previsões</p>
           <div className="mt-2 h-px w-full max-w-xl bg-gradient-to-r from-[var(--text-tertiary)]/35 to-transparent" />
         </div>
-        <div className="flex flex-col gap-[var(--space-md)]">
+        <div className="flex flex-col gap-[var(--space-xl)]">
           <article className="rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
             <div className="flex gap-[var(--space-md)]">
               <span
@@ -1120,6 +1125,7 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
           </article>
         </div>
       </section>
+      </div>
     </PageContent>
   )
 }

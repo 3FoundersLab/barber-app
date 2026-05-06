@@ -11,7 +11,6 @@ import {
   CalendarRange,
   Check,
   ChevronRight,
-  Download,
   Lock,
   Minus,
   RefreshCw,
@@ -26,7 +25,7 @@ import {
 import { addDays, format, startOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PageContent } from '@/components/shared/page-container'
-import { Button } from '@/components/ui/button'
+import { ExportarPDFButton } from '@/components/ui/exportar-pdf-button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -432,20 +431,6 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
     : 'Todos os barbeiros'
   const unitLabel = unidadeNome ?? 'Unidade'
 
-  const exportCsv = () => {
-    if (!atual) return
-    const header = 'data;faturamento;atendimentos\n'
-    const body = atual.serieDiaria
-      .map((d) => `${d.data};${d.faturamento.toFixed(2)};${d.atendimentos}`)
-      .join('\n')
-    const blob = new Blob([`\ufeff${header}${body}`], { type: 'text/csv;charset=utf-8' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `visao-geral-${format(new Date(), 'yyyy-MM-dd-HHmm')}.csv`
-    a.click()
-    URL.revokeObjectURL(a.href)
-  }
-
   const maxRankFat = ranking[0]?.faturamento ?? 1
 
   if (error) {
@@ -481,6 +466,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
 
   return (
     <PageContent className="visao-geral-premium bg-[var(--bg-page)] pb-14 pt-[var(--space-md)]">
+      <div id="relatorio-visao-geral-export" className="min-w-0">
       <header className="vg-enter space-y-[var(--space-lg)]" style={{ animationDelay: '0ms' }}>
         <nav aria-label="Hierarquia da página" className="vg-small">
           <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[var(--text-tertiary)]">
@@ -613,17 +599,13 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
               {unitLabel}
             </span>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="rounded-full text-muted-foreground hover:text-foreground"
+            <ExportarPDFButton
+              conteudoId="relatorio-visao-geral-export"
+              nomeArquivo={`visao-geral-${format(new Date(), 'yyyy-MM-dd-HHmm')}`}
+              titulo="Exportar PDF"
               disabled={!atual || loading}
-              onClick={exportCsv}
-              aria-label="Exportar CSV"
-            >
-              <Download className="size-4" />
-            </Button>
+              className="rounded-full px-4"
+            />
           </div>
         </div>
       </header>
@@ -1025,6 +1007,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
           </AnaliseCard>
         </div>
       </section>
+      </div>
     </PageContent>
   )
 }
