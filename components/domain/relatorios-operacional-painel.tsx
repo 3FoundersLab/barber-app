@@ -12,7 +12,6 @@ import {
   Check,
   ChevronRight,
   Download,
-  Filter,
   Lock,
   Minus,
   LineChart,
@@ -172,7 +171,6 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
   const [barbeiroId, setBarbeiroId] = useState<string | null>(null)
   const [periodOpen, setPeriodOpen] = useState(false)
   const [barberOpen, setBarberOpen] = useState(false)
-  const [filterOpen, setFilterOpen] = useState(false)
 
   const [unidadeNome, setUnidadeNome] = useState<string | null>(null)
   const [operacaoLiberada, setOperacaoLiberada] = useState(true)
@@ -585,27 +583,6 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
             >
               <Download className="size-4" />
             </Button>
-
-            <Popover open={filterOpen} onOpenChange={setFilterOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full border-0 bg-[var(--bg-elevated)] shadow-premium"
-                >
-                  <Filter className="size-4" />
-                  Filtros
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72 vg-body" align="end">
-                <p className="font-medium text-[var(--text-primary)]">Filtros</p>
-                <p className="mt-2 text-[var(--text-secondary)]">
-                  Período, profissional e unidade já estão acima. Filtros avançados (serviço, canal) podem ser
-                  adicionados depois.
-                </p>
-              </PopoverContent>
-            </Popover>
           </div>
         </div>
       </header>
