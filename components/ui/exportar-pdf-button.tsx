@@ -50,10 +50,17 @@ export function ExportarPDFButton({
       await exportHtmlElementToPdf(el, nomeArquivo, { config, tipoRelatorio })
       setEstado('pronto')
       window.setTimeout(() => setEstado('idle'), 2800)
-    } catch {
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : String(err)
+      const hint =
+        /zoom|scale|devicePixelRatio/i.test(raw) || /security|taint|canvas/i.test(raw)
+          ? ' Defina o zoom do navegador em 100% e tente de novo.'
+          : ''
+      const base =
+        raw && raw.length < 180 ? raw : 'Não foi possível gerar o ficheiro. Tente de novo em instantes.'
       toast({
         title: 'Erro ao gerar PDF',
-        description: 'Tente novamente ou reduza o zoom da página.',
+        description: `${base}${hint}`.trim(),
         variant: 'destructive',
       })
       setEstado('idle')

@@ -109,6 +109,171 @@ function drawFooter(pdf: jsPDF, pageNum: number, totalPages: number, dataRef: Da
   pdf.text(line2, pageW / 2, baseY + 5, { align: 'center' })
 }
 
+async function waitForPaint(): Promise<void> {
+  await new Promise<void>((r) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => r()))
+  })
+}
+
+/** html2canvas não interpreta `lab()`, `oklch()`, etc. — normaliza para algo que o canvas aceite. */
+function resolveModernColorToRgb(value: string): string {
+  const v = value.trim()
+  if (!v || v === 'none' || v === 'transparent') return v
+  if (!/lab\(|oklch\(|lch\(|hwb\(|color\(/i.test(v)) return v
+  try {
+    const ctx = document.createElement('canvas').getContext('2d')
+    if (!ctx) return '#78716c'
+    ctx.fillStyle = '#000'
+    ctx.fillStyle = v
+    const out = ctx.fillStyle
+    return typeof out === 'string' && !/lab\(|oklch\(|lch\(/i.test(out) ? out : '#78716c'
+  } catch {
+    return '#78716c'
+  }
+}
+
+function sanitizePropertyValue(prop: string, value: string): string {
+  let v = value
+  if (/lab\(|oklch\(|lch\(/i.test(v)) {
+    if (prop === 'box-shadow' || prop === 'text-shadow') {
+      return '0 2px 8px rgba(28, 25, 23, 0.1)'
+    }
+    v = resolveModernColorToRgb(v)
+  }
+  return v
+}
+
+/**
+ * Remove CSS global do clone (Tailwind usa oklch/lab) e recria o visual via estilos computados
+ * já resolvidos pelo browser — evita o parser do html2canvas quebrar em `lab()`.
+ */
+function isolateExportSubtreeForCanvas(origRoot: HTMLElement, cloneRoot: HTMLElement): void {
+  const cloneDoc = cloneRoot.ownerDocument
+  if (!cloneDoc) return
+
+  cloneDoc.querySelectorAll('link[rel="stylesheet"]').forEach((n) => n.remove())
+  cloneDoc.querySelectorAll('style').forEach((n) => n.remove())
+
+  const html = cloneDoc.documentElement
+  const body = cloneDoc.body
+  html.style.setProperty('margin', '0', 'important')
+  html.style.setProperty('padding', '0', 'important')
+  html.style.setProperty('background', pdfPadrao.colors.background, 'important')
+  body.style.setProperty('margin', '0', 'important')
+  body.style.setProperty('padding', '0', 'important')
+  body.style.setProperty('background', pdfPadrao.colors.background, 'important')
+
+  function apply(orig: Element, clone: Element): void {
+    if (orig instanceof HTMLElement && clone instanceof HTMLElement) {
+      const cs = window.getComputedStyle(orig)
+      for (let i = 0; i < cs.length; i++) {
+        const key = cs.item(i)
+        let val = cs.getPropertyValue(key)
+        if (
+          (key === 'background' || key === 'background-image') &&
+          /lab\(|oklch\(|lch\(/i.test(val)
+        ) {
+          val = 'none'
+        } else {
+          val = sanitizePropertyValue(key, val)
+        }
+        try {
+          clone.style.setProperty(key, val, 'important')
+        } catch {
+          /* propriedades só-leitura / inválidas como inline */
+        }
+      }
+      clone.style.setProperty('filter', 'none', 'important')
+      clone.style.setProperty('backdrop-filter', 'none', 'important')
+    } else if (orig instanceof SVGElement && clone instanceof SVGElement) {
+      const cs = window.getComputedStyle(orig)
+      const fill = cs.fill
+      const stroke = cs.stroke
+      if (fill && fill !== 'none') {
+        clone.setAttribute('fill', sanitizePropertyValue('fill', fill))
+      }
+      if (stroke && stroke !== 'none') {
+        clone.setAttribute('stroke', sanitizePropertyValue('stroke', stroke))
+      }
+    }
+
+    const oc = orig.children
+    const cc = clone.children
+    for (let i = 0; i < oc.length; i++) {
+      apply(oc[i]!, cc[i]!)
+    }
+  }
+
+  apply(origRoot, cloneRoot)
+  cloneRoot.style.setProperty('overflow', 'visible', 'important')
+  cloneRoot.style.setProperty('height', 'auto', 'important')
+  cloneRoot.style.setProperty('max-height', 'none', 'important')
+}
+
+async function elementToCanvas(element: HTMLElement, bg: string): Promise<HTMLCanvasElement> {
+  const h = Math.max(
+    element.scrollHeight,
+    element.offsetHeight,
+    element.clientHeight,
+    Math.ceil(element.getBoundingClientRect().height),
+  )
+  const w = Math.max(
+    element.scrollWidth,
+    element.offsetWidth,
+    element.clientWidth,
+    Math.ceil(element.getBoundingClientRect().width),
+  )
+  if (w < 1 || h < 1) {
+    throw new Error('Área do relatório sem dimensão visível. Recarregue a página e tente de novo.')
+  }
+
+  const longSide = Math.max(w, h)
+  /** Evita exceder limites de canvas do browser; tenta escalas do melhor para o mais compatível. */
+  const scales =
+    longSide * 2 > 22_000
+      ? [1, 1.15]
+      : longSide * 2 > 14_000
+        ? [1.25, 1.5, 1]
+        : [2, 1.5, 1]
+
+  let lastErr: unknown
+  element.scrollIntoView({ block: 'start', inline: 'nearest' })
+  await waitForPaint()
+
+  for (const scale of scales) {
+    try {
+      const canvas = await html2canvas(element, {
+        scale,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: bg,
+        logging: false,
+        foreignObjectRendering: false,
+        imageTimeout: 20000,
+        removeContainer: true,
+        onclone: (clonedDoc) => {
+          const clonedRoot = clonedDoc.getElementById(element.id)
+          if (clonedRoot) {
+            isolateExportSubtreeForCanvas(element, clonedRoot)
+          }
+        },
+      })
+      if (canvas.width < 2 || canvas.height < 2) {
+        throw new Error('Captura vazia')
+      }
+      try {
+        canvas.toDataURL('image/jpeg', 0.5)
+      } catch {
+        throw new Error('Não foi possível serializar a captura (conteúdo bloqueado).')
+      }
+      return canvas
+    } catch (e) {
+      lastErr = e
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('Falha ao capturar o relatório para PDF.')
+}
+
 /**
  * Captura um elemento HTML e gera PDF A4 com capa institucional e rodapé paginado.
  * O corpo é renderizado como imagem (fatias) para relatórios longos.
@@ -122,20 +287,7 @@ export async function exportHtmlElementToPdf(
   const safeName = filename.toLowerCase().endsWith('.pdf') ? filename : `${filename}.pdf`
   const bg = pdfPadrao.colors.background
 
-  const rect = element.getBoundingClientRect()
-  const canvas = await html2canvas(element, {
-    scale: 2,
-    useCORS: true,
-    allowTaint: true,
-    backgroundColor: bg,
-    logging: false,
-    width: element.scrollWidth,
-    height: element.scrollHeight,
-    windowWidth: Math.max(element.scrollWidth, Math.ceil(rect.width)),
-    windowHeight: element.scrollHeight,
-    scrollX: 0,
-    scrollY: 0,
-  })
+  const canvas = await elementToCanvas(element, bg)
 
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
   const pageWidth = pdf.internal.pageSize.getWidth()
@@ -155,7 +307,7 @@ export async function exportHtmlElementToPdf(
   drawCover(pdf, config, tipoRelatorio)
   drawFooter(pdf, 1, totalPages, config.dataGeracao)
 
-  const jpegQ = 0.95
+  const jpegQ = 0.92
 
   if (scaledH <= maxH) {
     const img = canvas.toDataURL('image/jpeg', jpegQ)
@@ -170,6 +322,7 @@ export async function exportHtmlElementToPdf(
   let page = 0
   while (srcY < canvas.height) {
     const slicePx = Math.min(canvas.height - srcY, Math.ceil(maxH / scale))
+    if (slicePx <= 0) break
     const sliceCanvas = document.createElement('canvas')
     sliceCanvas.width = canvas.width
     sliceCanvas.height = slicePx
