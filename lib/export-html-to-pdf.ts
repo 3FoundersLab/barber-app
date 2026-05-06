@@ -156,14 +156,20 @@ function isolateExportSubtreeForCanvas(origRoot: HTMLElement, cloneRoot: HTMLEle
 
   const html = cloneDoc.documentElement
   const body = cloneDoc.body
-  html.style.setProperty('margin', '0', 'important')
-  html.style.setProperty('padding', '0', 'important')
-  html.style.setProperty('background', pdfPadrao.colors.background, 'important')
-  body.style.setProperty('margin', '0', 'important')
-  body.style.setProperty('padding', '0', 'important')
-  body.style.setProperty('background', pdfPadrao.colors.background, 'important')
+  if (html) {
+    html.style.setProperty('margin', '0', 'important')
+    html.style.setProperty('padding', '0', 'important')
+    html.style.setProperty('background', pdfPadrao.colors.background, 'important')
+  }
+  if (body) {
+    body.style.setProperty('margin', '0', 'important')
+    body.style.setProperty('padding', '0', 'important')
+    body.style.setProperty('background', pdfPadrao.colors.background, 'important')
+  }
 
-  function apply(orig: Element, clone: Element): void {
+  function apply(orig: Element | null | undefined, clone: Element | null | undefined): void {
+    if (!orig || !clone) return
+
     if (orig instanceof HTMLElement && clone instanceof HTMLElement) {
       const cs = window.getComputedStyle(orig)
       for (let i = 0; i < cs.length; i++) {
@@ -199,8 +205,12 @@ function isolateExportSubtreeForCanvas(origRoot: HTMLElement, cloneRoot: HTMLEle
 
     const oc = orig.children
     const cc = clone.children
-    for (let i = 0; i < oc.length; i++) {
-      apply(oc[i]!, cc[i]!)
+    /** O clone do html2canvas pode não espelhar todos os nós (ex.: comentários, nós omitidos). */
+    const n = Math.min(oc.length, cc.length)
+    for (let i = 0; i < n; i++) {
+      const oChild = oc.item(i)
+      const cChild = cc.item(i)
+      if (oChild && cChild) apply(oChild, cChild)
     }
   }
 
