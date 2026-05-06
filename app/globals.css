@@ -238,16 +238,24 @@
   }
 }
 
-/** Relatório Tendências — crescimento + churn (com `.visao-geral-premium`). */
+/** Relatório Tendências — gráficos + métricas (com `.visao-geral-premium`). */
 .visao-geral-premium.relatorio-tendencias-premium {
-  --font-display: 2.5rem;
+  --font-display: 3rem;
+  --font-section: 1.25rem;
+  --font-body: 0.9375rem;
+  --font-small: 0.8125rem;
   --crescimento: #22c55e;
+  --faturamento: #3b82f6;
+  --churn: #ef4444;
   --churn-metric: #ef4444;
+  --ticket: #8b5cf6;
+  --clientes: #f59e0b;
+  --bg-crescimento: #f0fdf4;
 }
 
 @media (max-width: 640px) {
   .visao-geral-premium.relatorio-tendencias-premium {
-    --font-display: 2.125rem;
+    --font-display: 2.25rem;
   }
 }
 

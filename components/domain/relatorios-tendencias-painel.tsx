@@ -2,7 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Line, LineChart, ResponsiveContainer } from 'recharts'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ComposedChart,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -15,6 +26,7 @@ import {
   Lock,
   Minus,
   PiggyBank,
+  Target,
   TrendingUp,
   UserRound,
   Users,
@@ -28,7 +40,12 @@ import { formatCurrency } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { getAuthUserSafe } from '@/lib/supabase/get-auth-user-safe'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
-import { computeTendenciasFromRows, fetchTendenciasAgendamentos } from '@/lib/relatorios-tendencias-data'
+import {
+  computeTendenciasFromRows,
+  fetchTendenciasAgendamentos,
+  intensidadeSazonalidade12,
+} from '@/lib/relatorios-tendencias-data'
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import type { VisaoGeralAgendamentoRow } from '@/lib/relatorios-visao-geral-data'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -45,6 +62,27 @@ const PERIODO_OPTIONS: { id: MesesPreset; label: string }[] = [
   { id: '12m', label: 'Últimos 12 meses' },
   { id: '6m', label: 'Últimos 6 meses' },
 ]
+
+const chartDuploConfig = {
+  faturamento: { label: 'Faturamento', color: 'var(--faturamento)' },
+  ticketMedio: { label: 'Ticket médio', color: 'var(--crescimento)' },
+} satisfies ChartConfig
+
+const chartBarConfig = {
+  atual: { label: 'Período atual', color: 'var(--faturamento)' },
+  anterior: { label: 'Mesmo mês (ano ant.)', color: 'var(--text-tertiary)' },
+} satisfies ChartConfig
+
+const chartProjConfig = {
+  realizado: { label: 'Realizado', color: 'var(--faturamento)' },
+  projecao: { label: 'Projeção', color: 'var(--crescimento)' },
+} satisfies ChartConfig
+
+function tickFmtCompact(v: number): string {
+  if (!Number.isFinite(v)) return ''
+  if (Math.abs(v) >= 1000) return `${Math.round(v / 1000)}k`
+  return String(Math.round(v))
+}
 
 function fmtPctSigned(n: number | null): string {
   if (n == null || !Number.isFinite(n)) return '—'
@@ -207,6 +245,8 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
     () => computeTendenciasFromRows(rows, new Date(), mesesPreset === '12m' ? 12 : 6),
     [rows, mesesPreset],
   )
+
+  const heatSazonalidade = useMemo(() => intensidadeSazonalidade12(rows), [rows])
 
   const sparkMoM = useMemo(
     () => metrics.serieMensal.map((p) => ({ label: p.label, v: p.faturamento })),
@@ -433,7 +473,7 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
         <div
           className={cn(
             'overflow-hidden rounded-3xl p-[var(--space-lg)] shadow-premium hover-lift md:p-[var(--space-xl)]',
-            'bg-gradient-to-br from-emerald-50/95 via-white to-[var(--bg-card)]',
+            'bg-gradient-to-br from-[var(--bg-crescimento)] via-white to-[var(--bg-card)]',
             'dark:from-emerald-950/35 dark:via-[var(--bg-card)] dark:to-[var(--bg-card)]',
           )}
         >
@@ -486,13 +526,13 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
               <Skeleton className="h-24 w-full rounded-2xl" />
             </div>
           ) : (
-            <div className="mt-[var(--space-md)] space-y-[var(--space-lg)]">
-              <div className="rounded-2xl bg-[var(--bg-elevated)]/75 p-4">
+            <div className="mt-[var(--space-md)] flex flex-col gap-[var(--space-md)]">
+              <div className="rounded-2xl bg-[var(--bg-elevated)]/75 p-4 shadow-premium">
                 <div className="flex items-start gap-3">
                   <span
-                    className="flex size-11 shrink-0 items-center justify-center rounded-full text-[var(--accent-faturamento)]"
+                    className="flex size-11 shrink-0 items-center justify-center rounded-full text-[var(--faturamento)]"
                     style={{
-                      backgroundColor: 'color-mix(in srgb, var(--accent-faturamento) 16%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--faturamento) 16%, transparent)',
                     }}
                   >
                     <PiggyBank className="size-5" aria-hidden />
@@ -506,8 +546,11 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
                     </p>
                     <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-[var(--bg-card)]">
                       <div
-                        className="h-full rounded-full bg-[var(--accent-faturamento)] transition-all"
-                        style={{ width: `${barAtualPct}%` }}
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${barAtualPct}%`,
+                          backgroundColor: 'var(--faturamento)',
+                        }}
                       />
                     </div>
                     <p className="vg-small mt-2 text-[var(--text-tertiary)]">
@@ -517,7 +560,7 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
                 </div>
               </div>
 
-              <div className="rounded-2xl border-0 bg-[var(--bg-elevated)]/50 p-4">
+              <div className="rounded-2xl bg-[var(--bg-elevated)]/50 p-4 shadow-premium">
                 <div className="flex items-start gap-3">
                   <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted/80 text-[var(--text-secondary)]">
                     <CalendarRange className="size-5" aria-hidden />
@@ -531,7 +574,7 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
                     </p>
                     <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-[var(--bg-card)]">
                       <div
-                        className="h-full rounded-full bg-[var(--text-tertiary)]/45 transition-all"
+                        className="h-full rounded-full bg-[var(--text-tertiary)]/40 transition-all"
                         style={{ width: `${barAntPct}%` }}
                       />
                     </div>
@@ -540,7 +583,7 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
                 </div>
               </div>
 
-              <p className="vg-body leading-relaxed text-[var(--text-secondary)]">
+              <p className="vg-body leading-relaxed text-stone-500 dark:text-stone-400">
                 <span className="font-semibold text-[var(--text-primary)]">Diferença:</span>{' '}
                 <span className="tabular-nums text-[var(--accent-faturamento)]">
                   {diffFat >= 0 ? '+' : ''}
@@ -566,101 +609,107 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
           </p>
           {loading && !rows.length ? (
             <div className="mt-6 flex flex-1 flex-col gap-3">
-              <Skeleton className="h-28 w-full rounded-2xl" />
-              <Skeleton className="h-28 w-full rounded-2xl" />
-              <Skeleton className="h-28 w-full rounded-2xl" />
+              <Skeleton className="h-24 w-full rounded-xl" />
+              <Skeleton className="h-20 w-full rounded-xl" />
+              <Skeleton className="h-20 w-full rounded-xl" />
             </div>
           ) : (
-            <div className="mt-[var(--space-md)] flex flex-1 flex-col gap-[var(--space-sm)]">
-              <article className="rounded-2xl bg-[var(--bg-elevated)]/85 px-4 py-3.5 shadow-premium">
-                <div className="flex items-start gap-3">
+            <div className="mt-[var(--space-md)] flex flex-1 flex-col gap-2">
+              <article
+                className="rounded-xl px-3 py-3 shadow-premium ring-2 ring-[var(--churn)]/30"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--churn) 8%, var(--bg-elevated))',
+                }}
+              >
+                <div className="flex items-start gap-2.5">
                   <span
-                    className="flex size-11 shrink-0 items-center justify-center rounded-full text-[var(--churn-metric)]"
+                    className="flex size-9 shrink-0 items-center justify-center rounded-full text-[var(--churn)]"
                     style={{
-                      backgroundColor: 'color-mix(in srgb, var(--churn-metric) 16%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--churn) 22%, transparent)',
                     }}
                   >
-                    <Ban className="size-5" aria-hidden />
+                    <Ban className="size-4" aria-hidden />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="vg-small font-medium text-[var(--text-tertiary)]">Churn de base (mês a mês)</p>
-                    <p className="vg-display mt-1 tabular-nums text-[var(--churn-metric)]">
+                    <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--churn)]">
+                      Churn de base
+                    </p>
+                    <p className="mt-0.5 text-2xl font-semibold tabular-nums leading-tight text-[var(--churn)] md:text-[1.65rem]">
                       {metrics.churnUltimoPct.toFixed(1).replace('.', ',')}%
                     </p>
-                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--bg-card)]">
+                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-card)]">
                       <div
-                        className="h-full rounded-full bg-[var(--churn-metric)]/90"
-                        style={{ width: `${churnBarWidth}%` }}
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${churnBarWidth}%`,
+                          backgroundColor: 'var(--churn)',
+                        }}
                       />
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className="vg-small text-[var(--text-tertiary)]">
-                        Variação vs par anterior:{' '}
-                        <span
-                          className={cn(
-                            'font-semibold tabular-nums',
-                            metrics.deltaChurnPontos > 0.5
-                              ? 'text-[var(--churn-metric)]'
-                              : 'text-[var(--text-secondary)]',
-                          )}
-                        >
-                          {metrics.deltaChurnPontos >= 0 ? '+' : ''}
-                          {metrics.deltaChurnPontos.toFixed(1).replace('.', ',')} p.p.
-                        </span>
+                    <p className="mt-1.5 text-[0.8125rem] text-stone-500 dark:text-stone-400">
+                      Variação vs par anterior:{' '}
+                      <span className="font-semibold tabular-nums text-[var(--churn)]">
+                        {metrics.deltaChurnPontos >= 0 ? '+' : ''}
+                        {metrics.deltaChurnPontos.toFixed(1).replace('.', ',')} p.p.
                       </span>
-                    </div>
+                    </p>
                   </div>
                 </div>
               </article>
 
-              <article className="rounded-2xl bg-[var(--bg-elevated)]/85 px-4 py-3.5 shadow-premium">
-                <div className="flex items-start gap-3">
+              <article className="rounded-xl bg-[var(--bg-elevated)]/85 px-3 py-2.5 shadow-premium">
+                <div className="flex items-center gap-2.5">
                   <span
-                    className="flex size-11 shrink-0 items-center justify-center rounded-full text-[var(--accent-ticket)]"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full text-[var(--ticket)]"
                     style={{
-                      backgroundColor: 'color-mix(in srgb, var(--accent-ticket) 16%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--ticket) 16%, transparent)',
                     }}
                   >
-                    <PiggyBank className="size-5" aria-hidden />
+                    <PiggyBank className="size-3.5" aria-hidden />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="vg-small font-medium text-[var(--text-tertiary)]">Ticket médio</p>
-                    <p className="vg-display mt-1 tabular-nums text-[var(--text-primary)]">
+                    <p className="text-[0.7rem] font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+                      Ticket médio
+                    </p>
+                    <p className="text-lg font-semibold tabular-nums text-[var(--text-primary)] md:text-xl">
                       {formatCurrency(metrics.ticketUltimo)}
                     </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                       <DeltaBadge pct={metrics.pctTicketVsAnt} />
-                      <span className="vg-small text-[var(--text-tertiary)]">vs mês anterior</span>
+                      <span className="text-[0.75rem] text-[var(--text-tertiary)]">vs mês ant.</span>
                     </div>
                   </div>
                 </div>
               </article>
 
-              <article className="rounded-2xl bg-[var(--bg-elevated)]/85 px-4 py-3.5 shadow-premium">
-                <div className="flex items-start gap-3">
+              <article className="rounded-xl bg-[var(--bg-elevated)]/85 px-3 py-2.5 shadow-premium">
+                <div className="flex items-center gap-2.5">
                   <span
-                    className="flex size-11 shrink-0 items-center justify-center rounded-full text-[var(--accent-novos)]"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full text-[var(--clientes)]"
                     style={{
-                      backgroundColor: 'color-mix(in srgb, var(--accent-novos) 16%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--clientes) 16%, transparent)',
                     }}
                   >
-                    <Users className="size-5" aria-hidden />
+                    <Users className="size-3.5" aria-hidden />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="vg-small font-medium text-[var(--text-tertiary)]">Clientes ativos</p>
-                    <p className="vg-display mt-1 tabular-nums text-[var(--text-primary)]">
+                    <p className="text-[0.7rem] font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+                      Clientes ativos
+                    </p>
+                    <p className="text-lg font-semibold tabular-nums text-[var(--text-primary)] md:text-xl">
                       {metrics.clientesUltimo.toLocaleString('pt-BR')}
                     </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                       <DeltaBadge pct={metrics.pctClientesVsAnt} />
-                      <span className="vg-small text-[var(--text-tertiary)]">vs mês anterior (únicos no mês)</span>
+                      <span className="text-[0.75rem] text-[var(--text-tertiary)]">únicos no mês</span>
                     </div>
                   </div>
                 </div>
               </article>
 
-              <p className="vg-body mt-1 rounded-2xl bg-[var(--bg-elevated)]/60 px-4 py-3.5 leading-relaxed text-[var(--text-secondary)]">
-                <span className="font-semibold text-[var(--text-primary)]">Leitura integrada:</span> {analiseChurn}{' '}
+              <p className="vg-body mt-2 rounded-xl bg-[var(--bg-elevated)]/55 px-3 py-3 leading-relaxed text-stone-500 dark:text-stone-400">
+                <span className="font-semibold text-stone-600 dark:text-stone-300">Análise integrada:</span>{' '}
+                {analiseChurn}{' '}
                 {metrics.pctTicketVsAnt != null && metrics.pctTicketVsAnt > 3
                   ? `O ticket médio avançou ${metrics.pctTicketVsAnt.toFixed(1).replace('.', ',')}%, o que ajuda a compensar oscilações de volume se a taxa de comparecimento se mantiver.`
                   : metrics.pctTicketVsAnt != null && metrics.pctTicketVsAnt < -3
@@ -669,6 +718,406 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
               </p>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Gráficos principais — tricolumna */}
+      <section className="vg-enter space-y-[var(--space-md)]" style={{ animationDelay: '90ms' }}>
+        <div className="grid gap-[var(--space-lg)] xl:grid-cols-3">
+          <div className="flex flex-col rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-stone-500 dark:text-stone-400">
+                <span className="size-2 rounded-full bg-[var(--faturamento)]" aria-hidden />
+                Faturamento
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-stone-500 dark:text-stone-400">
+                <span className="size-2 rounded-full bg-[var(--crescimento)]" aria-hidden />
+                Ticket médio
+              </span>
+            </div>
+            <p className="vg-section mt-2 text-[var(--text-primary)]">Crescimento do faturamento</p>
+            {loading && !rows.length ? (
+              <Skeleton className="mt-4 aspect-auto h-[240px] w-full rounded-xl" />
+            ) : (
+              <ChartContainer config={chartDuploConfig} className="mt-4 aspect-auto h-[240px] w-full">
+                <ComposedChart data={metrics.serieFatTicket} margin={{ top: 8, right: 6, left: 0, bottom: 4 }}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/35" />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={6}
+                    tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }}
+                  />
+                  <YAxis
+                    yAxisId="l"
+                    tickLine={false}
+                    axisLine={false}
+                    width={40}
+                    tickFormatter={tickFmtCompact}
+                    tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }}
+                  />
+                  <YAxis
+                    yAxisId="r"
+                    orientation="right"
+                    tickLine={false}
+                    axisLine={false}
+                    width={36}
+                    tickFormatter={tickFmtCompact}
+                    tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }}
+                  />
+                  <ChartTooltip
+                    content={<ChartTooltipContent formatter={(v) => formatCurrency(Number(v))} />}
+                  />
+                  <Line
+                    yAxisId="l"
+                    type="monotone"
+                    dataKey="faturamento"
+                    stroke="var(--faturamento)"
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    yAxisId="r"
+                    type="monotone"
+                    dataKey="ticketMedio"
+                    stroke="var(--crescimento)"
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </ComposedChart>
+              </ChartContainer>
+            )}
+            <p className="vg-body mt-3 leading-relaxed text-stone-500 dark:text-stone-400">
+              O faturamento mensal acompanha o ritmo de atendimentos concluídos; o ticket médio, quando sobe junto,
+              indica retenção de valor por cadeira. No período exibido, o último ponto soma{' '}
+              <span className="font-medium tabular-nums text-stone-600 dark:text-stone-300">
+                {formatCurrency(metrics.serieFatTicket[metrics.serieFatTicket.length - 1]?.faturamento ?? 0)}
+              </span>{' '}
+              com ticket em{' '}
+              <span className="font-medium tabular-nums text-stone-600 dark:text-stone-300">
+                {formatCurrency(metrics.serieFatTicket[metrics.serieFatTicket.length - 1]?.ticketMedio ?? 0)}
+              </span>
+              .
+            </p>
+          </div>
+
+          <div className="flex flex-col rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-stone-500 dark:text-stone-400">
+                <span className="size-2 rounded-full bg-[var(--faturamento)]" aria-hidden />
+                Período atual
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-stone-500 dark:text-stone-400">
+                <span className="size-2 rounded-full bg-[var(--text-tertiary)] opacity-70" aria-hidden />
+                Mesmo mês (ano ant.)
+              </span>
+            </div>
+            <p className="vg-section mt-2 text-[var(--text-primary)]">Comparação entre períodos</p>
+            {loading && !rows.length ? (
+              <Skeleton className="mt-4 aspect-auto h-[240px] w-full rounded-xl" />
+            ) : (
+              <ChartContainer config={chartBarConfig} className="mt-4 aspect-auto h-[240px] w-full">
+                <BarChart data={metrics.serieBarrasComparacao} margin={{ top: 8, right: 6, left: 0, bottom: 4 }}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/35" />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={6}
+                    tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    width={40}
+                    tickFormatter={tickFmtCompact}
+                    tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }}
+                  />
+                  <ChartTooltip
+                    content={<ChartTooltipContent formatter={(v) => formatCurrency(Number(v))} />}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar
+                    dataKey="atual"
+                    fill="var(--faturamento)"
+                    radius={[4, 4, 0, 0]}
+                    name="Atual"
+                    isAnimationActive={false}
+                  />
+                  <Bar
+                    dataKey="anterior"
+                    fill="var(--text-tertiary)"
+                    fillOpacity={0.45}
+                    radius={[4, 4, 0, 0]}
+                    name="Ano ant."
+                    isAnimationActive={false}
+                  />
+                </BarChart>
+              </ChartContainer>
+            )}
+            <p className="vg-body mt-3 leading-relaxed text-stone-500 dark:text-stone-400">
+              Cada par de barras contrasta o faturamento do mês com o mesmo mês do ano anterior. O recorte ajuda a
+              separar sazonalidade de mudança estrutural: quando o azul permanece acima do cinza em sequência, o
+              crescimento tende a ser consistente ano contra ano.
+            </p>
+          </div>
+
+          <div className="flex flex-col rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-stone-500 dark:text-stone-400">
+                <span className="size-2 rounded-full bg-[var(--faturamento)]" aria-hidden />
+                Realizado
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-stone-500 dark:text-stone-400">
+                <span className="size-2 rounded-full border-2 border-dashed border-[var(--crescimento)] bg-transparent" aria-hidden />
+                Projeção
+              </span>
+            </div>
+            <p className="vg-section mt-2 text-[var(--text-primary)]">Projeção de faturamento</p>
+            {loading && !rows.length ? (
+              <Skeleton className="mt-4 aspect-auto h-[240px] w-full rounded-xl" />
+            ) : (
+              <ChartContainer config={chartProjConfig} className="mt-4 aspect-auto h-[240px] w-full">
+                <LineChart data={metrics.serieProjecaoChart} margin={{ top: 8, right: 6, left: 0, bottom: 4 }}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/35" />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={6}
+                    tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    width={40}
+                    tickFormatter={tickFmtCompact}
+                    tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }}
+                  />
+                  <ChartTooltip
+                    content={<ChartTooltipContent formatter={(v) => formatCurrency(Number(v))} />}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="realizado"
+                    stroke="var(--faturamento)"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls={false}
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    type="linear"
+                    dataKey="projecao"
+                    stroke="var(--crescimento)"
+                    strokeWidth={2}
+                    strokeDasharray="6 4"
+                    dot={{ r: 3, fill: 'var(--crescimento)' }}
+                    connectNulls
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ChartContainer>
+            )}
+            <p className="vg-body mt-3 leading-relaxed text-stone-500 dark:text-stone-400">
+              A linha pontilhada extrapola o ritmo recente (últimos meses e variação mês a mês) para uma janela de ~30
+              dias. Valor indicativo:{' '}
+              <span className="font-medium tabular-nums text-stone-600 dark:text-stone-300">
+                {formatCurrency(metrics.projecao30Valor)}
+              </span>{' '}
+              (
+              {metrics.projecao30Pct >= 0 ? '+' : ''}
+              {metrics.projecao30Pct.toFixed(1).replace('.', ',')}% vs último mês fechado).
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Análises e previsões — wide */}
+      <section className="vg-enter space-y-[var(--space-md)]" style={{ animationDelay: '120ms' }}>
+        <div>
+          <p className="vg-section text-[var(--text-primary)]">Análises e previsões</p>
+          <div className="mt-2 h-px w-full max-w-xl bg-gradient-to-r from-[var(--text-tertiary)]/35 to-transparent" />
+        </div>
+        <div className="flex flex-col gap-[var(--space-md)]">
+          <article className="rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
+            <div className="flex gap-[var(--space-md)]">
+              <span
+                className="mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-full text-[var(--crescimento)]"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--crescimento) 16%, transparent)',
+                }}
+              >
+                <TrendingUp className="size-5" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="vg-section text-[var(--text-primary)]">Crescimento projetado</p>
+                <p className="vg-body mt-2 leading-relaxed text-stone-500 dark:text-stone-400">
+                  Com base na tendência do último mês fechado ({metrics.ultimoMesFechadoLabel}) e na variação mês a mês
+                  de {fmtPctSigned(metrics.crescimentoMoM)}, o faturamento pode avançar cerca de{' '}
+                  <span className="font-semibold tabular-nums text-stone-600 dark:text-stone-300">
+                    {metrics.projecao30Pct.toFixed(1).replace('.', ',')}%
+                  </span>{' '}
+                  na janela de ~30 dias, aproximando-se de{' '}
+                  <span className="font-semibold tabular-nums text-stone-600 dark:text-stone-300">
+                    {formatCurrency(metrics.projecao30Valor)}
+                  </span>
+                  — valor modelo, não garantia contratual.
+                </p>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="h-14 min-w-0 flex-1">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={metrics.serieProjecaoChart.map((p) => ({
+                          l: p.label,
+                          v: p.realizado ?? p.projecao ?? 0,
+                        }))}
+                        margin={{ top: 2, right: 2, left: 0, bottom: 0 }}
+                      >
+                        <Line
+                          type="monotone"
+                          dataKey="v"
+                          stroke="var(--faturamento)"
+                          strokeWidth={2}
+                          dot={false}
+                          isAnimationActive={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <Link
+                    href={`${base}/relatorios/visao-geral`}
+                    className="vg-small inline-flex shrink-0 items-center gap-1 font-semibold text-[var(--brand-primary)] hover:underline"
+                  >
+                    Ver detalhamento <ChevronRight className="size-3.5" aria-hidden />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article className="rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
+            <div className="flex gap-[var(--space-md)]">
+              <span
+                className="mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-full text-[var(--clientes)]"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--clientes) 16%, transparent)',
+                }}
+              >
+                <CalendarRange className="size-5" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="vg-section text-[var(--text-primary)]">Sazonalidade</p>
+                <p className="vg-body mt-2 leading-relaxed text-stone-500 dark:text-stone-400">
+                  {metrics.sazonalidadeMesesDestaque.length >= 2
+                    ? `No histórico carregado, ${metrics.sazonalidadeMesesDestaque[0]} e ${metrics.sazonalidadeMesesDestaque[1]} concentram parte relevante da receita — antecipe escala de equipe e estoque nesses meses.`
+                    : metrics.sazonalidadeMesesDestaque.length === 1
+                      ? `O mês de ${metrics.sazonalidadeMesesDestaque[0]} se destaca no acumulado; use isso para campanhas e folgas da equipe.`
+                      : 'Ainda há poucos meses com volume comparável no recorte — amplie o período ou aguarde mais fechamentos para ler sazonalidade com segurança.'}
+                </p>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="grid w-full max-w-md grid-cols-12 gap-1">
+                    {['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'].map((abbr, i) => (
+                      <div key={`saz-${i}`} className="flex flex-col items-center gap-1">
+                        <div
+                          className="aspect-square w-full max-w-[1.4rem] rounded-sm"
+                          style={{
+                            backgroundColor: `color-mix(in srgb, var(--faturamento) ${Math.round((heatSazonalidade[i] ?? 0) * 85 + 15)}%, var(--bg-elevated))`,
+                          }}
+                          title={`Intensidade ${Math.round((heatSazonalidade[i] ?? 0) * 100)}%`}
+                        />
+                        <span className="text-[0.6rem] text-stone-400">{abbr}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Link
+                    href={`${base}/relatorios/visao-geral`}
+                    className="vg-small inline-flex shrink-0 items-center gap-1 font-semibold text-[var(--brand-primary)] hover:underline"
+                  >
+                    Ver histórico <ChevronRight className="size-3.5" aria-hidden />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article className="rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
+            <div className="flex gap-[var(--space-md)]">
+              <span
+                className="mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-full text-[var(--faturamento)]"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--faturamento) 16%, transparent)',
+                }}
+              >
+                <Users className="size-5" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="vg-section text-[var(--text-primary)]">Comportamento de clientes</p>
+                <p className="vg-body mt-2 leading-relaxed text-stone-500 dark:text-stone-400">
+                  {metrics.medianaDiasEntreVisitas != null
+                    ? `A mediana de dias entre visitas do mesmo cliente ficou em ${Math.round(metrics.medianaDiasEntreVisitas)} dias no histórico analisado. Ciclos mais longos podem indicar concorrência ou menor urgência percebida — vale reforçar lembretes e benefícios de recorrência.`
+                    : 'Com poucas visitas repetidas por cliente no período, o indicador de intervalo entre cortes ainda não estabilizou; concentre-se em volume e taxa de retorno primeiro.'}
+                </p>
+                <Link
+                  href={`${base}/clientes`}
+                  className="vg-small mt-4 inline-flex items-center gap-1 font-semibold text-[var(--brand-primary)] hover:underline"
+                >
+                  Ver base de clientes <ChevronRight className="size-3.5" aria-hidden />
+                </Link>
+              </div>
+            </div>
+          </article>
+
+          <article className="rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
+            <div className="flex gap-[var(--space-md)]">
+              <span
+                className="mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-full text-[var(--brand-primary)]"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--brand-primary) 14%, transparent)',
+                }}
+              >
+                <Target className="size-5" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="vg-section text-[var(--text-primary)]">Ações recomendadas</p>
+                <p className="vg-body mt-2 text-stone-500 dark:text-stone-400">
+                  Com base nos dados do período e no último mês fechado:
+                </p>
+                <ol className="vg-body mt-3 list-decimal space-y-2 pl-5 leading-relaxed text-stone-500 dark:text-stone-400">
+                  <li>
+                    {metrics.clientesInativosEstimados > 0
+                      ? `Campanha para reativar clientes sem visita há 90+ dias (${metrics.clientesInativosEstimados} identificados no recorte).`
+                      : 'Monitorar clientes que não repetem após o primeiro corte — amplie o histórico para quantificar inativos.'}
+                  </li>
+                  <li>
+                    Promoção ou pacotes curtos para horários ociosos (ex.: 14h–16h), alinhada ao relatório operacional.
+                  </li>
+                  <li>
+                    {metrics.pctTicketVsAnt != null && metrics.pctTicketVsAnt < 3
+                      ? `Treino de upsell e combos para elevar ticket — ritmo atual (${fmtPctSigned(metrics.pctTicketVsAnt)} vs mês anterior) ainda deixa margem para composição de serviços.`
+                      : 'Manter disciplina de upsell onde o ticket já reage bem, sem sacrificar tempo de cadeira.'}
+                  </li>
+                </ol>
+                <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+                  <Link
+                    href={`${base}/relatorios/operacao`}
+                    className="vg-small inline-flex items-center gap-1 font-semibold text-[var(--brand-primary)] hover:underline"
+                  >
+                    Abrir operacional <ChevronRight className="size-3.5" aria-hidden />
+                  </Link>
+                  <Link
+                    href={`${base}/clientes`}
+                    className="vg-small inline-flex items-center gap-1 font-semibold text-[var(--brand-primary)] hover:underline"
+                  >
+                    Criar plano de ação <ChevronRight className="size-3.5" aria-hidden />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </article>
         </div>
       </section>
     </PageContent>
