@@ -85,11 +85,11 @@
   --relatorios-visao-ativo-foreground: #ffffff;
 }
 
-/* Sombras sutis */
+/* Sombras sutis (design system relatórios / operacional) */
 .shadow-premium {
   box-shadow:
-    0 1px 2px 0 rgb(0 0 0 / 0.04),
-    0 1px 3px 0 rgb(0 0 0 / 0.08);
+    0 1px 3px 0 rgb(0 0 0 / 0.04),
+    0 1px 2px 0 rgb(0 0 0 / 0.08);
 }
 
 /* Hover elegante */
@@ -215,6 +215,26 @@
 @media (max-width: 640px) {
   .visao-geral-premium {
     --font-display: 2.25rem;
+  }
+}
+
+/**
+ * Relatório Operacional — tokens de métricas + display (usar com `.visao-geral-premium` no mesmo nó).
+ */
+.visao-geral-premium.relatorio-operacional-premium {
+  --font-display: 2.5rem;
+  --ocupacao: #22c55e;
+  --tempo-medio: #f59e0b;
+  --tempo-ocioso: #ef4444;
+  --produtividade: #10b981;
+  --cancelamento: #f59e0b;
+  --no-show: #ef4444;
+  --servicos: #3b82f6;
+}
+
+@media (max-width: 640px) {
+  .visao-geral-premium.relatorio-operacional-premium {
+    --font-display: 2.125rem;
   }
 }
 
