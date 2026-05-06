@@ -31,8 +31,10 @@ import {
   Users,
 } from 'lucide-react'
 import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import { PageContent } from '@/components/shared/page-container'
 import { ExportarPDFButton } from '@/components/ui/exportar-pdf-button'
+import { usePdfGeradoPor } from '@/hooks/usePdfGeradoPor'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/constants'
@@ -157,6 +159,7 @@ function SparkFaturamento({ data }: { data: { label: string; v: number }[] }) {
 
 export function RelatoriosTendenciasPainel(props: { slug: string; base: string }) {
   const { slug, base } = props
+  const pdfGeradoPor = usePdfGeradoPor()
 
   const [mesesPreset, setMesesPreset] = useState<MesesPreset>('12m')
   const [barbeiroId, setBarbeiroId] = useState<string | null>(null)
@@ -295,6 +298,7 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
   const barberLabel = barbeiroId
     ? barbeiros.find((b) => b.id === barbeiroId)?.nome ?? 'Barbeiro'
     : 'Todos os barbeiros'
+  const unitLabel = unidadeNome ?? 'Unidade'
 
   if (error) {
     return (
@@ -466,8 +470,17 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
               conteudoId="relatorio-tendencias-export"
               nomeArquivo={`tendencias-${format(new Date(), 'yyyy-MM-dd-HHmm')}`}
               titulo="Exportar PDF"
+              tipoRelatorio="tendencias"
+              pdfMeta={{
+                titulo: 'Tendências',
+                subtitulo:
+                  barberLabel !== 'Todos os barbeiros' ? `Escopo: ${barberLabel}` : undefined,
+                periodo: `${periodLabel} (corte em ${format(new Date(), 'dd/MM/yyyy', { locale: ptBR })})`,
+                unidade: unitLabel,
+                geradoPor: pdfGeradoPor,
+              }}
               disabled={loading || rows.length === 0}
-              className="shrink-0 rounded-full px-4"
+              className="shrink-0"
             />
           </div>
         </div>

@@ -24,6 +24,7 @@ import { addDays, format, startOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PageContent } from '@/components/shared/page-container'
 import { ExportarPDFButton } from '@/components/ui/exportar-pdf-button'
+import { usePdfGeradoPor } from '@/hooks/usePdfGeradoPor'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -165,6 +166,7 @@ function OcupacaoGauge({ pct }: { pct: number | null }) {
 
 export function RelatoriosOperacionalPainel(props: { slug: string; base: string }) {
   const { slug, base } = props
+  const pdfGeradoPor = usePdfGeradoPor()
 
   const [preset, setPreset] = useState<RelatorioPeriodoPreset>('30d')
   const [barbeiroId, setBarbeiroId] = useState<string | null>(null)
@@ -425,9 +427,12 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
 
   return (
     <PageContent className="visao-geral-premium relatorio-operacional-premium bg-[var(--bg-page)] pb-14 pt-[var(--space-md)]">
-      <div id="relatorio-operacional-export" className="min-w-0">
+      <div
+        id="relatorio-operacional-export"
+        className="flex min-w-0 flex-col gap-[var(--space-xl)]"
+      >
       {/* Header */}
-      <header className="vg-enter space-y-[var(--space-lg)]" style={{ animationDelay: '0ms' }}>
+      <header className="vg-enter space-y-4 md:space-y-5" style={{ animationDelay: '0ms' }}>
         <nav aria-label="Hierarquia da página" className="vg-small">
           <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[var(--text-tertiary)]">
             <li>
@@ -446,14 +451,14 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
             </li>
           </ol>
         </nav>
-        <div className="flex flex-col gap-[var(--space-md)] xl:flex-row xl:items-end xl:justify-between">
-          <div className="min-w-0 space-y-[var(--space-sm)]">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between xl:gap-10">
+          <div className="min-w-0 space-y-2 md:space-y-3">
             <h1 className="vg-display text-[var(--text-primary)]">Operacional</h1>
-            <p className="vg-body max-w-2xl text-[var(--text-secondary)]">
+            <p className="vg-body max-w-2xl text-pretty text-[var(--text-secondary)]">
               Acompanhe a eficiência e produtividade da sua barbearia com leitura integrada dos dados.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-[var(--space-xs)]">
+          <div className="flex flex-wrap items-center gap-2">
             <Popover open={periodOpen} onOpenChange={setPeriodOpen}>
               <PopoverTrigger asChild>
                 <button
@@ -556,8 +561,16 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
               conteudoId="relatorio-operacional-export"
               nomeArquivo={`operacional-${format(new Date(), 'yyyy-MM-dd-HHmm')}`}
               titulo="Exportar PDF"
+              tipoRelatorio="operacional"
+              pdfMeta={{
+                titulo: 'Operacional',
+                subtitulo:
+                  barberLabel !== 'Todos os barbeiros' ? `Escopo: ${barberLabel}` : undefined,
+                periodo: `${format(intervaloAtual.inicio, 'dd/MM/yyyy', { locale: ptBR })} a ${format(intervaloAtual.fim, 'dd/MM/yyyy', { locale: ptBR })}`,
+                unidade: unitLabel,
+                geradoPor: pdfGeradoPor,
+              }}
               disabled={!atual || loading}
-              className="rounded-full px-4"
             />
           </div>
         </div>

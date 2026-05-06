@@ -5,6 +5,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Check, Download, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
+import type { PDFConfigInput, TipoRelatorioPdf } from '@/lib/pdfTemplate'
+import { buildPdfConfig } from '@/lib/pdfTemplate'
 
 export interface ExportarPDFButtonProps {
   /** `id` do elemento raiz a capturar (deve existir no DOM). */
@@ -12,6 +14,9 @@ export interface ExportarPDFButtonProps {
   /** Nome do ficheiro (com ou sem `.pdf`). */
   nomeArquivo: string
   titulo?: string
+  tipoRelatorio: TipoRelatorioPdf
+  /** Metadados da capa (data de geração é preenchida no momento da exportação). */
+  pdfMeta: PDFConfigInput
   disabled?: boolean
   className?: string
 }
@@ -20,6 +25,8 @@ export function ExportarPDFButton({
   conteudoId,
   nomeArquivo,
   titulo = 'Exportar PDF',
+  tipoRelatorio,
+  pdfMeta,
   disabled = false,
   className,
 }: ExportarPDFButtonProps) {
@@ -38,8 +45,9 @@ export function ExportarPDFButton({
 
     setEstado('gerando')
     try {
+      const config = buildPdfConfig({ ...pdfMeta, dataGeracao: new Date() })
       const { exportHtmlElementToPdf } = await import('@/lib/export-html-to-pdf')
-      await exportHtmlElementToPdf(el, nomeArquivo)
+      await exportHtmlElementToPdf(el, nomeArquivo, { config, tipoRelatorio })
       setEstado('pronto')
       window.setTimeout(() => setEstado('idle'), 2800)
     } catch {
@@ -50,7 +58,7 @@ export function ExportarPDFButton({
       })
       setEstado('idle')
     }
-  }, [conteudoId, nomeArquivo])
+  }, [conteudoId, nomeArquivo, pdfMeta, tipoRelatorio])
 
   const busy = estado === 'gerando'
 
@@ -62,7 +70,7 @@ export function ExportarPDFButton({
       whileHover={disabled || busy ? undefined : { scale: 1.02 }}
       whileTap={disabled || busy ? undefined : { scale: 0.98 }}
       className={cn(
-        'relative inline-flex min-h-[2.5rem] items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors duration-200',
+        'vg-body relative inline-flex shrink-0 items-center justify-center gap-1 rounded-full px-3 py-1.5 font-medium transition-colors duration-200',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         'disabled:pointer-events-none disabled:opacity-50',
         estado === 'idle' && [
@@ -83,9 +91,9 @@ export function ExportarPDFButton({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18 }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-1"
           >
-            <Download className="size-[1.125rem] shrink-0" strokeWidth={2} aria-hidden />
+            <Download className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
             <span>{titulo}</span>
           </motion.span>
         )}
@@ -96,9 +104,9 @@ export function ExportarPDFButton({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18 }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-1"
           >
-            <Loader2 className="size-[1.125rem] shrink-0 animate-spin" aria-hidden />
+            <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden />
             <span>A gerar PDF…</span>
           </motion.span>
         )}
@@ -109,9 +117,9 @@ export function ExportarPDFButton({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18 }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-1"
           >
-            <Check className="size-[1.125rem] shrink-0" strokeWidth={2.5} aria-hidden />
+            <Check className="size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
             <span>PDF descarregado</span>
           </motion.span>
         )}

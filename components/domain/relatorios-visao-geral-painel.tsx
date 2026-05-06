@@ -26,6 +26,7 @@ import { addDays, format, startOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PageContent } from '@/components/shared/page-container'
 import { ExportarPDFButton } from '@/components/ui/exportar-pdf-button'
+import { usePdfGeradoPor } from '@/hooks/usePdfGeradoPor'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -248,6 +249,7 @@ function MixDonut({ mix }: { mix: VisaoGeralMixSlice[] }) {
 
 export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }) {
   const { slug, base } = props
+  const pdfGeradoPor = usePdfGeradoPor()
   const chartGradId = useId().replace(/:/g, '')
 
   const [preset, setPreset] = useState<RelatorioPeriodoPreset>('30d')
@@ -466,8 +468,11 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
 
   return (
     <PageContent className="visao-geral-premium bg-[var(--bg-page)] pb-14 pt-[var(--space-md)]">
-      <div id="relatorio-visao-geral-export" className="min-w-0">
-      <header className="vg-enter space-y-[var(--space-lg)]" style={{ animationDelay: '0ms' }}>
+      <div
+        id="relatorio-visao-geral-export"
+        className="flex min-w-0 flex-col gap-[var(--space-xl)]"
+      >
+      <header className="vg-enter space-y-4 md:space-y-5" style={{ animationDelay: '0ms' }}>
         <nav aria-label="Hierarquia da página" className="vg-small">
           <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[var(--text-tertiary)]">
             <li>
@@ -486,13 +491,13 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
             </li>
           </ol>
         </nav>
-        <div className="flex flex-col gap-[var(--space-md)] lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0 space-y-[var(--space-sm)]">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
+          <div className="min-w-0 space-y-2 md:space-y-3">
             <h1 className="vg-display text-[var(--text-primary)]">Visão geral</h1>
-            <p className="vg-body max-w-2xl text-[var(--text-secondary)]">
+            <p className="vg-body max-w-2xl text-pretty text-[var(--text-secondary)]">
               Leitura integrada de faturamento, mix e ritmo da equipe — ajuste o recorte abaixo.
             </p>
-            <p className="vg-small flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[var(--text-tertiary)]">
+            <p className="vg-small mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[var(--text-tertiary)]">
               <span>{periodLabel}</span>
               <ChevronRight className="size-3 shrink-0 opacity-50" aria-hidden />
               <span>{barberLabel}</span>
@@ -500,7 +505,7 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
               <span>Todas as unidades</span>
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-[var(--space-xs)]">
+          <div className="flex flex-wrap items-center gap-2">
             <Popover open={periodOpen} onOpenChange={setPeriodOpen}>
               <PopoverTrigger asChild>
                 <button
@@ -603,8 +608,16 @@ export function RelatoriosVisaoGeralPainel(props: { slug: string; base: string }
               conteudoId="relatorio-visao-geral-export"
               nomeArquivo={`visao-geral-${format(new Date(), 'yyyy-MM-dd-HHmm')}`}
               titulo="Exportar PDF"
+              tipoRelatorio="visao_geral"
+              pdfMeta={{
+                titulo: 'Visão Geral',
+                subtitulo:
+                  barberLabel !== 'Todos os barbeiros' ? `Escopo: ${barberLabel}` : undefined,
+                periodo: `${format(intervaloAtual.inicio, 'dd/MM/yyyy', { locale: ptBR })} a ${format(intervaloAtual.fim, 'dd/MM/yyyy', { locale: ptBR })}`,
+                unidade: unitLabel,
+                geradoPor: pdfGeradoPor,
+              }}
               disabled={!atual || loading}
-              className="rounded-full px-4"
             />
           </div>
         </div>
