@@ -532,20 +532,21 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
       </section>
 
       {/* Bicolumn */}
-      <section className="grid gap-[var(--space-xl)] lg:grid-cols-2 lg:items-start">
-        <div className="vg-card vg-enter rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
+      <section className="grid gap-[var(--space-xl)] lg:grid-cols-2 lg:items-stretch">
+        <div className="vg-card vg-enter flex h-full min-h-0 flex-col rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
           <p className="vg-section text-[var(--text-primary)]">Faturamento comparativo</p>
           <p className="vg-small mt-1 text-[var(--text-secondary)]">
             Serviços concluídos — {metrics.ultimoMesFechadoLabel} frente a {metrics.penultimoMesLabel}.
           </p>
           {loading && !rows.length ? (
-            <div className="mt-6 space-y-4">
+            <div className="mt-6 flex flex-1 flex-col space-y-4">
               <Skeleton className="h-24 w-full rounded-2xl" />
               <Skeleton className="h-24 w-full rounded-2xl" />
             </div>
           ) : (
-            <div className="mt-[var(--space-md)] flex flex-col gap-[var(--space-md)]">
-              <div className="rounded-2xl bg-[var(--bg-elevated)]/75 p-4 shadow-premium">
+            <div className="mt-[var(--space-md)] flex min-h-0 flex-1 flex-col">
+              <div className="flex flex-col gap-[var(--space-md)]">
+                <div className="rounded-2xl bg-[var(--bg-elevated)]/75 p-4 shadow-premium">
                 <div className="flex items-start gap-3">
                   <span
                     className="flex size-11 shrink-0 items-center justify-center rounded-full text-[var(--faturamento)]"
@@ -576,9 +577,9 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
                     </p>
                   </div>
                 </div>
-              </div>
+                </div>
 
-              <div className="rounded-2xl bg-[var(--bg-elevated)]/50 p-4 shadow-premium">
+                <div className="rounded-2xl bg-[var(--bg-elevated)]/50 p-4 shadow-premium">
                 <div className="flex items-start gap-3">
                   <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted/80 text-[var(--text-secondary)]">
                     <CalendarRange className="size-5" aria-hidden />
@@ -599,28 +600,31 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
                     <p className="vg-small mt-2 text-[var(--text-tertiary)]">Mês imediatamente anterior.</p>
                   </div>
                 </div>
+                </div>
               </div>
 
-              <p className="vg-body leading-relaxed text-stone-500 dark:text-stone-400">
-                <span className="font-semibold text-[var(--text-primary)]">Diferença:</span>{' '}
-                <span className="tabular-nums text-[var(--accent-faturamento)]">
-                  {diffFat >= 0 ? '+' : ''}
-                  {formatCurrency(diffFat)}
-                </span>{' '}
-                ({fmtPctSigned(metrics.crescimentoMoM)} em relação ao mês anterior). Quando o par está estável, o
-                esforço pode ir para ticket e recorrência em vez de só volume bruto.
-              </p>
+              <div className="mt-auto flex flex-col gap-[var(--space-md)] pt-[var(--space-md)]">
+                <p className="vg-body leading-relaxed text-stone-500 dark:text-stone-400">
+                  <span className="font-semibold text-[var(--text-primary)]">Diferença:</span>{' '}
+                  <span className="tabular-nums text-[var(--accent-faturamento)]">
+                    {diffFat >= 0 ? '+' : ''}
+                    {formatCurrency(diffFat)}
+                  </span>{' '}
+                  ({fmtPctSigned(metrics.crescimentoMoM)} em relação ao mês anterior). Quando o par está estável, o
+                  esforço pode ir para ticket e recorrência em vez de só volume bruto.
+                </p>
+                <Link
+                  href={`${base}/relatorios/visao-geral`}
+                  className="vg-small inline-flex items-center gap-1 font-semibold text-[var(--brand-primary)] hover:underline"
+                >
+                  Visão geral financeira <ChevronRight className="size-3.5" aria-hidden />
+                </Link>
+              </div>
             </div>
           )}
-          <Link
-            href={`${base}/relatorios/visao-geral`}
-            className="vg-small mt-[var(--space-md)] inline-flex items-center gap-1 font-semibold text-[var(--brand-primary)] hover:underline"
-          >
-            Visão geral financeira <ChevronRight className="size-3.5" aria-hidden />
-          </Link>
         </div>
 
-        <div className="vg-card vg-enter flex flex-col rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
+        <div className="vg-card vg-enter flex h-full min-h-0 flex-col rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift md:p-[var(--space-lg)]">
           <p className="vg-section text-[var(--text-primary)]">Métricas-chave</p>
           <p className="vg-small mt-1 text-[var(--text-secondary)]">
             Churn estimado por saída de base entre meses consecutivos; ticket e clientes no último mês fechado.
@@ -632,7 +636,7 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
               <Skeleton className="h-20 w-full rounded-xl" />
             </div>
           ) : (
-            <div className="mt-[var(--space-md)] flex flex-1 flex-col gap-2">
+            <div className="mt-[var(--space-md)] flex min-h-0 flex-1 flex-col gap-2">
               <article
                 className="rounded-xl px-3 py-3 shadow-premium ring-2 ring-[var(--churn)]/30"
                 style={{
@@ -725,7 +729,7 @@ export function RelatoriosTendenciasPainel(props: { slug: string; base: string }
                 </div>
               </article>
 
-              <p className="vg-body mt-2 rounded-xl bg-[var(--bg-elevated)]/55 px-3 py-3 leading-relaxed text-stone-500 dark:text-stone-400">
+              <p className="vg-body mt-auto rounded-xl bg-[var(--bg-elevated)]/55 px-3 py-3 leading-relaxed text-stone-500 dark:text-stone-400">
                 <span className="font-semibold text-stone-600 dark:text-stone-300">Análise integrada:</span>{' '}
                 {analiseChurn}{' '}
                 {metrics.pctTicketVsAnt != null && metrics.pctTicketVsAnt > 3

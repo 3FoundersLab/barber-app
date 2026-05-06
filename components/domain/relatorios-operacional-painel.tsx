@@ -78,10 +78,11 @@ const curvaChartConfig = {
 } satisfies ChartConfig
 
 function heatIntensityColor(t: number): string {
-  if (t <= 0) return 'rgb(231 229 228 / 0.35)'
-  if (t < 0.33) return 'color-mix(in oklab, var(--ocupacao) 55%, transparent)'
-  if (t < 0.66) return 'color-mix(in oklab, #eab308 70%, var(--ocupacao))'
-  return 'color-mix(in oklab, var(--no-show) 75%, #eab308)'
+  if (t <= 0) return 'var(--heatmap-empty)'
+  if (t < 0.33)
+    return 'color-mix(in oklab, var(--ocupacao) 68%, var(--heatmap-empty))'
+  if (t < 0.66) return 'color-mix(in oklab, #eab308 72%, var(--ocupacao))'
+  return 'color-mix(in oklab, var(--no-show) 78%, #eab308)'
 }
 
 function DeltaBadge({
@@ -848,7 +849,7 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
           <p className="vg-section text-[var(--text-primary)]">Heatmap de ocupação</p>
           <p className="vg-small mt-1 text-[var(--text-secondary)]">Inícios de agendamentos por dia da semana e hora.</p>
           <div className="mt-[var(--space-md)] overflow-x-auto">
-            <table className="w-full min-w-[520px] border-separate border-spacing-1 text-left text-xs">
+            <table className="w-full min-w-[520px] border-separate border-spacing-1.5 text-left text-xs">
               <thead>
                 <tr>
                   <th className="w-10 pr-1 font-medium text-[var(--text-tertiary)]" />
@@ -870,7 +871,7 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
                       return (
                         <td key={hi} className="p-0">
                           <div
-                            className="mx-auto aspect-square w-full max-w-[1.35rem] rounded-sm sm:max-w-[1.5rem]"
+                            className="mx-auto aspect-square w-full max-w-[1.35rem] rounded-[3px] ring-1 ring-inset ring-[var(--heatmap-cell-ring)] sm:max-w-[1.5rem]"
                             style={{ backgroundColor: heatIntensityColor(t) }}
                             title={`${c} agendamentos`}
                           />

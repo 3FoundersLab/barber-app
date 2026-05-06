@@ -138,9 +138,9 @@
   --space-lg: 2rem;
   --space-xl: 3rem;
 
-  --bg-page: #fafaf9;
+  --bg-page: #f0efec;
   --bg-card: #ffffff;
-  --bg-elevated: #f5f5f4;
+  --bg-elevated: #ebeae8;
   --text-primary: #1c1917;
   --text-secondary: #78716c;
   --text-tertiary: #a8a29e;
@@ -153,9 +153,29 @@
   --accent-noshow: #ef4444;
   --brand-primary: #c2410c;
   --brand-primary-light: #fff7ed;
+  --heatmap-cell-ring: rgb(87 83 78 / 0.22);
+  --heatmap-empty: rgb(214 211 209);
   --vg-card-shadow:
     0 1px 2px rgb(28 25 23 / 0.04),
     0 4px 12px rgb(28 25 23 / 0.06);
+}
+
+/**
+ * Superfícies de card nos relatórios (tema claro): borda + sombra para separar do fundo.
+ * Exclui pills `rounded-full` (filtros / avatares).
+ */
+.visao-geral-premium :where(.shadow-premium):not(.rounded-full) {
+  box-shadow:
+    0 1px 2px rgb(28 25 23 / 0.05),
+    0 6px 18px rgb(28 25 23 / 0.07),
+    0 0 0 1px rgb(28 25 23 / 0.09);
+}
+
+.visao-geral-premium :where(.hover-lift.shadow-premium):not(.rounded-full):hover {
+  box-shadow:
+    0 8px 22px rgb(28 25 23 / 0.1),
+    0 3px 8px rgb(28 25 23 / 0.06),
+    0 0 0 1px rgb(28 25 23 / 0.1);
 }
 
 .visao-geral-premium .vg-display {
@@ -267,9 +287,25 @@
   --text-secondary: oklch(0.72 0.015 75);
   --text-tertiary: oklch(0.58 0.02 75);
   --brand-primary-light: oklch(0.28 0.06 55);
+  --heatmap-cell-ring: rgb(255 255 255 / 0.14);
+  --heatmap-empty: oklch(0.34 0.02 75);
   --vg-card-shadow:
     0 1px 2px rgb(0 0 0 / 0.2),
     0 4px 14px rgb(0 0 0 / 0.28);
+}
+
+.dark .visao-geral-premium :where(.shadow-premium):not(.rounded-full) {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.22),
+    0 6px 18px rgb(0 0 0 / 0.32),
+    0 0 0 1px rgb(255 255 255 / 0.08);
+}
+
+.dark .visao-geral-premium :where(.hover-lift.shadow-premium):not(.rounded-full):hover {
+  box-shadow:
+    0 10px 26px rgb(0 0 0 / 0.38),
+    0 4px 10px rgb(0 0 0 / 0.22),
+    0 0 0 1px rgb(255 255 255 / 0.1);
 }
 
 .dark {
