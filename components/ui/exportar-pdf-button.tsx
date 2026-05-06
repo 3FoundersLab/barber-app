@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Check, Download, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
+import { exportHtmlElementToPdf } from '@/lib/export-html-to-pdf'
 import type { PDFConfigInput, TipoRelatorioPdf } from '@/lib/pdfTemplate'
 import { buildPdfConfig } from '@/lib/pdfTemplate'
 
@@ -46,7 +47,6 @@ export function ExportarPDFButton({
     setEstado('gerando')
     try {
       const config = buildPdfConfig({ ...pdfMeta, dataGeracao: new Date() })
-      const { exportHtmlElementToPdf } = await import('@/lib/export-html-to-pdf')
       await exportHtmlElementToPdf(el, nomeArquivo, { config, tipoRelatorio })
       setEstado('pronto')
       window.setTimeout(() => setEstado('idle'), 2800)
@@ -57,7 +57,9 @@ export function ExportarPDFButton({
           ? ' Defina o zoom do navegador em 100% e tente de novo.'
           : /oklab|oklch|color-mix|unsupported color|parse/i.test(raw)
             ? ' Recarregue a página e tente outra vez.'
-            : ''
+            : /chunk|failed to load|loading css chunk/i.test(raw)
+              ? ' Atualize a página com Ctrl+F5 (cache) ou aguarde o deploy terminar.'
+              : ''
       const base =
         raw && raw.length < 180 ? raw : 'Não foi possível gerar o ficheiro. Tente de novo em instantes.'
       toast({

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import { exportHtmlElementToPdf } from '@/lib/export-html-to-pdf'
 import type { PDFConfigInput, TipoRelatorioPdf } from '@/lib/pdfTemplate'
 import { buildPdfConfig } from '@/lib/pdfTemplate'
 
@@ -26,7 +27,6 @@ export function useExportPDF() {
           throw new Error('Elemento não encontrado')
         }
         const config = buildPdfConfig({ ...meta, dataGeracao: new Date() })
-        const { exportHtmlElementToPdf } = await import('@/lib/export-html-to-pdf')
         await exportHtmlElementToPdf(element, nomeArquivo, { config, tipoRelatorio })
         return true
       } finally {
