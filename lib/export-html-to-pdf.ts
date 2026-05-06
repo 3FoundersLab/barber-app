@@ -119,8 +119,9 @@ async function waitForPaint(): Promise<void> {
  * Sintaxes de cor que o html2canvas não parseia (Tailwind v4: oklab, oklch, color-mix…).
  * Nota: `lab(` sozinho não cobre `oklab(` — precisa de entradas explícitas.
  */
+/** Inclui `oklab`/`oklch` como palavra — o tokenizer do html2canvas reporta o nome da função. */
 const H2C_UNSUPPORTED_COLOR =
-  /oklab\s*\(|oklch\s*\(|color-mix\s*\(|\blab\s*\(|\blch\s*\(|hwb\s*\(|color\(|display-p3/i
+  /\boklab\b|\boklch\b|color-mix\s*\(|\blab\s*\(|\blch\s*\(|hwb\s*\(|color\(|display-p3/i
 
 function stillHasUnsupportedColor(value: string): boolean {
   return H2C_UNSUPPORTED_COLOR.test(value)
@@ -172,31 +173,90 @@ function sanitizePropertyValue(prop: string, value: string): string {
   return v
 }
 
-/** Segunda passagem: garantir que nenhum inline/atributo no clone ficou com oklab/color-mix. */
-function scrubInlineStylesInCloneSubtree(root: HTMLElement): void {
+/** Reescreve atributo `style="..."` quando ainda contém sintaxe moderna. */
+function scrubRawStyleAttribute(el: HTMLElement): void {
+  const raw = el.getAttribute('style')
+  if (!raw || !stillHasUnsupportedColor(raw)) return
+  const parts = raw
+    .split(';')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const next: string[] = []
+  for (const part of parts) {
+    const idx = part.indexOf(':')
+    if (idx === -1) continue
+    const k = part.slice(0, idx).trim()
+    const v0 = part.slice(idx + 1).trim()
+    const v = sanitizePropertyValue(k, v0)
+    next.push(`${k}: ${v}`)
+  }
+  if (next.length) el.setAttribute('style', next.join('; '))
+  else el.removeAttribute('style')
+}
+
+function scrubSvgStyleAttribute(el: SVGElement): void {
+  const raw = el.getAttribute('style')
+  if (!raw || !stillHasUnsupportedColor(raw)) return
+  const parts = raw
+    .split(';')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const next: string[] = []
+  for (const part of parts) {
+    const idx = part.indexOf(':')
+    if (idx === -1) continue
+    const k = part.slice(0, idx).trim()
+    const v0 = part.slice(idx + 1).trim()
+    const v = sanitizePropertyValue(k, v0)
+    next.push(`${k}: ${v}`)
+  }
+  if (next.length) el.setAttribute('style', next.join('; '))
+  else el.removeAttribute('style')
+}
+
+/**
+ * Uma passagem: corrige `.style`, atributo `style` e cores em SVG.
+ * O html2canvas já copiou `getComputedStyle` para o clone (às vezes com oklab); não comparar com o DOM original
+ * porque o clone tem nós extra (pseudo-elementos sintéticos) e a ordem dos filhos pode divergir.
+ */
+function scrubCloneTreePass(root: Element): boolean {
+  let foundBad = false
   const visit = (el: Element): void => {
-    if (el instanceof HTMLElement && el.style?.length) {
-      for (let i = 0; i < el.style.length; i++) {
-        const key = el.style.item(i)
-        const val = el.style.getPropertyValue(key)
-        if (stillHasUnsupportedColor(val)) {
-          const fixed = sanitizePropertyValue(key, val)
-          try {
-            el.style.setProperty(key, fixed, 'important')
-          } catch {
+    if (el instanceof HTMLElement) {
+      scrubRawStyleAttribute(el)
+      if (el.style?.length) {
+        for (let i = 0; i < el.style.length; i++) {
+          const key = el.style.item(i)
+          const val = el.style.getPropertyValue(key)
+          if (stillHasUnsupportedColor(val)) {
+            foundBad = true
+            const fixed = sanitizePropertyValue(key, val)
             try {
-              el.style.removeProperty(key)
+              el.style.setProperty(key, fixed, 'important')
             } catch {
-              /* ignore */
+              try {
+                el.style.removeProperty(key)
+              } catch {
+                /* ignore */
+              }
             }
           }
         }
       }
+      const filt = el.style.filter
+      const back = el.style.getPropertyValue('backdrop-filter')
+      if ((filt && stillHasUnsupportedColor(filt)) || (back && stillHasUnsupportedColor(back))) {
+        foundBad = true
+        el.style.setProperty('filter', 'none', 'important')
+        el.style.setProperty('backdrop-filter', 'none', 'important')
+      }
     }
     if (el instanceof SVGElement) {
-      for (const attr of ['fill', 'stroke', 'stop-color']) {
+      scrubSvgStyleAttribute(el)
+      for (const attr of ['fill', 'stroke', 'stop-color', 'flood-color', 'lighting-color']) {
         const raw = el.getAttribute(attr)
         if (raw && stillHasUnsupportedColor(raw)) {
+          foundBad = true
           el.setAttribute(attr, sanitizePropertyValue(attr, raw))
         }
       }
@@ -206,84 +266,52 @@ function scrubInlineStylesInCloneSubtree(root: HTMLElement): void {
     }
   }
   visit(root)
+  return foundBad
+}
+
+function scrubCloneDocumentUntilClean(clonedDoc: Document, maxPasses = 8): void {
+  const root = clonedDoc.documentElement
+  if (!root) return
+  for (let p = 0; p < maxPasses; p++) {
+    if (!scrubCloneTreePass(root)) break
+  }
 }
 
 /**
- * Remove CSS global do clone (Tailwind usa oklch/lab) e recria o visual via estilos computados
- * já resolvidos pelo browser — evita o parser do html2canvas quebrar em `lab()`.
+ * Documento clonado no iframe do html2canvas: remove folhas com oklch e sanitiza todo o inline
+ * que o próprio html2canvas copiou de `getComputedStyle` (pode vir como oklab em Chromium).
  */
-function isolateExportSubtreeForCanvas(origRoot: HTMLElement, cloneRoot: HTMLElement): void {
-  const cloneDoc = cloneRoot.ownerDocument
-  if (!cloneDoc) return
+function sanitizeHtml2CanvasCloneDocument(clonedDoc: Document, exportElementId: string): void {
+  clonedDoc.querySelectorAll('link[rel="stylesheet"]').forEach((n) => n.remove())
+  clonedDoc.querySelectorAll('style').forEach((n) => n.remove())
+  try {
+    const d = clonedDoc as Document & { adoptedStyleSheets?: CSSStyleSheet[] }
+    if (d.adoptedStyleSheets) d.adoptedStyleSheets = []
+  } catch {
+    /* ignore */
+  }
 
-  cloneDoc.querySelectorAll('link[rel="stylesheet"]').forEach((n) => n.remove())
-  cloneDoc.querySelectorAll('style').forEach((n) => n.remove())
-
-  const html = cloneDoc.documentElement
-  const body = cloneDoc.body
-  if (html) {
+  const html = clonedDoc.documentElement
+  const body = clonedDoc.body
+  if (html instanceof HTMLElement) {
     html.style.setProperty('margin', '0', 'important')
     html.style.setProperty('padding', '0', 'important')
     html.style.setProperty('background', pdfPadrao.colors.background, 'important')
   }
-  if (body) {
+  if (body instanceof HTMLElement) {
     body.style.setProperty('margin', '0', 'important')
     body.style.setProperty('padding', '0', 'important')
     body.style.setProperty('background', pdfPadrao.colors.background, 'important')
   }
 
-  function apply(orig: Element | null | undefined, clone: Element | null | undefined): void {
-    if (!orig || !clone) return
+  scrubCloneDocumentUntilClean(clonedDoc)
 
-    if (orig instanceof HTMLElement && clone instanceof HTMLElement) {
-      const cs = window.getComputedStyle(orig)
-      for (let i = 0; i < cs.length; i++) {
-        const key = cs.item(i)
-        let val = cs.getPropertyValue(key)
-        if (
-          (key === 'background' || key === 'background-image') &&
-          stillHasUnsupportedColor(val)
-        ) {
-          val = 'none'
-        } else {
-          val = sanitizePropertyValue(key, val)
-        }
-        try {
-          clone.style.setProperty(key, val, 'important')
-        } catch {
-          /* propriedades só-leitura / inválidas como inline */
-        }
-      }
-      clone.style.setProperty('filter', 'none', 'important')
-      clone.style.setProperty('backdrop-filter', 'none', 'important')
-    } else if (orig instanceof SVGElement && clone instanceof SVGElement) {
-      const cs = window.getComputedStyle(orig)
-      const fill = cs.fill
-      const stroke = cs.stroke
-      if (fill && fill !== 'none') {
-        clone.setAttribute('fill', sanitizePropertyValue('fill', fill))
-      }
-      if (stroke && stroke !== 'none') {
-        clone.setAttribute('stroke', sanitizePropertyValue('stroke', stroke))
-      }
-    }
-
-    const oc = orig.children
-    const cc = clone.children
-    /** O clone do html2canvas pode não espelhar todos os nós (ex.: comentários, nós omitidos). */
-    const n = Math.min(oc.length, cc.length)
-    for (let i = 0; i < n; i++) {
-      const oChild = oc.item(i)
-      const cChild = cc.item(i)
-      if (oChild && cChild) apply(oChild, cChild)
-    }
+  const exportRoot = clonedDoc.getElementById(exportElementId)
+  if (exportRoot instanceof HTMLElement) {
+    exportRoot.style.setProperty('overflow', 'visible', 'important')
+    exportRoot.style.setProperty('height', 'auto', 'important')
+    exportRoot.style.setProperty('max-height', 'none', 'important')
   }
-
-  apply(origRoot, cloneRoot)
-  cloneRoot.style.setProperty('overflow', 'visible', 'important')
-  cloneRoot.style.setProperty('height', 'auto', 'important')
-  cloneRoot.style.setProperty('max-height', 'none', 'important')
-  scrubInlineStylesInCloneSubtree(cloneRoot)
 }
 
 async function elementToCanvas(element: HTMLElement, bg: string): Promise<HTMLCanvasElement> {
@@ -328,10 +356,7 @@ async function elementToCanvas(element: HTMLElement, bg: string): Promise<HTMLCa
         imageTimeout: 20000,
         removeContainer: true,
         onclone: (clonedDoc) => {
-          const clonedRoot = clonedDoc.getElementById(element.id)
-          if (clonedRoot) {
-            isolateExportSubtreeForCanvas(element, clonedRoot)
-          }
+          sanitizeHtml2CanvasCloneDocument(clonedDoc, element.id)
         },
       })
       if (canvas.width < 2 || canvas.height < 2) {
