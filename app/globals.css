@@ -238,6 +238,19 @@
   }
 }
 
+/** Relatório Tendências — crescimento + churn (com `.visao-geral-premium`). */
+.visao-geral-premium.relatorio-tendencias-premium {
+  --font-display: 2.5rem;
+  --crescimento: #22c55e;
+  --churn-metric: #ef4444;
+}
+
+@media (max-width: 640px) {
+  .visao-geral-premium.relatorio-tendencias-premium {
+    --font-display: 2.125rem;
+  }
+}
+
 .dark .visao-geral-premium {
   --bg-page: oklch(0.17 0.006 75);
   --bg-card: oklch(0.21 0.008 75);
