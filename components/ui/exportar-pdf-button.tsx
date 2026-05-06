@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Check, Download, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
@@ -55,7 +55,9 @@ export function ExportarPDFButton({
       const hint =
         /zoom|scale|devicePixelRatio/i.test(raw) || /security|taint|canvas/i.test(raw)
           ? ' Defina o zoom do navegador em 100% e tente de novo.'
-          : ''
+          : /oklab|oklch|color-mix|unsupported color|parse/i.test(raw)
+            ? ' Recarregue a página e tente outra vez.'
+            : ''
       const base =
         raw && raw.length < 180 ? raw : 'Não foi possível gerar o ficheiro. Tente de novo em instantes.'
       toast({
@@ -69,6 +71,9 @@ export function ExportarPDFButton({
 
   const busy = estado === 'gerando'
 
+  const label =
+    estado === 'idle' ? titulo : estado === 'gerando' ? 'A gerar PDF…' : 'PDF descarregado'
+
   return (
     <motion.button
       type="button"
@@ -76,8 +81,9 @@ export function ExportarPDFButton({
       disabled={disabled || busy}
       whileHover={disabled || busy ? undefined : { scale: 1.02 }}
       whileTap={disabled || busy ? undefined : { scale: 0.98 }}
+      layout
       className={cn(
-        'vg-body relative inline-flex shrink-0 items-center justify-center gap-1 rounded-full px-3 py-1.5 font-medium transition-colors duration-200',
+        'vg-body relative inline-flex min-h-8 min-w-[9.25rem] shrink-0 items-center justify-center gap-1 rounded-full px-3 py-1.5 font-medium transition-colors duration-200',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         'disabled:pointer-events-none disabled:opacity-50',
         estado === 'idle' && [
@@ -90,47 +96,24 @@ export function ExportarPDFButton({
         className,
       )}
     >
-      <AnimatePresence mode="wait" initial={false}>
-        {estado === 'idle' && (
-          <motion.span
-            key="idle"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18 }}
-            className="flex items-center gap-1"
-          >
-            <Download className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
-            <span>{titulo}</span>
-          </motion.span>
+      <span className="inline-flex items-center justify-center gap-1">
+        {estado === 'idle' ? (
+          <Download className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+        ) : estado === 'gerando' ? (
+          <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden />
+        ) : (
+          <Check className="size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
         )}
-        {estado === 'gerando' && (
-          <motion.span
-            key="gerando"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18 }}
-            className="flex items-center gap-1"
-          >
-            <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden />
-            <span>A gerar PDF…</span>
-          </motion.span>
-        )}
-        {estado === 'pronto' && (
-          <motion.span
-            key="pronto"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18 }}
-            className="flex items-center gap-1"
-          >
-            <Check className="size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
-            <span>PDF descarregado</span>
-          </motion.span>
-        )}
-      </AnimatePresence>
+        <motion.span
+          key={estado}
+          initial={{ opacity: 0.85 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.15 }}
+          className="whitespace-nowrap text-center"
+        >
+          {label}
+        </motion.span>
+      </span>
     </motion.button>
   )
 }

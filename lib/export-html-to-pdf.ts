@@ -115,32 +115,97 @@ async function waitForPaint(): Promise<void> {
   })
 }
 
-/** html2canvas não interpreta `lab()`, `oklch()`, etc. — normaliza para algo que o canvas aceite. */
+/**
+ * Sintaxes de cor que o html2canvas não parseia (Tailwind v4: oklab, oklch, color-mix…).
+ * Nota: `lab(` sozinho não cobre `oklab(` — precisa de entradas explícitas.
+ */
+const H2C_UNSUPPORTED_COLOR =
+  /oklab\s*\(|oklch\s*\(|color-mix\s*\(|\blab\s*\(|\blch\s*\(|hwb\s*\(|color\(|display-p3/i
+
+function stillHasUnsupportedColor(value: string): boolean {
+  return H2C_UNSUPPORTED_COLOR.test(value)
+}
+
+/** Normaliza para rgb/#hex via Canvas; fallback seguro se o browser devolver outra sintaxe moderna. */
 function resolveModernColorToRgb(value: string): string {
   const v = value.trim()
   if (!v || v === 'none' || v === 'transparent') return v
-  if (!/lab\(|oklch\(|lch\(|hwb\(|color\(/i.test(v)) return v
+  if (!stillHasUnsupportedColor(v)) {
+    if (/^(rgb|rgba|#)/i.test(v)) return v
+  }
   try {
     const ctx = document.createElement('canvas').getContext('2d')
     if (!ctx) return '#78716c'
     ctx.fillStyle = '#000'
     ctx.fillStyle = v
     const out = ctx.fillStyle
-    return typeof out === 'string' && !/lab\(|oklch\(|lch\(/i.test(out) ? out : '#78716c'
+    return typeof out === 'string' && !stillHasUnsupportedColor(out) ? out : '#78716c'
   } catch {
     return '#78716c'
   }
 }
 
+function fallbackForProperty(prop: string): string {
+  if (prop === 'box-shadow' || prop === 'text-shadow') {
+    return '0 2px 8px rgba(28, 25, 23, 0.12)'
+  }
+  if (prop === 'background' || prop === 'background-image') return 'none'
+  if (prop === 'background-color') return pdfPadrao.colors.background
+  if (prop === 'color' || prop.endsWith('-color')) return '#1c1917'
+  if (prop.includes('border') && prop.includes('color')) return '#d6d3d1'
+  return 'transparent'
+}
+
 function sanitizePropertyValue(prop: string, value: string): string {
   let v = value
-  if (/lab\(|oklch\(|lch\(/i.test(v)) {
-    if (prop === 'box-shadow' || prop === 'text-shadow') {
-      return '0 2px 8px rgba(28, 25, 23, 0.1)'
-    }
-    v = resolveModernColorToRgb(v)
+  if (!stillHasUnsupportedColor(v)) return v
+  if (prop === 'box-shadow' || prop === 'text-shadow') {
+    return '0 2px 8px rgba(28, 25, 23, 0.12)'
+  }
+  if (prop === 'background' || prop === 'background-image') {
+    return 'none'
+  }
+  v = resolveModernColorToRgb(v)
+  if (stillHasUnsupportedColor(v)) {
+    v = fallbackForProperty(prop)
   }
   return v
+}
+
+/** Segunda passagem: garantir que nenhum inline/atributo no clone ficou com oklab/color-mix. */
+function scrubInlineStylesInCloneSubtree(root: HTMLElement): void {
+  const visit = (el: Element): void => {
+    if (el instanceof HTMLElement && el.style?.length) {
+      for (let i = 0; i < el.style.length; i++) {
+        const key = el.style.item(i)
+        const val = el.style.getPropertyValue(key)
+        if (stillHasUnsupportedColor(val)) {
+          const fixed = sanitizePropertyValue(key, val)
+          try {
+            el.style.setProperty(key, fixed, 'important')
+          } catch {
+            try {
+              el.style.removeProperty(key)
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+      }
+    }
+    if (el instanceof SVGElement) {
+      for (const attr of ['fill', 'stroke', 'stop-color']) {
+        const raw = el.getAttribute(attr)
+        if (raw && stillHasUnsupportedColor(raw)) {
+          el.setAttribute(attr, sanitizePropertyValue(attr, raw))
+        }
+      }
+    }
+    for (let j = 0; j < el.children.length; j++) {
+      visit(el.children[j]!)
+    }
+  }
+  visit(root)
 }
 
 /**
@@ -177,7 +242,7 @@ function isolateExportSubtreeForCanvas(origRoot: HTMLElement, cloneRoot: HTMLEle
         let val = cs.getPropertyValue(key)
         if (
           (key === 'background' || key === 'background-image') &&
-          /lab\(|oklch\(|lch\(/i.test(val)
+          stillHasUnsupportedColor(val)
         ) {
           val = 'none'
         } else {
@@ -218,6 +283,7 @@ function isolateExportSubtreeForCanvas(origRoot: HTMLElement, cloneRoot: HTMLEle
   cloneRoot.style.setProperty('overflow', 'visible', 'important')
   cloneRoot.style.setProperty('height', 'auto', 'important')
   cloneRoot.style.setProperty('max-height', 'none', 'important')
+  scrubInlineStylesInCloneSubtree(cloneRoot)
 }
 
 async function elementToCanvas(element: HTMLElement, bg: string): Promise<HTMLCanvasElement> {
