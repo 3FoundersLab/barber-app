@@ -154,8 +154,16 @@ export function tenantAdminNavEntriesFull(base: string): NavEntry[] {
               href: path(base, 'relatorios/visao-geral'),
               relatoriosBrandActive: true,
             },
-            { label: 'Operacional', href: path(base, 'relatorios/operacao') },
-            { label: 'Tendências', href: path(base, 'relatorios/tendencias') },
+            {
+              label: 'Operacional',
+              href: path(base, 'relatorios/operacao'),
+              relatoriosBrandActive: true,
+            },
+            {
+              label: 'Tendências',
+              href: path(base, 'relatorios/tendencias'),
+              relatoriosBrandActive: true,
+            },
           ],
         }
         out.push(group)
