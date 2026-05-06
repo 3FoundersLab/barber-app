@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -14,6 +15,7 @@ import {
   Filter,
   Lock,
   Minus,
+  LineChart,
   Scissors,
   Timer,
   TrendingUp,
@@ -25,12 +27,15 @@ import { ptBR } from 'date-fns/locale'
 import { PageContent } from '@/components/shared/page-container'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { getAuthUserSafe } from '@/lib/supabase/get-auth-user-safe'
 import { resolveAdminBarbeariaId } from '@/lib/resolve-admin-barbearia-id'
 import {
+  diasCalendarioInclusivo,
   intervaloAnteriorComparacao,
   intervaloPorPreset,
   textoComparativoKpi,
@@ -38,12 +43,18 @@ import {
   type RelatorioPeriodoPreset,
 } from '@/lib/relatorios-range'
 import {
+  analiseJanelaOciosa14h16,
+  computeCurvaPorHora,
+  computeHeatmapDowHora,
   computeOperacionalMetrics,
+  computePiorServicoCancelamento,
   fetchHorariosNetPorBarbeiroDia,
   fetchOperacionalAgendamentos,
+  rowsConcluidosComoDetalhe,
+  taxaOcupacaoEstimadaBarbeiro,
   type OperacionalAgendaRow,
 } from '@/lib/relatorios-operacional-data'
-import { pctChange } from '@/lib/relatorios-visao-geral-data'
+import { computeRankingBarbeiros, pctChange } from '@/lib/relatorios-visao-geral-data'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Empty,
@@ -62,6 +73,28 @@ const PRESET_OPTIONS: { id: RelatorioPeriodoPreset; label: string }[] = [
 ]
 
 const META_TEMPO_MEDIO_MIN = 35
+
+/** Cores dos ícones (referência operacional). */
+const ICON = {
+  ocupacao: '#22c55e',
+  tempoMedio: '#f59e0b',
+  tempoOcioso: '#ef4444',
+  produtividade: '#10b981',
+  cancelamento: '#f59e0b',
+  noShow: '#ef4444',
+  servicos: '#3b82f6',
+} as const
+
+const curvaChartConfig = {
+  int: { label: 'Intensidade', color: '#22c55e' },
+} satisfies ChartConfig
+
+function heatIntensityColor(t: number): string {
+  if (t <= 0) return 'rgb(231 229 228 / 0.35)'
+  if (t < 0.33) return `color-mix(in oklab, ${ICON.ocupacao} 55%, transparent)`
+  if (t < 0.66) return `color-mix(in oklab, #eab308 70%, ${ICON.ocupacao})`
+  return `color-mix(in oklab, ${ICON.noShow} 75%, #eab308)`
+}
 
 function DeltaBadge({
   pct,
@@ -109,29 +142,34 @@ function DeltaBadge({
   )
 }
 
+/** Gauge em semicírculo (arco inferior) + percentual central. */
 function OcupacaoGauge({ pct }: { pct: number | null }) {
-  const r = 46
-  const c = 2 * Math.PI * r
+  const r = 72
+  const arcLen = Math.PI * r
   const p = pct != null && Number.isFinite(pct) ? Math.min(100, Math.max(0, pct)) : 0
-  const offset = c * (1 - p / 100)
+  const offset = arcLen * (1 - p / 100)
   return (
-    <div className="relative flex size-[7.5rem] shrink-0 items-center justify-center">
-      <svg viewBox="0 0 112 112" className="size-full -rotate-90" aria-hidden>
-        <circle cx="56" cy="56" r={r} fill="none" className="stroke-[var(--bg-elevated)]" strokeWidth="10" />
-        <circle
-          cx="56"
-          cy="56"
-          r={r}
+    <div className="relative mx-auto flex h-[5.75rem] w-[11rem] shrink-0 flex-col items-center justify-end">
+      <svg viewBox="0 0 200 108" className="w-full max-w-[11rem]" aria-hidden>
+        <path
+          d="M 28 88 A 72 72 0 0 0 172 88"
           fill="none"
-          stroke="var(--accent-faturamento)"
-          strokeWidth="10"
+          className="stroke-[var(--bg-elevated)]"
+          strokeWidth="14"
           strokeLinecap="round"
-          strokeDasharray={c}
+        />
+        <path
+          d="M 28 88 A 72 72 0 0 0 172 88"
+          fill="none"
+          stroke={ICON.ocupacao}
+          strokeWidth="14"
+          strokeLinecap="round"
+          strokeDasharray={arcLen}
           strokeDashoffset={offset}
           className="transition-[stroke-dashoffset] duration-700 ease-out"
         />
       </svg>
-      <span className="absolute vg-section tabular-nums text-[var(--text-primary)]">
+      <span className="absolute bottom-1 vg-section tabular-nums text-[var(--text-primary)]">
         {pct != null ? `${pct.toFixed(0)}%` : '—'}
       </span>
     </div>
@@ -306,15 +344,46 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
   const pctNs = pctChange(atual?.taxaNoShowPct ?? 0, anterior?.taxaNoShowPct ?? 0)
   const pctServ = pctChange(atual?.servicosRealizados ?? 0, anterior?.servicosRealizados ?? 0)
 
+  const chartGradId = useId().replace(/:/g, '')
+  const diasPeriodo = diasCalendarioInclusivo(intervaloAtual.inicio, intervaloAtual.fim)
+
+  const heatmap = useMemo(() => computeHeatmapDowHora(rowsAtual), [rowsAtual])
+  const curva = useMemo(() => computeCurvaPorHora(rowsAtual), [rowsAtual])
+  const ranking = useMemo(() => {
+    const a = rowsConcluidosComoDetalhe(rowsAtual)
+    const p = rowsConcluidosComoDetalhe(rowsAnt)
+    return computeRankingBarbeiros(a, p, 5)
+  }, [rowsAtual, rowsAnt])
+  const maxRankFat = ranking[0]?.faturamento ?? 1
+
+  const piorServCancel = useMemo(() => computePiorServicoCancelamento(rowsAtual), [rowsAtual])
+  const janela1416 = useMemo(() => analiseJanelaOciosa14h16(curva, diasPeriodo), [curva, diasPeriodo])
+
+  const picoHora = useMemo(() => {
+    if (!curva.length) return null
+    return [...curva].reduce((best, c) => (c.raw > (best?.raw ?? -1) ? c : best), curva[0]!)
+  }, [curva])
+
+  const valeHora = useMemo(() => {
+    const withData = curva.filter((c) => c.raw > 0)
+    if (!withData.length) return null
+    return [...withData].reduce((best, c) => (c.raw < best.raw ? c : best), withData[0]!)
+  }, [curva])
+
+  const piorBarbeiroRanking = useMemo(() => {
+    if (ranking.length < 2 || barbeiroId) return null
+    return ranking[ranking.length - 1] ?? null
+  }, [ranking, barbeiroId])
+
   const periodLabel = PRESET_OPTIONS.find((o) => o.id === preset)?.label ?? 'Período'
   const barberLabel = barbeiroId
     ? barbeiros.find((b) => b.id === barbeiroId)?.nome ?? 'Barbeiro'
     : 'Todos os barbeiros'
   const unitLabel = unidadeNome ?? 'Unidade'
 
-  const tempoBarPct =
+  const tempoBarVsMetaPct =
     atual?.tempoMedioAtendMin != null
-      ? Math.min(100, (atual.tempoMedioAtendMin / (META_TEMPO_MEDIO_MIN * 1.5)) * 100)
+      ? Math.min(100, (atual.tempoMedioAtendMin / META_TEMPO_MEDIO_MIN) * 100)
       : 0
   const tempoAboveMeta =
     atual?.tempoMedioAtendMin != null && atual.tempoMedioAtendMin > META_TEMPO_MEDIO_MIN
@@ -562,14 +631,23 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
             )}
             style={{ animationDelay: '80ms' }}
           >
-            <p className="vg-small font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
-              Taxa de ocupação
-            </p>
-            <div className="flex flex-col items-center gap-[var(--space-md)] sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <span
+                className="flex size-9 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: `${ICON.ocupacao}22`, color: ICON.ocupacao }}
+                aria-hidden
+              >
+                <LineChart className="size-4" />
+              </span>
+              <p className="vg-small font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+                Taxa de ocupação
+              </p>
+            </div>
+            <div className="flex flex-col items-center gap-[var(--space-lg)] lg:flex-row lg:items-center lg:justify-between">
               <OcupacaoGauge pct={atual?.taxaOcupacaoPct ?? null} />
-              <div className="min-w-0 flex-1 space-y-[var(--space-sm)] text-center sm:text-left">
+              <div className="min-w-0 flex-1 space-y-[var(--space-sm)] text-center lg:text-left">
                 <p className="vg-body text-[var(--text-secondary)]">{analiseOcupacao}</p>
-                <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
                   <DeltaBadge pct={pctOcup} comparar={comparar} />
                   <span className="vg-small text-[var(--text-tertiary)]">{textoCmp}</span>
                 </div>
@@ -590,9 +668,18 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
             )}
             style={{ animationDelay: '110ms' }}
           >
-            <p className="vg-small font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
-              Tempo médio por atendimento
-            </p>
+            <div className="flex items-center gap-2">
+              <span
+                className="flex size-9 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: `${ICON.tempoMedio}22`, color: ICON.tempoMedio }}
+                aria-hidden
+              >
+                <Timer className="size-4" />
+              </span>
+              <p className="vg-small font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+                Tempo médio por atendimento
+              </p>
+            </div>
             {loading && !atual ? (
               <Skeleton className="h-24 w-full rounded-2xl" />
             ) : (
@@ -608,11 +695,11 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
                 <div className="space-y-2">
                   <div className="h-2.5 w-full overflow-hidden rounded-full bg-[var(--bg-elevated)]">
                     <div
-                      className={cn(
-                        'h-full rounded-full transition-all',
-                        tempoAboveMeta ? 'bg-amber-500/90' : 'bg-[var(--accent-ticket)]',
-                      )}
-                      style={{ width: `${tempoBarPct}%` }}
+                      className={cn('h-full rounded-full transition-all')}
+                      style={{
+                        width: `${tempoBarVsMetaPct}%`,
+                        backgroundColor: tempoAboveMeta ? ICON.tempoMedio : ICON.ocupacao,
+                      }}
                     />
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2 vg-small text-[var(--text-secondary)]">
@@ -638,70 +725,66 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
           </div>
         </div>
 
-        {/* Três métricas compactas */}
+        {/* Três métricas compactas — ícone circular, valor grande, variação */}
         <div className="grid gap-[var(--space-md)] sm:grid-cols-3">
           <div
-            className="vg-card vg-enter rounded-2xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift"
+            className="vg-card vg-enter flex flex-col items-center rounded-2xl bg-[var(--bg-card)] px-[var(--space-md)] py-[var(--space-lg)] text-center shadow-premium hover-lift"
             style={{ animationDelay: '140ms' }}
           >
-            <div className="flex items-start gap-3">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-atendidos)]/15 text-[var(--accent-atendidos)]">
-                <Timer className="size-5" aria-hidden />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="vg-small font-medium text-[var(--text-tertiary)]">Tempo ocioso</p>
-                <p className="vg-section mt-1 tabular-nums text-[var(--text-primary)]">
-                  {atual?.tempoOciosoPct != null ? `${atual.tempoOciosoPct.toFixed(1).replace('.', ',')}%` : '—'}
-                </p>
-                <p className="vg-small mt-1 text-[var(--text-secondary)]">
-                  Share do expediente sem atendimento agendado.
-                </p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <DeltaBadge pct={pctOcioso} comparar={comparar} invert />
-                </div>
-              </div>
+            <span
+              className="flex size-14 shrink-0 items-center justify-center rounded-full"
+              style={{ backgroundColor: `${ICON.tempoOcioso}22`, color: ICON.tempoOcioso }}
+              aria-hidden
+            >
+              <Timer className="size-6" />
+            </span>
+            <p className="vg-small mt-[var(--space-md)] font-medium text-[var(--text-tertiary)]">Tempo ocioso</p>
+            <p className="vg-display mt-1 tabular-nums leading-tight text-[var(--text-primary)]">
+              {atual?.tempoOciosoPct != null ? `${atual.tempoOciosoPct.toFixed(1).replace('.', ',')}%` : '—'}
+            </p>
+            <div className="mt-2">
+              <DeltaBadge pct={pctOcioso} comparar={comparar} invert />
             </div>
           </div>
 
           <div
-            className="vg-card vg-enter rounded-2xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift"
+            className="vg-card vg-enter flex flex-col items-center rounded-2xl bg-[var(--bg-card)] px-[var(--space-md)] py-[var(--space-lg)] text-center shadow-premium hover-lift"
             style={{ animationDelay: '170ms' }}
           >
-            <div className="flex items-start gap-3">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-faturamento)]/15 text-[var(--accent-faturamento)]">
-                <TrendingUp className="size-5" aria-hidden />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="vg-small font-medium text-[var(--text-tertiary)]">Produtividade</p>
-                <p className="vg-section mt-1 tabular-nums text-[var(--text-primary)]">
-                  {atual?.produtividadeHora != null ? `${formatCurrency(atual.produtividadeHora)}/h` : '—'}
-                </p>
-                <p className="vg-small mt-1 text-[var(--text-secondary)]">Receita por hora de serviço concluído.</p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <DeltaBadge pct={pctProd} comparar={comparar} />
-                </div>
-              </div>
+            <span
+              className="flex size-14 shrink-0 items-center justify-center rounded-full"
+              style={{ backgroundColor: `${ICON.produtividade}22`, color: ICON.produtividade }}
+              aria-hidden
+            >
+              <TrendingUp className="size-6" />
+            </span>
+            <p className="vg-small mt-[var(--space-md)] font-medium text-[var(--text-tertiary)]">Produtividade</p>
+            <p className="vg-display mt-1 tabular-nums leading-tight text-[var(--text-primary)]">
+              {atual?.produtividadeHora != null ? formatCurrency(atual.produtividadeHora) : '—'}
+            </p>
+            <p className="vg-small mt-0.5 text-[var(--text-tertiary)]">por hora</p>
+            <div className="mt-2">
+              <DeltaBadge pct={pctProd} comparar={comparar} />
             </div>
           </div>
 
           <div
-            className="vg-card vg-enter rounded-2xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium hover-lift"
+            className="vg-card vg-enter flex flex-col items-center rounded-2xl bg-[var(--bg-card)] px-[var(--space-md)] py-[var(--space-lg)] text-center shadow-premium hover-lift"
             style={{ animationDelay: '200ms' }}
           >
-            <div className="flex items-start gap-3">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-noshow)]/15 text-[var(--accent-noshow)]">
-                <Ban className="size-5" aria-hidden />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="vg-small font-medium text-[var(--text-tertiary)]">Taxa de cancelamento</p>
-                <p className="vg-section mt-1 tabular-nums text-[var(--text-primary)]">
-                  {atual ? `${atual.taxaCancelamentoPct.toFixed(1).replace('.', ',')}%` : '—'}
-                </p>
-                <p className="vg-small mt-1 text-[var(--text-secondary)]">Cancelamentos sobre o total de agendamentos.</p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <DeltaBadge pct={pctCanc} comparar={comparar} invert />
-                </div>
-              </div>
+            <span
+              className="flex size-14 shrink-0 items-center justify-center rounded-full"
+              style={{ backgroundColor: `${ICON.cancelamento}22`, color: ICON.cancelamento }}
+              aria-hidden
+            >
+              <Ban className="size-6" />
+            </span>
+            <p className="vg-small mt-[var(--space-md)] font-medium text-[var(--text-tertiary)]">Cancelamento</p>
+            <p className="vg-display mt-1 tabular-nums leading-tight text-[var(--text-primary)]">
+              {atual ? `${atual.taxaCancelamentoPct.toFixed(1).replace('.', ',')}%` : '—'}
+            </p>
+            <div className="mt-2">
+              <DeltaBadge pct={pctCanc} comparar={comparar} invert />
             </div>
           </div>
         </div>
@@ -713,7 +796,10 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
             style={{ animationDelay: '230ms' }}
           >
             <div className="flex items-start gap-[var(--space-md)]">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-noshow)]/15 text-[var(--accent-noshow)]">
+              <div
+                className="flex size-12 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: `${ICON.noShow}22`, color: ICON.noShow }}
+              >
                 <XCircle className="size-5" aria-hidden />
               </div>
               <div className="min-w-0 flex-1 space-y-[var(--space-sm)]">
@@ -747,7 +833,10 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
             style={{ animationDelay: '260ms' }}
           >
             <div className="flex items-start gap-[var(--space-md)]">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-ticket)]/15 text-[var(--accent-ticket)]">
+              <div
+                className="flex size-12 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: `${ICON.servicos}22`, color: ICON.servicos }}
+              >
                 <Scissors className="size-5" aria-hidden />
               </div>
               <div className="min-w-0 flex-1 space-y-[var(--space-sm)]">
@@ -777,11 +866,268 @@ export function RelatoriosOperacionalPainel(props: { slug: string; base: string 
         </div>
       </section>
 
-      {/* Rodapé contextual leve */}
+      {/* Heatmap + ranking */}
+      <section className="grid gap-[var(--space-lg)] lg:grid-cols-2">
+        <div className="vg-card vg-enter rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium md:p-[var(--space-lg)]">
+          <p className="vg-section text-[var(--text-primary)]">Heatmap de ocupação</p>
+          <p className="vg-small mt-1 text-[var(--text-secondary)]">Inícios de agendamentos por dia da semana e hora.</p>
+          <div className="mt-[var(--space-md)] overflow-x-auto">
+            <table className="w-full min-w-[520px] border-separate border-spacing-1 text-left text-xs">
+              <thead>
+                <tr>
+                  <th className="w-10 pr-1 font-medium text-[var(--text-tertiary)]" />
+                  {heatmap.hourLabels.map((h) => (
+                    <th key={h} className="px-0.5 text-center font-medium text-[var(--text-tertiary)]">
+                      {h.replace('h', '')}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {heatmap.dowOrder.map((dow, rowIdx) => (
+                  <tr key={dow}>
+                    <td className="whitespace-nowrap pr-2 font-medium text-[var(--text-secondary)]">
+                      {heatmap.dowLabels[rowIdx]}
+                    </td>
+                    {heatmap.matrix[dow]!.map((c, hi) => {
+                      const t = heatmap.globalMax > 0 ? c / heatmap.globalMax : 0
+                      return (
+                        <td key={hi} className="p-0">
+                          <div
+                            className="mx-auto aspect-square w-full max-w-[1.35rem] rounded-sm sm:max-w-[1.5rem]"
+                            style={{ backgroundColor: heatIntensityColor(t) }}
+                            title={`${c} agendamentos`}
+                          />
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div
+            className="mt-3 h-2 w-full max-w-md rounded-full"
+            style={{
+              background: `linear-gradient(90deg, ${ICON.ocupacao} 0%, #eab308 50%, ${ICON.noShow} 100%)`,
+            }}
+            aria-hidden
+          />
+          <p className="vg-small mt-2 text-[var(--text-tertiary)]">
+            <span className="font-medium text-[var(--text-secondary)]">Legenda:</span> tons mais frios = menos
+            inícios na célula; tons quentes = mais demanda concentrada nesse cruzamento dia × hora.
+          </p>
+          <p className="vg-body mt-[var(--space-md)] text-[var(--text-secondary)]">
+            {heatmap.globalMax <= 1
+              ? 'Ainda há poucos dados para padrões fortes — amplie o período ou aguarde mais movimento na agenda.'
+              : janela1416?.ociosa
+                ? 'Os horários entre 14h e 16h aparecem mais vazios que a média do dia — vale testar promoção ou pacotes nesse intervalo.'
+                : 'O calor concentra-se de forma relativamente equilibrada; use o mapa para ajustar escala onde ainda há células frias contíguas.'}
+          </p>
+        </div>
+
+        <div className="vg-card vg-enter rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium md:p-[var(--space-lg)]">
+          <p className="vg-section text-[var(--text-primary)]">Desempenho por barbeiro</p>
+          <p className="vg-small mt-1 text-[var(--text-secondary)]">Faturamento em serviços concluídos {textoCmp}.</p>
+          <div className="mt-[var(--space-md)] space-y-[var(--space-md)]">
+            {loading && ranking.length === 0 ? (
+              Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)
+            ) : ranking.length === 0 ? (
+              <p className="vg-body text-muted-foreground">Sem faturamento concluído no período.</p>
+            ) : (
+              ranking.map((r) => {
+                const iniciais = r.nome
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((p) => p[0])
+                  .join('')
+                  .toUpperCase()
+                const barW = maxRankFat > 0 ? (r.faturamento / maxRankFat) * 100 : 0
+                return (
+                  <div key={r.barbeiroId} className="flex items-center gap-3">
+                    <Avatar className="size-9 shrink-0 border-0 shadow-premium">
+                      <AvatarFallback className="vg-small font-semibold">{iniciais || '?'}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <p className="vg-body truncate font-semibold text-[var(--text-primary)]">{r.nome}</p>
+                        <span className="vg-body shrink-0 tabular-nums font-semibold text-[var(--text-primary)]">
+                          {formatCurrency(r.faturamento)}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex items-center gap-3">
+                        <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--bg-elevated)]">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${barW}%`,
+                              backgroundColor: ICON.servicos,
+                            }}
+                          />
+                        </div>
+                        <div className="shrink-0">
+                          <DeltaBadge pct={r.pctVsAnterior} comparar={comparar} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+          <Link
+            href={`${base}/equipe`}
+            className="vg-small mt-[var(--space-md)] inline-flex font-semibold text-[var(--brand-primary)] hover:underline"
+          >
+            Ver ranking completo <ChevronRight className="inline size-3.5" aria-hidden />
+          </Link>
+        </div>
+      </section>
+
+      {/* Curva do dia + análises */}
+      <section className="grid gap-[var(--space-lg)] lg:grid-cols-2">
+        <div className="vg-card vg-enter rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium md:p-[var(--space-lg)]">
+          <p className="vg-section text-[var(--text-primary)]">Ocupação ao longo do dia (média)</p>
+          <p className="vg-small mt-1 text-[var(--text-secondary)]">
+            Intensidade relativa de inícios por hora no período selecionado.
+          </p>
+          <div className="mt-[var(--space-md)] h-[220px] w-full sm:h-[260px]">
+            <ChartContainer config={curvaChartConfig} className="h-full w-full !aspect-auto">
+              <AreaChart data={curva} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
+                <defs>
+                  <linearGradient id={`op-curva-${chartGradId}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={ICON.ocupacao} stopOpacity={0.45} />
+                    <stop offset="100%" stopColor={ICON.ocupacao} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/35" />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 11 }} />
+                <YAxis hide domain={[0, 100]} />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      formatter={(v) => `${Number(v).toFixed(0)}% (rel.)`}
+                      labelFormatter={(l) => String(l)}
+                    />
+                  }
+                />
+                <Area
+                  type="monotone"
+                  dataKey="intensidadePct"
+                  stroke={ICON.ocupacao}
+                  strokeWidth={2}
+                  fill={`url(#op-curva-${chartGradId})`}
+                  dot={false}
+                />
+              </AreaChart>
+            </ChartContainer>
+          </div>
+          {picoHora && valeHora ? (
+            <div className="vg-body mt-[var(--space-sm)] space-y-1 text-[var(--text-secondary)]">
+              <p>
+                <span className="font-semibold text-[var(--text-primary)]">Pico:</span> {picoHora.hora}h (
+                {picoHora.raw} inícios) — maior concentração de chegadas.
+              </p>
+              <p>
+                <span className="font-semibold text-[var(--text-primary)]">Vale:</span> {valeHora.hora}h (
+                {valeHora.raw} inícios) — janela mais tranquila para encaixes ou manutenção interna.
+              </p>
+            </div>
+          ) : null}
+          <Link
+            href={`${base}/agendamentos`}
+            className="vg-small mt-[var(--space-md)] inline-flex font-semibold text-[var(--brand-primary)] hover:underline"
+          >
+            Ver por dia da semana <ChevronRight className="inline size-3.5" aria-hidden />
+          </Link>
+        </div>
+
+        <div className="vg-card vg-enter flex flex-col rounded-3xl bg-[var(--bg-card)] p-[var(--space-md)] shadow-premium md:p-[var(--space-lg)]">
+          <p className="vg-section text-[var(--text-primary)]">Análises do período</p>
+          <p className="vg-small mt-1 text-[var(--text-secondary)]">Leituras automáticas a partir dos mesmos dados do painel.</p>
+          <ul className="mt-[var(--space-md)] flex flex-1 flex-col gap-[var(--space-md)]">
+            <li className="flex gap-3">
+              <span className="mt-0.5 text-[var(--text-tertiary)]" aria-hidden>
+                <Timer className="size-5" />
+              </span>
+              <p className="vg-body text-[var(--text-secondary)]">
+                {janela1416?.ociosa
+                  ? 'Os horários entre 14h e 16h estão mais ociosos que o restante do dia. Considere promoção ou combos nesse intervalo para densificar a agenda.'
+                  : 'A distribuição entre 14h e 16h não destoa da média — mantenha o foco em confirmação e pontualidade nas faixas mais quentes do gráfico.'}
+              </p>
+            </li>
+            {piorBarbeiroRanking ? (
+              <li className="flex gap-3">
+                <span className="mt-0.5 text-[var(--text-tertiary)]" aria-hidden>
+                  <UserRound className="size-5" />
+                </span>
+                <p className="vg-body text-[var(--text-secondary)]">
+                  <span className="font-semibold text-[var(--text-primary)]">{piorBarbeiroRanking.nome}</span> aparece
+                  com menor fatia de faturamento no grupo exibido
+                  {atual?.taxaOcupacaoPct != null
+                    ? (() => {
+                        const est = taxaOcupacaoEstimadaBarbeiro(
+                          rowsAtual,
+                          piorBarbeiroRanking.barbeiroId,
+                          atual.taxaOcupacaoPct,
+                        )
+                        return est != null ? ` — ocupação estimada em torno de ${est}%` : ''
+                      })()
+                    : ''}
+                  . Verifique disponibilidade na agenda ou mix de serviços ofertados.
+                </p>
+              </li>
+            ) : null}
+            {piorServCancel ? (
+              <li className="flex gap-3">
+                <span className="mt-0.5 text-[var(--text-tertiary)]" aria-hidden>
+                  <Scissors className="size-5" />
+                </span>
+                <p className="vg-body text-[var(--text-secondary)]">
+                  O serviço <span className="font-semibold text-[var(--text-primary)]">{piorServCancel.nome}</span>{' '}
+                  concentra taxa de cancelamento de{' '}
+                  <span className="font-semibold tabular-nums text-[var(--text-primary)]">
+                    {piorServCancel.pct.toFixed(1).replace('.', ',')}%
+                  </span>
+                  . Avalie tempo de execução, política de reagendamento ou comunicação prévia.
+                </p>
+              </li>
+            ) : null}
+            <li className="flex gap-3">
+              <span className="mt-0.5 text-[var(--text-tertiary)]" aria-hidden>
+                <TrendingUp className="size-5" />
+              </span>
+              <p className="vg-body text-[var(--text-secondary)]">
+                {pctProd != null && Math.abs(pctProd) >= 0.05 ? (
+                  <>
+                    Produtividade (R$/h em concluídos) variou{' '}
+                    <span className="font-semibold tabular-nums text-[var(--text-primary)]">
+                      {pctProd > 0 ? '+' : ''}
+                      {pctProd.toFixed(1).replace('.', ',')}%
+                    </span>{' '}
+                    {textoCmp}
+                    {pctProd > 0 ? ' — ritmo de receita por hora de serviço melhorou.' : ' — vale revisar precificação ou composição de serviços.'}
+                  </>
+                ) : (
+                  <>Produtividade estável {textoCmp}, o que indica consistência na conversão tempo → receita.</>
+                )}
+              </p>
+            </li>
+          </ul>
+          <Link
+            href={`${base}/relatorios/visao-geral`}
+            className="vg-small mt-[var(--space-md)] inline-flex font-semibold text-[var(--brand-primary)] hover:underline"
+          >
+            Ver panorama financeiro <ChevronRight className="inline size-3.5" aria-hidden />
+          </Link>
+        </div>
+      </section>
+
       <footer className="vg-enter vg-body text-[var(--text-tertiary)]" style={{ animationDelay: '280ms' }}>
         <p>
-          Ocupação compara tempo reservado nos agendamentos (exceto cancelados) com a capacidade estimada a partir dos
-          horários da equipe — ou do expediente da unidade quando não há escala cadastrada para o dia.
+          Ocupação global compara minutos reservados (agendado, em atendimento, concluído, faltou) com capacidade
+          estimada pelos horários da equipe ou expediente da unidade.
         </p>
       </footer>
     </PageContent>
